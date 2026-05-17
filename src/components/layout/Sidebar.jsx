@@ -1,0 +1,43 @@
+import { NavLink } from 'react-router-dom';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
+
+const navigationItems = [
+  { path: '/', labelKey: 'routes.dashboard' },
+  { path: '/daily-journal', labelKey: 'routes.dailyJournal' },
+  { path: '/warehouse-inventory', labelKey: 'routes.warehouseInventory' },
+  { path: '/customers', labelKey: 'routes.customers' },
+  { path: '/products', labelKey: 'routes.products' },
+  { path: '/orders', labelKey: 'routes.orders' },
+  { path: '/weighing-shipment', labelKey: 'routes.weighingShipment' },
+  { path: '/invoices', labelKey: 'routes.invoices' },
+  { path: '/reports', labelKey: 'routes.reports' },
+];
+
+export default function Sidebar() {
+  const { t } = useLanguage();
+
+  return (
+    <aside className="sidebar">
+      <div className="sidebar__brand">
+        <span className="sidebar__mark">B</span>
+        <div>
+          <strong>{t('brandName')}</strong>
+          <small>{t('brandSubtitle')}</small>
+        </div>
+      </div>
+
+      <nav className="sidebar__nav" aria-label={t('mainNavigation')}>
+        {navigationItems.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            end={item.path === '/'}
+            className={({ isActive }) => `sidebar__link ${isActive ? 'is-active' : ''}`}
+          >
+            {t(item.labelKey)}
+          </NavLink>
+        ))}
+      </nav>
+    </aside>
+  );
+}
