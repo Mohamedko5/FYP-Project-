@@ -28,7 +28,7 @@ const emptyCommodityForm = {
   party: '',
   lahuWaAlayh: 'Lahu',
   estimatedValue: '',
-  description: '',
+  description: '',   
 };
 
 export default function DailyJournal() {
