@@ -1,89 +1,132 @@
-import { useState } from 'react';
-import Button from '../components/ui/Button.jsx';
+import { useMemo, useState } from 'react';
 import Card from '../components/ui/Card.jsx';
-import StatusBadge from '../components/ui/StatusBadge.jsx';
-import Table from '../components/ui/Table.jsx';
-import { customers, paymentHistory, formatCurrency } from '../data/dummyData.js';
+import CustomerForm from '../components/customers/CustomerForm.jsx';
+import CustomerList from '../components/customers/CustomerList.jsx';
+import CustomerProfile from '../components/customers/CustomerProfile.jsx';
+import {
+  customerCashTransactions,
+  customerCommodityTransactions,
+  customers,
+  orders,
+  paymentHistory,
+} from '../data/dummyData.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 
-export default function Customers() {
-  const { t, statusLabel } = useLanguage();
-  const [customerForm, setCustomerForm] = useState({
+function createCustomerForm() {
+  return {
     name: '',
     phone: '',
-    cashAccount: '',
-    commodityAccount: '',
-    debtBalance: '',
-    status: 'Debtor',
-  });
+    address: '',
+    customerType: 'Farmer',
+    notes: '',
+  };
+}
+
+export default function Customers() {
+  const { t } = useLanguage();
+  const [customerList, setCustomerList] = useState(customers);
+  const [selectedCustomerId, setSelectedCustomerId] = useState(customers[0]?.id || '');
+  const [customerForm, setCustomerForm] = useState(createCustomerForm());
+  const [formErrors, setFormErrors] = useState([]);
+
+  const selectedCustomer = useMemo(
+    () => customerList.find((customer) => String(customer.id) === String(selectedCustomerId)),
+    [customerList, selectedCustomerId]
+  );
+
+  const selectedCashTransactions = customerCashTransactions.filter(
+    (transaction) => transaction.customer === selectedCustomer?.name
+  );
+
+  const selectedCommodityTransactions = customerCommodityTransactions.filter(
+    (transaction) => transaction.customer === selectedCustomer?.name
+  );
+
+  const selectedOrders = orders.filter((order) => order.customer === selectedCustomer?.name);
+  const selectedPayments = paymentHistory.filter((payment) => payment.customer === selectedCustomer?.name);
 
   function handleChange(event) {
     const { name, value } = event.target;
     setCustomerForm((current) => ({ ...current, [name]: value }));
   }
 
-  const customerColumns = [
-    { key: 'name', label: t('common.customer') },
-    { key: 'phone', label: t('common.phone') },
-    { key: 'cashAccount', label: t('customers.cashAccount'), render: (row) => formatCurrency(Math.abs(row.cashAccount)) },
-    { key: 'commodityAccount', label: t('customers.commodityAccount') },
-    { key: 'debtBalance', label: t('customers.debtBalance'), render: (row) => formatCurrency(row.debtBalance) },
-    { key: 'status', label: t('customers.lahuStatus'), render: (row) => <StatusBadge status={row.status} /> },
-  ];
+  function handleAddCustomer(event) {
+    event.preventDefault();
+    const errors = [];
 
-  const paymentColumns = [
-    { key: 'date', label: t('common.date') },
-    { key: 'customer', label: t('common.customer') },
-    { key: 'amount', label: t('common.amount'), render: (row) => formatCurrency(row.amount) },
-    { key: 'method', label: t('common.method') },
-    { key: 'note', label: t('common.note') },
-  ];
+    if (!customerForm.name.trim()) errors.push(t('customers.customerNameRequired'));
+    if (!customerForm.phone.trim()) errors.push(t('customers.phoneRequired'));
+    if (!customerForm.address.trim()) errors.push(t('customers.addressRequired'));
+
+    if (errors.length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    const newCustomer = {
+      id: Date.now(),
+      name: customerForm.name,
+      phone: customerForm.phone,
+      address: customerForm.address,
+      customerType: customerForm.customerType,
+      cashAccount: 0,
+      commodityAccount: 'None',
+      commodityBalance: 'None',
+      debtBalance: 0,
+      paidAmount: 0,
+      remainingBalance: 0,
+      status: 'Balanced',
+      lastTransactionDate: new Date().toISOString().slice(0, 10),
+      notes: customerForm.notes || t('warehouse.noNotes'),
+    };
+
+    setCustomerList((current) => [...current, newCustomer]);
+    setSelectedCustomerId(newCustomer.id);
+    setCustomerForm(createCustomerForm());
+    setFormErrors([]);
+  }
+
+  function handlePrintStatement() {
+    window.print();
+  }
 
   return (
-    <div className="page-grid">
+    <div className="page-grid customers-page">
       <Card title={t('customers.listTitle')} subtitle={t('customers.listSubtitle')}>
-        <Table columns={customerColumns} rows={customers} />
+        <CustomerList
+          customers={customerList}
+          selectedCustomerId={selectedCustomerId}
+          onSelect={setSelectedCustomerId}
+        />
       </Card>
 
-      <div className="two-column">
+      <div className="two-column customers-top-section">
         <Card title={t('customers.formTitle')} subtitle={t('customers.formSubtitle')}>
-          <form className="form-grid form-grid--single">
-            <label>
-              {t('common.customerName')}
-              <input name="name" value={customerForm.name} onChange={handleChange} placeholder={t('customers.namePlaceholder')} />
-            </label>
-            <label>
-              {t('common.phone')}
-              <input name="phone" value={customerForm.phone} onChange={handleChange} placeholder="+249..." />
-            </label>
-            <label>
-              {t('customers.cashAccount')}
-              <input name="cashAccount" type="number" value={customerForm.cashAccount} onChange={handleChange} placeholder="0" />
-            </label>
-            <label>
-              {t('customers.commodityAccount')}
-              <input name="commodityAccount" value={customerForm.commodityAccount} onChange={handleChange} placeholder={t('customers.commodityPlaceholder')} />
-            </label>
-            <label>
-              {t('customers.debtBalance')}
-              <input name="debtBalance" type="number" value={customerForm.debtBalance} onChange={handleChange} placeholder="0" />
-            </label>
-            <label>
-              {t('customers.debtorCreditorStatus')}
-              <select name="status" value={customerForm.status} onChange={handleChange}>
-                <option value="Debtor">{statusLabel('Debtor')}</option>
-                <option value="Creditor">{statusLabel('Creditor')}</option>
-                <option value="Balanced">{statusLabel('Balanced')}</option>
-              </select>
-            </label>
-            <Button>{t('customers.saveCustomer')}</Button>
-          </form>
+          <CustomerForm
+            form={customerForm}
+            errors={formErrors}
+            onChange={handleChange}
+            onSubmit={handleAddCustomer}
+          />
         </Card>
 
-        <Card title={t('customers.paymentHistory')} subtitle={t('customers.paymentSubtitle')}>
-          <Table columns={paymentColumns} rows={paymentHistory} />
+        <Card title={t('customers.accountLogicTitle')} subtitle={t('customers.accountLogicSubtitle')}>
+          <div className="customer-ledger-notes">
+            <p><strong>{t('status.Lahu') || 'Lahu'}:</strong> {t('customers.lahuMeaning')}</p>
+            <p><strong>{t('status.Alayh') || 'Alayh'}:</strong> {t('customers.alayhMeaning')}</p>
+            <p>{t('customers.integrationNote')}</p>
+          </div>
         </Card>
       </div>
+
+      <CustomerProfile
+        customer={selectedCustomer}
+        cashTransactions={selectedCashTransactions}
+        commodityTransactions={selectedCommodityTransactions}
+        orders={selectedOrders}
+        payments={selectedPayments}
+        onPrint={handlePrintStatement}
+      />
     </div>
   );
 }

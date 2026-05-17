@@ -8,10 +8,86 @@ export const dashboardSummary = [
 ];
 
 export const warehouses = [
-  { id: 1, name: 'Main Warehouse', location: 'Market Road', capacity: '3,000 bags', currentStock: 2460, status: 'Good' },
-  { id: 2, name: 'North Store', location: 'Truck Yard', capacity: '1,500 bags', currentStock: 1210, status: 'Good' },
-  { id: 3, name: 'Spare Store', location: 'Old Depot', capacity: '1,200 bags', currentStock: 430, status: 'Low Activity' },
+  {
+    id: 1,
+    name: 'Main Warehouse',
+    warehouseName: 'Main Warehouse',
+    location: 'Market Road',
+    capacity: 3000,
+    capacityUnit: 'Qintar',
+    productType: 'White Sesame',
+    managerName: 'Mohamed Ahmed',
+    guardName: 'Hassan Ali',
+    notes: 'Primary sesame storage near the market.',
+    currentStock: 2460,
+    status: 'Good',
+    storedProducts: [
+      { id: 1, productName: 'White Sesame', category: 'Commodity', quantity: 1800, unit: 'Qintar', minimumThreshold: 120 },
+      { id: 2, productName: 'Red Sesame', category: 'Commodity', quantity: 660, unit: 'Qintar', minimumThreshold: 100 },
+    ],
+  },
+  {
+    id: 2,
+    name: 'North Store',
+    warehouseName: 'North Store',
+    location: 'Truck Yard',
+    capacity: 1500,
+    capacityUnit: 'Large Bag',
+    productType: 'Corn',
+    managerName: 'Ibrahim Musa',
+    guardName: 'Adam Bashir',
+    notes: 'Used for corn received from northern farms.',
+    currentStock: 1210,
+    status: 'Good',
+    storedProducts: [
+      { id: 3, productName: 'Corn', category: 'Commodity', quantity: 1210, unit: 'Large Bag', minimumThreshold: 150 },
+    ],
+  },
+  {
+    id: 3,
+    name: 'Spare Store',
+    warehouseName: 'Spare Store',
+    location: 'Old Depot',
+    capacity: 1200,
+    capacityUnit: 'Bale',
+    productType: 'Sacks / Khaysh',
+    managerName: 'Osman Yousif',
+    guardName: 'Sami Khalid',
+    notes: 'Packaging materials and emergency overflow space.',
+    currentStock: 430,
+    status: 'Low Activity',
+    storedProducts: [
+      { id: 4, productName: 'Sacks / Khaysh', category: 'Packaging', quantity: 390, unit: 'Bale', minimumThreshold: 50 },
+      { id: 5, productName: 'Dabara', category: 'Packaging', quantity: 40, unit: 'Piece', minimumThreshold: 60 },
+    ],
+  },
 ];
+
+export const productUnitOptionsByProduct = {
+  'White Sesame': [{ value: 'Qintar', label: 'Qintar (قنطار)' }],
+  'Red Sesame': [{ value: 'Qintar', label: 'Qintar (قنطار)' }],
+  Corn: [
+    { value: 'Large Bag', label: 'Large Bag (جوال كبير)' },
+    { value: 'Small Bag', label: 'Small Bag (جوال صغير)' },
+  ],
+  'Sacks / Khaysh': [
+    { value: 'Bale', label: 'Bale (بالة)' },
+    { value: 'Number of Sacks', label: 'Number of Sacks (عدد جوالات)' },
+  ],
+  Plastic: [
+    { value: 'Bale', label: 'Bale (بالة)' },
+    { value: 'Roll', label: 'Roll (لفة)' },
+    { value: 'Meter', label: 'Meter (متر)' },
+  ],
+  Dabara: [{ value: 'Piece', label: 'Piece (حبة)' }],
+};
+
+export const warehouseUnitOptionsByProduct = {
+  ...productUnitOptionsByProduct,
+  Plastic: [
+    { value: 'Bale', label: 'Bale (بالة)' },
+  ],
+};
 
 export const products = [
   { id: 1, name: 'White Sesame', category: 'Commodity', unit: 'Bag / Jowal', price: 82000, stock: 1280, status: 'Available' },
@@ -59,16 +135,92 @@ export const commodityJournalEntries = [
 ];
 
 export const customers = [
-  { id: 1, name: 'Al-Noor Trading', phone: '+249 91 222 1100', cashAccount: 420000, commodityAccount: 'White Sesame 60 bags', debtBalance: 180000, status: 'Debtor' },
-  { id: 2, name: 'Blue Nile Stores', phone: '+249 92 830 7711', cashAccount: 0, commodityAccount: 'Corn 120 bags', debtBalance: 0, status: 'Balanced' },
-  { id: 3, name: 'Hamad Agro Supply', phone: '+249 90 441 6520', cashAccount: -95000, commodityAccount: 'Red Sesame 25 bags', debtBalance: 95000, status: 'Creditor' },
-  { id: 4, name: 'Central Market Buyer', phone: '+249 99 118 2005', cashAccount: 70000, commodityAccount: 'None', debtBalance: 70000, status: 'Debtor' },
+  {
+    id: 1,
+    name: 'Al-Noor Trading',
+    phone: '+249 91 222 1100',
+    address: 'Omdurman Central Market',
+    customerType: 'Exporter',
+    cashAccount: 420000,
+    commodityAccount: 'White Sesame 60 Qintar',
+    commodityBalance: '60 Qintar White Sesame',
+    debtBalance: 180000,
+    paidAmount: 280000,
+    remainingBalance: 180000,
+    status: 'Debtor',
+    lastTransactionDate: '2026-05-17',
+    notes: 'Regular sesame buyer with active export orders.',
+  },
+  {
+    id: 2,
+    name: 'Blue Nile Stores',
+    phone: '+249 92 830 7711',
+    address: 'Blue Nile Wholesale Area',
+    customerType: 'Investor',
+    cashAccount: 0,
+    commodityAccount: 'Corn 120 Large Bag',
+    commodityBalance: '120 Large Bag Corn',
+    debtBalance: 0,
+    paidAmount: 5040000,
+    remainingBalance: 0,
+    status: 'Balanced',
+    lastTransactionDate: '2026-05-17',
+    notes: 'Keeps corn stock in warehouse until market price improves.',
+  },
+  {
+    id: 3,
+    name: 'Hamad Agro Supply',
+    phone: '+249 90 441 6520',
+    address: 'Khartoum North Industrial Road',
+    customerType: 'Supplier',
+    cashAccount: -95000,
+    commodityAccount: 'Plastic 18 Roll',
+    commodityBalance: '18 Roll Plastic',
+    debtBalance: 95000,
+    paidAmount: 120000,
+    remainingBalance: 95000,
+    status: 'Creditor',
+    lastTransactionDate: '2026-05-15',
+    notes: 'Packaging material supplier for plastic and sacks.',
+  },
+  {
+    id: 4,
+    name: 'Central Market Buyer',
+    phone: '+249 99 118 2005',
+    address: 'Central Crop Market',
+    customerType: 'Consumer',
+    cashAccount: 70000,
+    commodityAccount: 'Red Sesame 25 Qintar',
+    commodityBalance: '25 Qintar Red Sesame',
+    debtBalance: 70000,
+    paidAmount: 1200000,
+    remainingBalance: 70000,
+    status: 'Debtor',
+    lastTransactionDate: '2026-05-16',
+    notes: 'Buys small and medium commodity quantities from warehouse.',
+  },
 ];
 
 export const paymentHistory = [
   { id: 1, date: '2026-05-17', customer: 'Al-Noor Trading', amount: 280000, method: 'Cash', note: 'Partial settlement' },
   { id: 2, date: '2026-05-14', customer: 'Central Market Buyer', amount: 70000, method: 'Bank Transfer', note: 'Remaining balance' },
   { id: 3, date: '2026-05-11', customer: 'Blue Nile Stores', amount: 530000, method: 'Cash', note: 'Full payment' },
+];
+
+export const customerCashTransactions = [
+  { id: 1, customer: 'Al-Noor Trading', date: '2026-05-17', type: 'Payment Received', amount: 280000, paidAmount: 280000, remainingBalance: 180000, lahuWaAlayh: 'Lahu', source: 'Daily Journal', description: 'Partial payment for sesame order' },
+  { id: 2, customer: 'Al-Noor Trading', date: '2026-05-17', type: 'Payment Owed', amount: 180000, paidAmount: 0, remainingBalance: 180000, lahuWaAlayh: 'Lahu', source: 'Invoice INV-9001', description: 'Remaining balance after order payment' },
+  { id: 3, customer: 'Blue Nile Stores', date: '2026-05-17', type: 'Payment Received', amount: 5040000, paidAmount: 5040000, remainingBalance: 0, lahuWaAlayh: 'Balanced', source: 'Invoice INV-9002', description: 'Full payment for corn order' },
+  { id: 4, customer: 'Hamad Agro Supply', date: '2026-05-15', type: 'Payment Owed', amount: 95000, paidAmount: 120000, remainingBalance: 95000, lahuWaAlayh: 'Alayh', source: 'Supplier Account', description: 'Remaining packaging supplier balance' },
+  { id: 5, customer: 'Central Market Buyer', date: '2026-05-16', type: 'Payment Owed', amount: 70000, paidAmount: 1200000, remainingBalance: 70000, lahuWaAlayh: 'Lahu', source: 'Invoice INV-9003', description: 'Remaining red sesame payment' },
+];
+
+export const customerCommodityTransactions = [
+  { id: 1, customer: 'Al-Noor Trading', date: '2026-05-17', transactionType: 'Product Delivered', product: 'White Sesame', quantity: 60, unit: 'Qintar', warehouseName: 'Main Warehouse', lahuWaAlayh: 'Lahu', source: 'Order ORD-1001', description: 'White sesame delivered on account' },
+  { id: 2, customer: 'Blue Nile Stores', date: '2026-05-17', transactionType: 'Product Stored', product: 'Corn', quantity: 120, unit: 'Large Bag', warehouseName: 'North Store', lahuWaAlayh: 'Alayh', source: 'Warehouse Entry', description: 'Corn reserved in warehouse for customer account' },
+  { id: 3, customer: 'Hamad Agro Supply', date: '2026-05-15', transactionType: 'Product Received', product: 'Plastic', quantity: 18, unit: 'Roll', warehouseName: 'Spare Store', lahuWaAlayh: 'Alayh', source: 'Commodity Journal', description: 'Plastic received from supplier' },
+  { id: 4, customer: 'Central Market Buyer', date: '2026-05-16', transactionType: 'Product Delivered', product: 'Red Sesame', quantity: 25, unit: 'Qintar', warehouseName: 'Main Warehouse', lahuWaAlayh: 'Lahu', source: 'Order ORD-1003', description: 'Red sesame withdrawn from warehouse' },
+  { id: 5, customer: 'Al-Noor Trading', date: '2026-05-16', transactionType: 'Product Received', product: 'White Sesame', quantity: 50, unit: 'Qintar', warehouseName: 'Main Warehouse', lahuWaAlayh: 'Alayh', source: 'Warehouse Receipt', description: 'Customer supplied sesame for account adjustment' },
 ];
 
 export const orders = [

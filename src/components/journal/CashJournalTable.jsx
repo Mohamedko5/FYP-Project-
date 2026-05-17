@@ -3,7 +3,7 @@ import StatusBadge from '../ui/StatusBadge.jsx';
 import Table from '../ui/Table.jsx';
 import { formatCurrency } from '../../data/dummyData.js';
 
-export default function CashJournalTable({ entries, onEdit, t }) {
+export default function CashJournalTable({ entries, onEdit, t, emptyMessage }) {
   const columns = [
     { key: 'date', label: t('common.date') },
     { key: 'time', label: t('common.time') },
@@ -22,5 +22,5 @@ export default function CashJournalTable({ entries, onEdit, t }) {
     },
   ];
 
-  return <Table columns={columns} rows={entries} />;
+  return <Table columns={columns} rows={entries} emptyMessage={emptyMessage} />;
 }

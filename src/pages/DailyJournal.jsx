@@ -11,44 +11,62 @@ import CommoditySummaryCards from '../components/journal/CommoditySummaryCards.j
 import { commodityJournalEntries, commodityUnits, formatCurrency, journalEntries, products } from '../data/dummyData.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 
-const emptyCashForm = {
-  date: '2026-05-17',
-  time: '09:00',
-  type: 'Income',
-  amount: '',
-  description: '',
-  party: '',
-};
+function getTodayDate() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
-const emptyCommodityForm = {
-  date: '2026-05-17',
-  product: 'White Sesame',
-  quantity: '',
-  unit: 'Qintar',
-  party: '',
-  lahuWaAlayh: 'Lahu',
-  estimatedValue: '',
-  description: '',   
-};
+function createEmptyCashForm(date) {
+  return {
+    date,
+    time: '09:00',
+    type: 'Income',
+    amount: '',
+    description: '',
+    party: '',
+  };
+}
+
+function createEmptyCommodityForm(date) {
+  return {
+    date,
+    product: 'White Sesame',
+    quantity: '',
+    unit: 'Qintar',
+    party: '',
+    lahuWaAlayh: 'Lahu',
+    estimatedValue: '',
+    description: '',
+  };
+}
 
 export default function DailyJournal() {
   const { t, statusLabel, isArabic } = useLanguage();
+  const [selectedDate, setSelectedDate] = useState(getTodayDate());
+  const [draftDate, setDraftDate] = useState(getTodayDate());
   const [journalType, setJournalType] = useState('cash');
   const [cashEntries, setCashEntries] = useState(journalEntries);
   const [commodityEntries, setCommodityEntries] = useState(commodityJournalEntries);
-  const [cashForm, setCashForm] = useState(emptyCashForm);
-  const [commodityForm, setCommodityForm] = useState(emptyCommodityForm);
+  const [cashForm, setCashForm] = useState(() => createEmptyCashForm(getTodayDate()));
+  const [commodityForm, setCommodityForm] = useState(() => createEmptyCommodityForm(getTodayDate()));
   const [editingCashId, setEditingCashId] = useState(null);
   const [editingCommodityId, setEditingCommodityId] = useState(null);
   const [cashErrors, setCashErrors] = useState([]);
   const [commodityErrors, setCommodityErrors] = useState([]);
-  const [reportDate, setReportDate] = useState('2026-05-17');
   const [adminName, setAdminName] = useState('Bayad Admin');
   const [openingBalance, setOpeningBalance] = useState(1010000);
 
   const dailyCashEntries = useMemo(
-    () => cashEntries.filter((entry) => entry.date === reportDate),
-    [cashEntries, reportDate]
+    () => cashEntries.filter((entry) => entry.date === selectedDate),
+    [cashEntries, selectedDate]
+  );
+
+  const dailyCommodityEntries = useMemo(
+    () => commodityEntries.filter((entry) => entry.date === selectedDate),
+    [commodityEntries, selectedDate]
   );
 
   const cashTotals = useMemo(() => {
@@ -63,8 +81,23 @@ export default function DailyJournal() {
     setCommodityErrors([]);
     setEditingCashId(null);
     setEditingCommodityId(null);
-    setCashForm(emptyCashForm);
-    setCommodityForm(emptyCommodityForm);
+    setCashForm(createEmptyCashForm(selectedDate));
+    setCommodityForm(createEmptyCommodityForm(selectedDate));
+  }
+
+  function loadJournalDate(nextDate) {
+    setSelectedDate(nextDate);
+    setDraftDate(nextDate);
+    setEditingCashId(null);
+    setEditingCommodityId(null);
+    setCashForm(createEmptyCashForm(nextDate));
+    setCommodityForm(createEmptyCommodityForm(nextDate));
+    setCashErrors([]);
+    setCommodityErrors([]);
+  }
+
+  function handleViewJournal() {
+    loadJournalDate(draftDate);
   }
 
   function handleCashChange(event) {
@@ -115,7 +148,7 @@ export default function DailyJournal() {
     } else {
       setCashEntries((current) => [{ id: Date.now(), ...payload }, ...current]);
     }
-    setCashForm(emptyCashForm);
+    setCashForm(createEmptyCashForm(selectedDate));
     setCashErrors([]);
   }
 
@@ -135,7 +168,7 @@ export default function DailyJournal() {
     } else {
       setCommodityEntries((current) => [{ id: Date.now(), ...payload }, ...current]);
     }
-    setCommodityForm(emptyCommodityForm);
+    setCommodityForm(createEmptyCommodityForm(selectedDate));
     setCommodityErrors([]);
   }
 
@@ -162,13 +195,13 @@ export default function DailyJournal() {
 
   function handleCashCancel() {
     setEditingCashId(null);
-    setCashForm(emptyCashForm);
+    setCashForm(createEmptyCashForm(selectedDate));
     setCashErrors([]);
   }
 
   function handleCommodityCancel() {
     setEditingCommodityId(null);
-    setCommodityForm(emptyCommodityForm);
+    setCommodityForm(createEmptyCommodityForm(selectedDate));
     setCommodityErrors([]);
   }
 
@@ -178,39 +211,33 @@ export default function DailyJournal() {
 
   return (
     <div className="page-grid">
-      <Card title={t('journal.journalType')} subtitle={t('journal.commodityJournalSubtitle')}>
+      <Card title={t('journal.journalType')} subtitle={t('journal.commodityJournalSubtitle')} className="journal-type-card">
         <JournalTypeSelector journalType={journalType} onChange={handleJournalTypeChange} t={t} />
+      </Card>
+
+      <Card>
+        <div className="journal-date-search">
+          <label>
+            {t('journal.selectJournalDate')}
+            <input type="date" value={draftDate} onChange={(event) => setDraftDate(event.target.value)} />
+          </label>
+          <div className="journal-date-search__actions">
+            <Button onClick={handleViewJournal}>{t('journal.viewJournal')}</Button>
+            <Button variant="secondary" onClick={handlePrint}>{t('journal.printPdf')}</Button>
+          </div>
+          <p>
+            {t('journal.viewingJournalFor')} <strong>{selectedDate}</strong>
+          </p>
+        </div>
       </Card>
 
       {journalType === 'cash' ? (
         <>
-          <Card title={t('print.reportSettings')} subtitle={t('print.reportSettingsSubtitle')}>
-            <div className="journal-toolbar">
-              <div className="journal-toolbar__fields">
-                <label>
-                  {t('print.selectedDate')}
-                  <input type="date" value={reportDate} onChange={(event) => setReportDate(event.target.value)} />
-                </label>
-                <label>
-                  {t('print.traderAdminName')}
-                  <input value={adminName} onChange={(event) => setAdminName(event.target.value)} placeholder={t('print.adminNamePlaceholder')} />
-                </label>
-                <label>
-                  {t('journal.openingBalance')}
-                  <input type="number" value={openingBalance} onChange={(event) => setOpeningBalance(Number(event.target.value))} placeholder="0" />
-                </label>
-              </div>
-              <Button onClick={handlePrint}>
-                {t('print.printDailyJournal')} / {t('print.exportPdf')}
-              </Button>
-            </div>
-          </Card>
-
           <div className="summary-grid">
             <Card className="summary-card">
               <p>{t('journal.openingBalance')}</p>
               <strong>{formatCurrency(openingBalance)}</strong>
-              <small>{reportDate}</small>
+              <small>{selectedDate}</small>
             </Card>
             <Card className="summary-card">
               <p>{t('journal.totalIncome')}</p>
@@ -246,12 +273,12 @@ export default function DailyJournal() {
           </Card>
 
           <Card title={t('journal.endOfDaySummary')} subtitle={t('journal.historySubtitle')}>
-            <CashJournalTable entries={dailyCashEntries} onEdit={handleCashEdit} t={t} />
+            <CashJournalTable entries={dailyCashEntries} onEdit={handleCashEdit} t={t} emptyMessage={t('journal.noTransactionsForDate')} />
           </Card>
 
           <PrintableDailyJournal
             entries={dailyCashEntries}
-            reportDate={reportDate}
+            reportDate={selectedDate}
             adminName={adminName}
             openingBalance={openingBalance}
             totals={cashTotals}
@@ -259,7 +286,7 @@ export default function DailyJournal() {
         </>
       ) : (
         <>
-          <CommoditySummaryCards entries={commodityEntries} t={t} statusLabel={statusLabel} isArabic={isArabic} />
+          <CommoditySummaryCards entries={dailyCommodityEntries} t={t} statusLabel={statusLabel} isArabic={isArabic} />
 
           <Card
             title={editingCommodityId ? t('journal.editingCommodityTitle') : t('journal.addCommodityTitle')}
@@ -282,13 +309,22 @@ export default function DailyJournal() {
 
           <Card title={t('journal.commodityJournalTitle')} subtitle={t('journal.commodityHistorySubtitle')}>
             <CommodityJournalTable
-              entries={commodityEntries}
+              entries={dailyCommodityEntries}
               onEdit={handleCommodityEdit}
               t={t}
               statusLabel={statusLabel}
               isArabic={isArabic}
+              emptyMessage={t('journal.noTransactionsForDate')}
             />
           </Card>
+
+          <PrintableDailyJournal
+            entries={dailyCommodityEntries}
+            reportDate={selectedDate}
+            adminName={adminName}
+            openingBalance={0}
+            totals={{ income: 0, expenses: 0, net: 0, closing: 0 }}
+          />
         </>
       )}
     </div>

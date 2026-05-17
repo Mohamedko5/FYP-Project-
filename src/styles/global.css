@@ -169,6 +169,53 @@ textarea {
   background: var(--surface-muted);
 }
 
+.journal-type-card {
+  text-align: center;
+}
+
+.journal-type-card .card__header {
+  display: grid;
+  justify-items: center;
+}
+
+.journal-date-search {
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.journal-date-search label {
+  display: grid;
+  gap: 6px;
+  color: #44423d;
+  font-weight: 700;
+}
+
+.journal-date-search input {
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--text);
+  padding: 8px 10px;
+}
+
+.journal-date-search__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.journal-date-search p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 38px;
+}
+
+.journal-date-search strong {
+  color: var(--green-dark);
+}
+
 .journal-type-selector__button {
   min-height: 38px;
   padding: 8px 14px;
@@ -375,7 +422,8 @@ textarea {
 .status-badge--pending-approval,
 .status-badge--partially-paid,
 .status-badge--low-stock,
-.status-badge--low-activity {
+.status-badge--low-activity,
+.status-badge--almost-full {
   background: #f0e8d6;
   color: var(--warning);
 }
@@ -383,7 +431,8 @@ textarea {
 .status-badge--cancelled,
 .status-badge--unpaid,
 .status-badge--expense,
-.status-badge--creditor {
+.status-badge--creditor,
+.status-badge--full {
   background: #efe1dd;
   color: var(--danger);
 }
@@ -456,6 +505,225 @@ textarea {
 
 .form-error p + p {
   margin-top: 4px;
+}
+
+.form-warning,
+.form-success {
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.form-warning {
+  border: 1px solid #c4ac72;
+  background: #f3ead7;
+  color: var(--warning);
+}
+
+.form-success {
+  margin-bottom: 14px;
+  border: 1px solid #b9c8ae;
+  background: #edf3e8;
+  color: var(--green-dark);
+  font-weight: 700;
+}
+
+.warehouse-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.warehouse-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.warehouse-card.is-selected {
+  border-color: var(--green);
+  background: #f2f6ef;
+}
+
+.warehouse-card__header,
+.warehouse-card__capacity {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.warehouse-card h3,
+.warehouse-card p {
+  margin: 0;
+}
+
+.warehouse-card p,
+.warehouse-card__capacity span,
+.warehouse-card__meta {
+  color: var(--muted);
+}
+
+.warehouse-card__capacity div {
+  display: grid;
+  gap: 2px;
+}
+
+.warehouse-card__capacity strong {
+  color: var(--text);
+}
+
+.warehouse-card__meta {
+  display: grid;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.capacity-meter {
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.capacity-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+}
+
+.capacity-meter--large {
+  height: 12px;
+}
+
+.warehouse-details {
+  display: grid;
+  gap: 16px;
+}
+
+.warehouse-details__summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.warehouse-details__summary div {
+  display: grid;
+  gap: 4px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-muted);
+}
+
+.warehouse-details__summary span,
+.warehouse-helper {
+  color: var(--muted);
+}
+
+.warehouse-details__notes,
+.warehouse-helper {
+  margin: 0 0 14px;
+}
+
+.warehouse-alert {
+  margin-bottom: 14px;
+}
+
+.customers-page {
+  position: relative;
+}
+
+.customers-top-section {
+  align-items: start;
+}
+
+.customer-profile-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.customer-profile-header h3,
+.customer-profile-header p,
+.customer-notes,
+.customer-ledger-notes p {
+  margin: 0;
+}
+
+.customer-profile-header p,
+.customer-notes,
+.customer-ledger-notes {
+  color: var(--muted);
+}
+
+.customer-profile-summary {
+  grid-template-columns: repeat(6, minmax(140px, 1fr));
+  margin-bottom: 14px;
+}
+
+.customer-profile-actions {
+  margin-top: 16px;
+}
+
+.customer-ledger-notes {
+  display: grid;
+  gap: 12px;
+}
+
+.customer-statement {
+  display: none;
+}
+
+.statement-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid #000;
+}
+
+.statement-header h1,
+.statement-header p {
+  margin: 0;
+}
+
+.statement-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 18px;
+  margin-bottom: 18px;
+}
+
+.statement-grid p {
+  margin: 0;
+}
+
+.customer-statement table {
+  width: 100%;
+  margin-bottom: 18px;
+  border-collapse: collapse;
+}
+
+.customer-statement th,
+.customer-statement td {
+  padding: 7px;
+  border: 1px solid #000;
+  text-align: left;
+}
+
+[dir="rtl"] .customer-statement th,
+[dir="rtl"] .customer-statement td {
+  text-align: right;
 }
 
 .warehouse-list,
@@ -602,8 +870,11 @@ textarea {
   .summary-grid,
   .summary-grid--three,
   .commodity-summary-grid,
+  .warehouse-card-grid,
   .form-grid,
   .detail-panel,
+  .customer-profile-summary,
+  .warehouse-details__summary,
   .note-grid,
   .note-grid--three {
     grid-template-columns: 1fr;
@@ -635,8 +906,43 @@ textarea {
 
   .warehouse-row,
   .activity-row,
+  .journal-date-search,
   .invoice-preview__header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .journal-date-search label,
+  .journal-date-search input {
+    width: 100%;
+  }
+}
+
+@media print {
+  body:has(.customer-statement) .app-shell > .sidebar,
+  body:has(.customer-statement) .topbar,
+  body:has(.customer-statement) .content > *:not(.customers-page),
+  body:has(.customer-statement) .customers-page > *:not(.customer-statement) {
+    display: none !important;
+  }
+
+  body:has(.customer-statement) {
+    background: #ffffff;
+  }
+
+  body:has(.customer-statement) .app-shell,
+  body:has(.customer-statement) .app-shell__main,
+  body:has(.customer-statement) .content,
+  body:has(.customer-statement) .customers-page {
+    display: block;
+    padding: 0;
+    margin: 0;
+  }
+
+  body:has(.customer-statement) .customer-statement {
+    display: block;
+    color: #000;
+    padding: 18px;
+    font-size: 12px;
   }
 }

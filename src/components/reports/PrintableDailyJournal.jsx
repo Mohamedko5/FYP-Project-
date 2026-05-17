@@ -11,6 +11,12 @@ export default function PrintableDailyJournal({
   const { t, statusLabel, isArabic } = useLanguage();
   const closingBalance = openingBalance + totals.net;
   const isCommodityReport = entries.some((entry) => entry.product);
+  const incomingQuantity = isCommodityReport
+    ? entries.filter((entry) => entry.lahuWaAlayh === 'Lahu').reduce((sum, entry) => sum + entry.quantity, 0)
+    : 0;
+  const outgoingQuantity = isCommodityReport
+    ? entries.filter((entry) => entry.lahuWaAlayh === 'Alayh').reduce((sum, entry) => sum + entry.quantity, 0)
+    : 0;
 
   function productLabel(productName) {
     return commodityProductLabels[productName]?.[isArabic ? 'ar' : 'en'] || productName;
@@ -28,7 +34,7 @@ export default function PrintableDailyJournal({
         <header className="print-report__header">
           <h1>{t('companyName')}</h1>
           <p>{t('invoices.systemName')}</p>
-          <h2>{t('print.dailyJournalReport')}</h2>
+          <h2>{isCommodityReport ? t('journal.commodityJournalTitle') : t('print.dailyJournalReport')}</h2>
         </header>
 
         <div className="print-report__meta">
@@ -40,26 +46,45 @@ export default function PrintableDailyJournal({
             <span>{t('print.traderAdminName')}</span>
             <strong>{adminName}</strong>
           </div>
-          <div>
-            <span>{t('print.openingBalance')}</span>
-            <strong>{formatCurrency(openingBalance)}</strong>
-          </div>
-          <div>
-            <span>{t('journal.totalIncome')}</span>
-            <strong>{formatCurrency(totals.income)}</strong>
-          </div>
-          <div>
-            <span>{t('journal.totalExpenses')}</span>
-            <strong>{formatCurrency(totals.expenses)}</strong>
-          </div>
-          <div>
-            <span>{t('print.netDailyBalance')}</span>
-            <strong>{formatCurrency(totals.net)}</strong>
-          </div>
-          <div>
-            <span>{t('journal.closingBalance')}</span>
-            <strong>{formatCurrency(closingBalance)}</strong>
-          </div>
+          {isCommodityReport ? (
+            <>
+              <div>
+                <span>{t('journal.dailyCommodityMovement')}</span>
+                <strong>{entries.length.toLocaleString()}</strong>
+              </div>
+              <div>
+                <span>{t('journal.totalCommodityIn')}</span>
+                <strong>{incomingQuantity.toLocaleString()}</strong>
+              </div>
+              <div>
+                <span>{t('journal.totalCommodityOut')}</span>
+                <strong>{outgoingQuantity.toLocaleString()}</strong>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <span>{t('print.openingBalance')}</span>
+                <strong>{formatCurrency(openingBalance)}</strong>
+              </div>
+              <div>
+                <span>{t('journal.totalIncome')}</span>
+                <strong>{formatCurrency(totals.income)}</strong>
+              </div>
+              <div>
+                <span>{t('journal.totalExpenses')}</span>
+                <strong>{formatCurrency(totals.expenses)}</strong>
+              </div>
+              <div>
+                <span>{t('print.netDailyBalance')}</span>
+                <strong>{formatCurrency(totals.net)}</strong>
+              </div>
+              <div>
+                <span>{t('journal.closingBalance')}</span>
+                <strong>{formatCurrency(closingBalance)}</strong>
+              </div>
+            </>
+          )}
         </div>
 
         <section className="print-report__section">
@@ -118,9 +143,15 @@ export default function PrintableDailyJournal({
 
         <section className="print-report__section">
           <h3>{t('print.endOfDaySummary')}</h3>
-          <p>
-            {t('print.summarySentence')} {formatCurrency(closingBalance)}.
-          </p>
+          {isCommodityReport ? (
+            <p>
+              {t('journal.dailyCommodityMovement')}: {entries.length.toLocaleString()} {t('journal.movementOperations')}.
+            </p>
+          ) : (
+            <p>
+              {t('print.summarySentence')} {formatCurrency(closingBalance)}.
+            </p>
+          )}
         </section>
 
         <footer className="print-report__signature">

@@ -2,7 +2,7 @@ import Button from '../ui/Button.jsx';
 import Table from '../ui/Table.jsx';
 import { commodityProductLabels, commodityUnits, formatCurrency } from '../../data/dummyData.js';
 
-export default function CommodityJournalTable({ entries, onEdit, t, statusLabel, isArabic }) {
+export default function CommodityJournalTable({ entries, onEdit, t, statusLabel, isArabic, emptyMessage }) {
   function productLabel(productName) {
     return commodityProductLabels[productName]?.[isArabic ? 'ar' : 'en'] || productName;
   }
@@ -33,5 +33,5 @@ export default function CommodityJournalTable({ entries, onEdit, t, statusLabel,
     },
   ];
 
-  return <Table columns={columns} rows={entries} />;
+  return <Table columns={columns} rows={entries} emptyMessage={emptyMessage} />;
 }
