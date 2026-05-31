@@ -13,17 +13,18 @@ const pageTitles = {
   '/reports': 'routes.reports',
 };
 
-export default function Topbar() {
+export default function Topbar({ headerAddon = null }) {
   const location = useLocation();
   const { t, toggleLanguage } = useLanguage();
   const pageTitle = t(pageTitles[location.pathname] || 'routes.dashboard');
 
   return (
     <header className="topbar">
-      <div>
+      <div className="topbar__title-area">
         <p className="topbar__company">{t('companyName')}</p>
         <h1>{pageTitle}</h1>
       </div>
+      {headerAddon && <div className="topbar__addon">{headerAddon}</div>}
       <div className="topbar__meta">
         <button className="language-toggle" type="button" onClick={toggleLanguage}>
           {t('switchLanguage')}

@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import PrintableDailyJournal from '../components/reports/PrintableDailyJournal.jsx';
@@ -45,6 +46,7 @@ function createEmptyCommodityForm(date) {
 
 export default function DailyJournal() {
   const { t, statusLabel, isArabic } = useLanguage();
+  const { setHeaderAddon } = useOutletContext();
   const [selectedDate, setSelectedDate] = useState(getTodayDate());
   const [draftDate, setDraftDate] = useState(getTodayDate());
   const [journalType, setJournalType] = useState('cash');
@@ -54,10 +56,11 @@ export default function DailyJournal() {
   const [commodityForm, setCommodityForm] = useState(() => createEmptyCommodityForm(getTodayDate()));
   const [editingCashId, setEditingCashId] = useState(null);
   const [editingCommodityId, setEditingCommodityId] = useState(null);
+  const [showCashForm, setShowCashForm] = useState(false);
+  const [showCommodityForm, setShowCommodityForm] = useState(false);
   const [cashErrors, setCashErrors] = useState([]);
   const [commodityErrors, setCommodityErrors] = useState([]);
   const [adminName, setAdminName] = useState('Bayad Admin');
-  const [openingBalance, setOpeningBalance] = useState(1010000);
 
   const dailyCashEntries = useMemo(
     () => cashEntries.filter((entry) => entry.date === selectedDate),
@@ -69,11 +72,24 @@ export default function DailyJournal() {
     [commodityEntries, selectedDate]
   );
 
+  const openingBalanceEntry = useMemo(() => {
+    return dailyCashEntries
+      .filter((entry) => entry.type === 'Income')
+      .reduce((firstEntry, entry) => {
+        if (!firstEntry) return entry;
+        return Number(entry.id) < Number(firstEntry.id) ? entry : firstEntry;
+      }, null);
+  }, [dailyCashEntries]);
+
+  const openingBalance = openingBalanceEntry?.amount || 0;
+
   const cashTotals = useMemo(() => {
-    const income = dailyCashEntries.filter((entry) => entry.type === 'Income').reduce((sum, entry) => sum + entry.amount, 0);
+    const income = dailyCashEntries
+      .filter((entry) => entry.type === 'Income' && entry.id !== openingBalanceEntry?.id)
+      .reduce((sum, entry) => sum + entry.amount, 0);
     const expenses = dailyCashEntries.filter((entry) => entry.type === 'Expense').reduce((sum, entry) => sum + entry.amount, 0);
     return { income, expenses, net: income - expenses, closing: openingBalance + income - expenses };
-  }, [dailyCashEntries, openingBalance]);
+  }, [dailyCashEntries, openingBalance, openingBalanceEntry]);
 
   function handleJournalTypeChange(nextType) {
     setJournalType(nextType);
@@ -81,6 +97,8 @@ export default function DailyJournal() {
     setCommodityErrors([]);
     setEditingCashId(null);
     setEditingCommodityId(null);
+    setShowCashForm(false);
+    setShowCommodityForm(false);
     setCashForm(createEmptyCashForm(selectedDate));
     setCommodityForm(createEmptyCommodityForm(selectedDate));
   }
@@ -90,6 +108,8 @@ export default function DailyJournal() {
     setDraftDate(nextDate);
     setEditingCashId(null);
     setEditingCommodityId(null);
+    setShowCashForm(false);
+    setShowCommodityForm(false);
     setCashForm(createEmptyCashForm(nextDate));
     setCommodityForm(createEmptyCommodityForm(nextDate));
     setCashErrors([]);
@@ -150,6 +170,7 @@ export default function DailyJournal() {
     }
     setCashForm(createEmptyCashForm(selectedDate));
     setCashErrors([]);
+    setShowCashForm(false);
   }
 
   function handleCommoditySubmit(event) {
@@ -170,16 +191,19 @@ export default function DailyJournal() {
     }
     setCommodityForm(createEmptyCommodityForm(selectedDate));
     setCommodityErrors([]);
+    setShowCommodityForm(false);
   }
 
   function handleCashEdit(entry) {
     setEditingCashId(entry.id);
+    setShowCashForm(true);
     setCashForm({ ...entry, amount: String(entry.amount) });
     setCashErrors([]);
   }
 
   function handleCommodityEdit(entry) {
     setEditingCommodityId(entry.id);
+    setShowCommodityForm(true);
     setCommodityForm({
       date: entry.date,
       product: entry.product,
@@ -195,26 +219,55 @@ export default function DailyJournal() {
 
   function handleCashCancel() {
     setEditingCashId(null);
+    setShowCashForm(false);
     setCashForm(createEmptyCashForm(selectedDate));
     setCashErrors([]);
   }
 
+  function handleCashDelete(entryId) {
+    setCashEntries((current) => current.filter((entry) => entry.id !== entryId));
+    if (editingCashId === entryId) {
+      handleCashCancel();
+    }
+  }
+
   function handleCommodityCancel() {
+    setEditingCommodityId(null);
+    setShowCommodityForm(false);
+    setCommodityForm(createEmptyCommodityForm(selectedDate));
+    setCommodityErrors([]);
+  }
+
+  function handleAddCommodityTransaction() {
     setEditingCommodityId(null);
     setCommodityForm(createEmptyCommodityForm(selectedDate));
     setCommodityErrors([]);
+    setShowCommodityForm(true);
+  }
+
+  function handleAddCashTransaction() {
+    setEditingCashId(null);
+    setCashForm(createEmptyCashForm(selectedDate));
+    setCashErrors([]);
+    setShowCashForm(true);
   }
 
   function handlePrint() {
     window.print();
   }
 
+  useEffect(() => {
+    setHeaderAddon(
+      <div className="journal-type-floating">
+        <JournalTypeSelector journalType={journalType} onChange={handleJournalTypeChange} t={t} />
+      </div>
+    );
+
+    return () => setHeaderAddon(null);
+  }, [journalType, selectedDate, setHeaderAddon, t]);
+
   return (
     <div className="page-grid">
-      <Card title={t('journal.journalType')} subtitle={t('journal.commodityJournalSubtitle')} className="journal-type-card">
-        <JournalTypeSelector journalType={journalType} onChange={handleJournalTypeChange} t={t} />
-      </Card>
-
       <Card>
         <div className="journal-date-search">
           <label>
@@ -256,25 +309,38 @@ export default function DailyJournal() {
             </Card>
           </div>
 
-          <Card
-            title={editingCashId ? t('journal.editingTitle') : t('journal.cashJournalTitle')}
-            subtitle={editingCashId ? t('journal.editingSubtitle') : t('journal.cashJournalSubtitle')}
-          >
-            <CashJournalForm
-              form={cashForm}
-              errors={cashErrors}
-              isEditing={Boolean(editingCashId)}
-              onChange={handleCashChange}
-              onSubmit={handleCashSubmit}
-              onCancel={handleCashCancel}
+          <Card title={t('journal.endOfDaySummary')} subtitle={t('journal.historySubtitle')}>
+            <div className="journal-table-toolbar">
+              <Button onClick={handleAddCashTransaction}>{t('journal.addTransaction')}</Button>
+            </div>
+            <CashJournalTable
+              entries={dailyCashEntries}
+              openingBalanceEntryId={openingBalanceEntry?.id}
+              onEdit={handleCashEdit}
+              onDelete={handleCashDelete}
               t={t}
-              statusLabel={statusLabel}
+              emptyMessage={t('journal.noTransactionsForDate')}
             />
           </Card>
 
-          <Card title={t('journal.endOfDaySummary')} subtitle={t('journal.historySubtitle')}>
-            <CashJournalTable entries={dailyCashEntries} onEdit={handleCashEdit} t={t} emptyMessage={t('journal.noTransactionsForDate')} />
-          </Card>
+          {showCashForm && (
+            <Card
+              className="journal-expandable-form"
+              title={editingCashId ? t('journal.editingTitle') : t('journal.cashJournalTitle')}
+              subtitle={editingCashId ? t('journal.editingSubtitle') : t('journal.cashJournalSubtitle')}
+            >
+              <CashJournalForm
+                form={cashForm}
+                errors={cashErrors}
+                isEditing={Boolean(editingCashId)}
+                onChange={handleCashChange}
+                onSubmit={handleCashSubmit}
+                onCancel={handleCashCancel}
+                t={t}
+                statusLabel={statusLabel}
+              />
+            </Card>
+          )}
 
           <PrintableDailyJournal
             entries={dailyCashEntries}
@@ -288,26 +354,10 @@ export default function DailyJournal() {
         <>
           <CommoditySummaryCards entries={dailyCommodityEntries} t={t} statusLabel={statusLabel} isArabic={isArabic} />
 
-          <Card
-            title={editingCommodityId ? t('journal.editingCommodityTitle') : t('journal.addCommodityTitle')}
-            subtitle={editingCommodityId ? t('journal.editingCommoditySubtitle') : t('journal.addCommoditySubtitle')}
-          >
-            <CommodityJournalForm
-              form={commodityForm}
-              errors={commodityErrors}
-              isEditing={Boolean(editingCommodityId)}
-              products={products}
-              units={commodityUnits}
-              isArabic={isArabic}
-              onChange={handleCommodityChange}
-              onSubmit={handleCommoditySubmit}
-              onCancel={handleCommodityCancel}
-              t={t}
-              statusLabel={statusLabel}
-            />
-          </Card>
-
           <Card title={t('journal.commodityJournalTitle')} subtitle={t('journal.commodityHistorySubtitle')}>
+            <div className="journal-table-toolbar">
+              <Button onClick={handleAddCommodityTransaction}>{t('journal.addTransaction')}</Button>
+            </div>
             <CommodityJournalTable
               entries={dailyCommodityEntries}
               onEdit={handleCommodityEdit}
@@ -317,6 +367,28 @@ export default function DailyJournal() {
               emptyMessage={t('journal.noTransactionsForDate')}
             />
           </Card>
+
+          {showCommodityForm && (
+            <Card
+              className="journal-expandable-form"
+              title={editingCommodityId ? t('journal.editingCommodityTitle') : t('journal.addCommodityTitle')}
+              subtitle={editingCommodityId ? t('journal.editingCommoditySubtitle') : t('journal.addCommoditySubtitle')}
+            >
+              <CommodityJournalForm
+                form={commodityForm}
+                errors={commodityErrors}
+                isEditing={Boolean(editingCommodityId)}
+                products={products}
+                units={commodityUnits}
+                isArabic={isArabic}
+                onChange={handleCommodityChange}
+                onSubmit={handleCommoditySubmit}
+                onCancel={handleCommodityCancel}
+                t={t}
+                statusLabel={statusLabel}
+              />
+            </Card>
+          )}
 
           <PrintableDailyJournal
             entries={dailyCommodityEntries}

@@ -93,7 +93,7 @@ export default function CommodityJournalForm({ form, errors, isEditing, products
       </label>
       <div className="form-grid__actions form-grid__actions--split">
         <Button type="submit">{isEditing ? t('journal.saveChanges') : t('journal.saveCommodityTransaction')}</Button>
-        {isEditing && <Button type="button" variant="secondary" onClick={onCancel}>{t('cancel')}</Button>}
+        <Button type="button" variant="secondary" onClick={onCancel}>{t('cancel')}</Button>
       </div>
     </form>
   );

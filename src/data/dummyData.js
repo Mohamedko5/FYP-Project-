@@ -63,6 +63,51 @@ export const warehouses = [
   },
 ];
 
+export const inventoryMovementHistory = [
+  {
+    id: 1,
+    warehouseId: 1,
+    warehouseName: 'Main Warehouse',
+    type: 'Add Stock',
+    product: 'White Sesame',
+    quantity: 120,
+    unit: 'Qintar',
+    date: '2026-06-01',
+    time: '10:30 AM',
+    adminName: 'Admin',
+    driverName: 'Hassan Adam',
+    notes: 'Received sesame from morning delivery.',
+  },
+  {
+    id: 2,
+    warehouseId: 1,
+    warehouseName: 'Main Warehouse',
+    type: 'Withdraw Stock',
+    product: 'Red Sesame',
+    quantity: 25,
+    unit: 'Qintar',
+    date: '2026-06-01',
+    time: '11:00 AM',
+    adminName: 'Admin',
+    driverName: '',
+    notes: 'Withdrawn for customer order preparation.',
+  },
+  {
+    id: 3,
+    warehouseId: 2,
+    warehouseName: 'North Store',
+    type: 'Add Stock',
+    product: 'Corn',
+    quantity: 80,
+    unit: 'Large Bag',
+    date: '2026-06-01',
+    time: '09:45 AM',
+    adminName: 'Admin',
+    driverName: 'Musa Ali',
+    notes: 'Corn received from northern farms.',
+  },
+];
+
 export const productUnitOptionsByProduct = {
   'White Sesame': [{ value: 'Qintar', label: 'Qintar (قنطار)' }],
   'Red Sesame': [{ value: 'Qintar', label: 'Qintar (قنطار)' }],

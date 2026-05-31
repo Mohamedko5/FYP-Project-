@@ -4,7 +4,7 @@ import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import WarehouseStockTable from './WarehouseStockTable.jsx';
 import { getAvailableCapacity, getUsagePercent, getUsedCapacity, getWarehouseStatus } from './warehouseUtils.js';
 
-export default function WarehouseDetails({ warehouse }) {
+export default function WarehouseDetails({ warehouse, actionSlot }) {
   const { t, isArabic } = useLanguage();
   if (!warehouse) return null;
 
@@ -55,7 +55,7 @@ export default function WarehouseDetails({ warehouse }) {
         <span style={{ width: `${usagePercent}%` }} />
       </div>
 
-      <p className="warehouse-details__notes">{warehouse.notes}</p>
+      {actionSlot && <div className="warehouse-details__actions">{actionSlot}</div>}
       <WarehouseStockTable stockItems={warehouse.storedProducts} warehouseCapacity={warehouse.capacity} />
     </div>
   );

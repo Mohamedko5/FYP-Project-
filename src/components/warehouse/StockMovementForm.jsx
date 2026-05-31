@@ -4,7 +4,7 @@ import { commodityProductLabels, commodityUnits } from '../../data/dummyData.js'
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import { getUnitOptions } from './warehouseUtils.js';
 
-export default function StockMovementForm({ form, errors, warehouses, products, unitRules, onChange, onSubmit }) {
+export default function StockMovementForm({ form, errors, warehouses, products, unitRules, onChange, onSubmit, onCancel }) {
   const { t, isArabic } = useLanguage();
   const unitOptions = useMemo(() => getUnitOptions(unitRules, form.product), [unitRules, form.product]);
 
@@ -87,8 +87,9 @@ export default function StockMovementForm({ form, errors, warehouses, products, 
         {t('warehouse.notes')}
         <textarea name="notes" value={form.notes} onChange={onChange} placeholder={t('warehouse.movementNotesPlaceholder')} />
       </label>
-      <div className="form-grid__actions">
+      <div className="form-grid__actions form-grid__actions--split">
         <Button type="submit">{t('warehouse.recordMovement')}</Button>
+        {onCancel && <Button type="button" variant="secondary" onClick={onCancel}>{t('cancel')}</Button>}
       </div>
     </form>
   );

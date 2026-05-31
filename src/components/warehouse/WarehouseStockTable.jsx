@@ -18,7 +18,6 @@ export default function WarehouseStockTable({ stockItems, warehouseCapacity }) {
 
   const columns = [
     { key: 'productName', label: t('common.productName'), render: (row) => productLabel(row.productName) },
-    { key: 'category', label: t('common.category') },
     { key: 'quantity', label: t('common.quantity'), render: (row) => Number(row.quantity).toLocaleString() },
     { key: 'unit', label: t('common.unit'), render: (row) => unitLabel(row.unit) },
     {

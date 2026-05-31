@@ -4,9 +4,8 @@ import { commodityProductLabels, commodityUnits } from '../../data/dummyData.js'
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import { getProductCategory, getUnitOptions } from './warehouseUtils.js';
 
-export default function StockForm({ form, errors, warning, warehouses, products, unitRules, onChange, onSubmit }) {
+export default function StockForm({ form, errors, warning, warehouses, products, unitRules, onChange, onSubmit, onCancel }) {
   const { t, isArabic } = useLanguage();
-  const selectedProduct = products.find((product) => product.name === form.product);
   const unitOptions = useMemo(() => getUnitOptions(unitRules, form.product), [unitRules, form.product]);
 
   function productLabel(productName) {
@@ -48,8 +47,14 @@ export default function StockForm({ form, errors, warning, warehouses, products,
         </select>
       </label>
       <label>
-        {t('common.category')}
-        <input name="category" value={selectedProduct?.category || form.category} onChange={onChange} readOnly />
+        {t('warehouse.driverName')}
+        <input
+          name="driverName"
+          type="text"
+          value={form.driverName}
+          onChange={onChange}
+          placeholder={t('warehouse.driverNamePlaceholder')}
+        />
       </label>
       <label>
         {t('common.quantity')}
@@ -69,8 +74,9 @@ export default function StockForm({ form, errors, warning, warehouses, products,
         {t('warehouse.notes')}
         <textarea name="notes" value={form.notes} onChange={onChange} placeholder={t('warehouse.stockNotesPlaceholder')} />
       </label>
-      <div className="form-grid__actions">
+      <div className="form-grid__actions form-grid__actions--split">
         <Button type="submit">{t('warehouse.addStock')}</Button>
+        {onCancel && <Button type="button" variant="secondary" onClick={onCancel}>{t('cancel')}</Button>}
       </div>
     </form>
   );
