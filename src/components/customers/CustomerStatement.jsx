@@ -2,12 +2,12 @@ import { formatCurrency } from '../../data/dummyData.js';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import { customerTypeLabel, productLabel, unitLabel } from './customerHelpers.js';
 
-export default function CustomerStatement({ customer, cashTransactions, commodityTransactions }) {
-  const { t, isArabic, statusLabel } = useLanguage();
+export default function CustomerStatement({ customer, cashTransactions, commodityTransactions, visible = false }) {
+  const { t, isArabic } = useLanguage();
   if (!customer) return null;
 
   return (
-    <section className="customer-statement print-only">
+    <section className={`customer-statement print-only ${visible ? 'customer-statement--visible' : ''}`}>
       <div className="statement-header">
         <div>
           <h1>{t('companyName')}</h1>
@@ -24,7 +24,6 @@ export default function CustomerStatement({ customer, cashTransactions, commodit
         <p><strong>{t('common.phone')}:</strong> {customer.phone}</p>
         <p><strong>{t('customers.address')}:</strong> {customer.address}</p>
         <p><strong>{t('customers.customerType')}:</strong> {customerTypeLabel(customer.customerType, isArabic)}</p>
-        <p><strong>{t('customers.debtStatus')}:</strong> {statusLabel(customer.status)}</p>
       </div>
 
       <h2>{t('customers.balanceSummary')}</h2>
@@ -42,7 +41,6 @@ export default function CustomerStatement({ customer, cashTransactions, commodit
             <th>{t('common.date')}</th>
             <th>{t('common.type')}</th>
             <th>{t('common.amount')}</th>
-            <th>{t('journal.lahuAlayh')}</th>
             <th>{t('common.description')}</th>
           </tr>
         </thead>
@@ -52,7 +50,6 @@ export default function CustomerStatement({ customer, cashTransactions, commodit
               <td>{row.date}</td>
               <td>{row.type}</td>
               <td>{formatCurrency(row.amount)}</td>
-              <td>{statusLabel(row.lahuWaAlayh)}</td>
               <td>{row.description}</td>
             </tr>
           ))}
@@ -68,7 +65,6 @@ export default function CustomerStatement({ customer, cashTransactions, commodit
             <th>{t('common.quantity')}</th>
             <th>{t('common.unit')}</th>
             <th>{t('customers.warehouseName')}</th>
-            <th>{t('journal.lahuAlayh')}</th>
           </tr>
         </thead>
         <tbody>
@@ -79,7 +75,6 @@ export default function CustomerStatement({ customer, cashTransactions, commodit
               <td>{row.quantity}</td>
               <td>{unitLabel(row.unit, isArabic)}</td>
               <td>{row.warehouseName}</td>
-              <td>{statusLabel(row.lahuWaAlayh)}</td>
             </tr>
           ))}
         </tbody>

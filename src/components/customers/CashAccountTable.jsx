@@ -1,4 +1,3 @@
-import StatusBadge from '../ui/StatusBadge.jsx';
 import Table from '../ui/Table.jsx';
 import { formatCurrency } from '../../data/dummyData.js';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
@@ -14,11 +13,10 @@ export default function CashAccountTable({ transactions }) {
 
   const columns = [
     { key: 'date', label: t('common.date') },
+    { key: 'time', label: t('common.time'), render: (row) => row.time || '-' },
     { key: 'type', label: t('common.type'), render: (row) => typeLabel[row.type] || row.type },
+    { key: 'customer', label: t('common.customerName') },
     { key: 'amount', label: t('common.amount'), render: (row) => formatCurrency(row.amount) },
-    { key: 'paidAmount', label: t('common.paidAmount'), render: (row) => formatCurrency(row.paidAmount) },
-    { key: 'remainingBalance', label: t('common.remainingBalance'), render: (row) => formatCurrency(row.remainingBalance) },
-    { key: 'lahuWaAlayh', label: t('journal.lahuAlayh'), render: (row) => <StatusBadge status={row.lahuWaAlayh === 'Balanced' ? 'Balanced' : row.lahuWaAlayh} /> },
     { key: 'source', label: t('customers.linkedRecord') },
     { key: 'description', label: t('common.description') },
   ];

@@ -246,6 +246,44 @@ export const customers = [
   },
 ];
 
+export const companyWorkers = [
+  {
+    id: 1,
+    name: 'Ahmed Hassan',
+    phone: '+249 91 445 2010',
+    workerType: 'Weighing Worker',
+    assignedWork: 'Truck weighing and scale recording',
+    status: 'Available',
+    notes: 'Responsible for morning weighing shifts.',
+    paymentHistory: [
+      { id: 1, date: '2026-06-02', time: '10:30 AM', warehouseName: 'Main Sesame Store', paymentMethod: 'Bag Based', numberOfBags: 120, pricePerBag: 150, totalPayment: 18000, adminName: 'Admin', notes: 'Morning weighing work' },
+      { id: 2, date: '2026-06-01', time: '09:45 AM', warehouseName: 'Main Sesame Store', paymentMethod: 'Bag Based', numberOfBags: 100, pricePerBag: 150, totalPayment: 15000, adminName: 'Admin', notes: 'Truck unloading support' },
+    ],
+  },
+  {
+    id: 2,
+    name: 'Musa Adam',
+    phone: '+249 92 330 1180',
+    workerType: 'General Worker',
+    assignedWork: 'Loading sesame and corn bags',
+    status: 'Available',
+    notes: 'Works with the warehouse loading team.',
+    paymentHistory: [
+      { id: 3, date: '2026-06-02', time: '11:15 AM', warehouseName: 'Corn Storage Yard', paymentMethod: 'Daily Wage', dailyWage: 13500, totalPayment: 13500, workDescription: 'Supervised store operations and shipment checking', adminName: 'Admin', notes: 'General daily operational support' },
+    ],
+  },
+  {
+    id: 3,
+    name: 'Osman Ali',
+    phone: '+249 90 760 4412',
+    workerType: 'Bag Carrying Workers',
+    assignedWork: 'Carrying jowal between store and truck',
+    status: 'Available',
+    notes: 'Available for heavy bag movement.',
+    paymentHistory: [],
+  },
+];
+
 export const paymentHistory = [
   { id: 1, date: '2026-05-17', customer: 'Al-Noor Trading', amount: 280000, method: 'Cash', note: 'Partial settlement' },
   { id: 2, date: '2026-05-14', customer: 'Central Market Buyer', amount: 70000, method: 'Bank Transfer', note: 'Remaining balance' },

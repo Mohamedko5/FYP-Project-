@@ -13,7 +13,7 @@ const navigationItems = [
   { path: '/reports', labelKey: 'routes.reports' },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ onLogout }) {
   const { t } = useLanguage();
 
   return (
@@ -38,6 +38,17 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      <div className="sidebar__footer">
+        <button className="sidebar__logout" type="button" onClick={onLogout}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 4H5v16h5" />
+            <path d="M14 8l4 4-4 4" />
+            <path d="M8 12h10" />
+          </svg>
+          <span>{t('logout')}</span>
+        </button>
+      </div>
     </aside>
   );
 }
