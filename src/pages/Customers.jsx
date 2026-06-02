@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
+import Tooltip from '../components/ui/Tooltip.jsx';
 import CustomerForm from '../components/customers/CustomerForm.jsx';
 import CustomerList from '../components/customers/CustomerList.jsx';
 import CustomerProfile from '../components/customers/CustomerProfile.jsx';
@@ -109,6 +110,7 @@ export default function Customers() {
   function openCustomerForm() {
     setFormErrors([]);
     setCustomerForm(createCustomerForm());
+    setSelectedCustomerId('');
     setShowCustomerForm(true);
   }
 
@@ -121,6 +123,7 @@ export default function Customers() {
   function openWorkerForm() {
     setWorkerErrors([]);
     setWorkerForm(createWorkerForm());
+    setSelectedWorkerId('');
     setShowWorkerForm(true);
   }
 
@@ -162,7 +165,7 @@ export default function Customers() {
     };
 
     setCustomerList((current) => [...current, newCustomer]);
-    setSelectedCustomerId(newCustomer.id);
+    setSelectedCustomerId('');
     setCustomerForm(createCustomerForm());
     setFormErrors([]);
     setShowCustomerForm(false);
@@ -194,7 +197,7 @@ export default function Customers() {
     };
 
     setWorkerList((current) => [...current, newWorker]);
-    setSelectedWorkerId(newWorker.id);
+    setSelectedWorkerId('');
     setWorkerForm(createWorkerForm());
     setWorkerErrors([]);
     setShowWorkerForm(false);
@@ -225,20 +228,24 @@ export default function Customers() {
   return (
     <div className="page-grid customers-page">
       <div className="customer-module-tabs">
-        <button
-          type="button"
-          className={`customer-module-tabs__button ${activeCustomerTab === 'business' ? 'is-active' : ''}`}
-          onClick={() => switchCustomerTab('business')}
-        >
-          {t('customers.businessCustomers')}
-        </button>
-        <button
-          type="button"
-          className={`customer-module-tabs__button ${activeCustomerTab === 'workers' ? 'is-active' : ''}`}
-          onClick={() => switchCustomerTab('workers')}
-        >
-          {t('customers.companyWorkers')}
-        </button>
+        <Tooltip content={t('tooltips.businessCustomers')}>
+          <button
+            type="button"
+            className={`customer-module-tabs__button ${activeCustomerTab === 'business' ? 'is-active' : ''}`}
+            onClick={() => switchCustomerTab('business')}
+          >
+            {t('customers.businessCustomers')}
+          </button>
+        </Tooltip>
+        <Tooltip content={t('tooltips.companyWorkers')}>
+          <button
+            type="button"
+            className={`customer-module-tabs__button ${activeCustomerTab === 'workers' ? 'is-active' : ''}`}
+            onClick={() => switchCustomerTab('workers')}
+          >
+            {t('customers.companyWorkers')}
+          </button>
+        </Tooltip>
       </div>
 
       {activeCustomerTab === 'business' && (

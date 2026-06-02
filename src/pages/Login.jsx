@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
+import Tooltip from '../components/ui/Tooltip.jsx';
 
 export default function Login({ onLogin }) {
   const navigate = useNavigate();
@@ -54,9 +55,11 @@ export default function Login({ onLogin }) {
     <main className="login-page" dir={direction} lang={language}>
       <section className="login-visual">
         <div className="login-visual__top">
-          <button className="language-toggle" type="button" onClick={toggleLanguage}>
-            {t('switchLanguage')}
-          </button>
+          <Tooltip content={t('tooltips.switchLanguage')}>
+            <button className="language-toggle" type="button" onClick={toggleLanguage}>
+              {t('switchLanguage')}
+            </button>
+          </Tooltip>
           <span>{dateTime}</span>
         </div>
 
@@ -129,9 +132,11 @@ export default function Login({ onLogin }) {
                 placeholder={t('login.passwordPlaceholder')}
                 autoComplete="current-password"
               />
-              <button type="button" onClick={() => setShowPassword((current) => !current)}>
-                {showPassword ? t('login.hidePassword') : t('login.showPassword')}
-              </button>
+              <Tooltip content={showPassword ? t('tooltips.hidePassword') : t('tooltips.showPassword')}>
+                <button type="button" onClick={() => setShowPassword((current) => !current)}>
+                  {showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                </button>
+              </Tooltip>
             </div>
           </label>
 
@@ -140,12 +145,16 @@ export default function Login({ onLogin }) {
               <input name="remember" type="checkbox" checked={form.remember} onChange={handleChange} />
               <span>{t('login.rememberMe')}</span>
             </label>
-            <button type="button" className="link-button">{t('login.forgotPassword')}</button>
+            <Tooltip content={t('tooltips.forgotPassword')}>
+              <button type="button" className="link-button">{t('login.forgotPassword')}</button>
+            </Tooltip>
           </div>
 
-          <button className="button button--primary login-submit" type="submit" disabled={isLoading}>
-            {isLoading ? t('login.loading') : t('login.loginButton')}
-          </button>
+          <Tooltip content={t('tooltips.login')}>
+            <button className="button button--primary login-submit" type="submit" disabled={isLoading}>
+              {isLoading ? t('login.loading') : t('login.loginButton')}
+            </button>
+          </Tooltip>
 
           <footer className="login-footer">
             <span>{t('companyName')}</span>

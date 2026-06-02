@@ -20,19 +20,6 @@ export default function Products() {
       <Card title={t('products.title')} subtitle={t('products.subtitle')}>
         <Table columns={columns} rows={products} />
       </Card>
-
-      <Card title={t('products.notesTitle')} subtitle={t('products.notesSubtitle')}>
-        <div className="note-grid">
-          <div>
-            <strong>{t('products.commodities')}</strong>
-            <p>{t('products.commoditiesText')}</p>
-          </div>
-          <div>
-            <strong>{t('products.packaging')}</strong>
-            <p>{t('products.packagingText')}</p>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 }

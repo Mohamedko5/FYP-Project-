@@ -20,8 +20,6 @@ export default function WorkerList({ workers, selectedWorkerId, onSelect }) {
     { key: 'name', label: t('customers.workerName') },
     { key: 'phone', label: t('common.phone') },
     { key: 'workerType', label: t('customers.workerType'), render: (row) => workerTypeLabel(row.workerType, isArabic) },
-    { key: 'assignedWork', label: t('customers.assignedWork') },
-    { key: 'notes', label: t('customers.workNotes') },
     {
       key: 'actions',
       label: t('common.action'),

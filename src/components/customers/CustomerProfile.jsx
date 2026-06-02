@@ -3,6 +3,7 @@ import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 import StatusBadge from '../ui/StatusBadge.jsx';
 import Table from '../ui/Table.jsx';
+import Tooltip from '../ui/Tooltip.jsx';
 import { formatCurrency } from '../../data/dummyData.js';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import CashAccountTable from './CashAccountTable.jsx';
@@ -88,11 +89,11 @@ export default function CustomerProfile({
     ? <img src={customer.photoUrl} alt={customer.name} />
     : <span>{customer.name.slice(0, 1).toUpperCase()}</span>;
   const profileSections = [
-    { key: 'cash', label: t('customers.addCashTransaction') },
-    { key: 'commodity', label: t('customers.addCommodityTransaction') },
-    { key: 'orders', label: t('customers.viewOrders') },
-    { key: 'payments', label: t('customers.viewPaymentHistory') },
-    { key: 'statement', label: t('customers.printStatement') },
+    { key: 'cash', label: t('customers.addCashTransaction'), tooltip: t('tooltips.addCashTransaction') },
+    { key: 'commodity', label: t('customers.addCommodityTransaction'), tooltip: t('tooltips.addCommodityTransaction') },
+    { key: 'orders', label: t('customers.viewOrders'), tooltip: t('tooltips.viewOrders') },
+    { key: 'payments', label: t('customers.viewPaymentHistory'), tooltip: t('tooltips.viewPayments') },
+    { key: 'statement', label: t('customers.printStatement'), tooltip: t('tooltips.printPdf') },
   ];
 
   function openSection(section) {
@@ -336,14 +337,15 @@ export default function CustomerProfile({
 
         <div className="customer-profile-tabs">
           {profileSections.map((section) => (
-            <button
-              key={section.key}
-              type="button"
-              className={`customer-profile-tabs__button ${activeSection === section.key ? 'is-active' : ''}`}
-              onClick={() => openSection(section.key)}
-            >
-              {section.label}
-            </button>
+            <Tooltip key={section.key} content={section.tooltip}>
+              <button
+                type="button"
+                className={`customer-profile-tabs__button ${activeSection === section.key ? 'is-active' : ''}`}
+                onClick={() => openSection(section.key)}
+              >
+                {section.label}
+              </button>
+            </Tooltip>
           ))}
         </div>
       </Card>

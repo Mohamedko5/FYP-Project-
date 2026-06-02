@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
+import Tooltip from '../ui/Tooltip.jsx';
 
 const pageTitles = {
   '/': 'routes.dashboard',
@@ -26,9 +27,11 @@ export default function Topbar({ headerAddon = null }) {
       </div>
       {headerAddon && <div className="topbar__addon">{headerAddon}</div>}
       <div className="topbar__meta">
-        <button className="language-toggle" type="button" onClick={toggleLanguage}>
-          {t('switchLanguage')}
-        </button>
+        <Tooltip content={t('tooltips.switchLanguage')}>
+          <button className="language-toggle" type="button" onClick={toggleLanguage}>
+            {t('switchLanguage')}
+          </button>
+        </Tooltip>
         <span>{t('admin')}</span>
         <strong>{new Date().toLocaleDateString()}</strong>
       </div>
