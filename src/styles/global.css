@@ -1685,6 +1685,15 @@ textarea {
   flex-wrap: wrap;
 }
 
+.warehouse-add-new-section--top {
+  margin-top: -4px;
+  margin-bottom: 2px;
+}
+
+.warehouse-inline-form {
+  margin-top: 6px;
+}
+
 [dir="rtl"] .warehouse-add-new-section {
   justify-content: flex-start;
 }

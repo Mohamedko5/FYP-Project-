@@ -13,7 +13,7 @@ const navigationItems = [
   { path: '/reports', labelKey: 'routes.reports' },
 ];
 
-export default function Sidebar({ onLogout }) {
+export default function Sidebar({ onLogout, onModuleNavigate }) {
   const { t } = useLanguage();
 
   return (
@@ -33,6 +33,7 @@ export default function Sidebar({ onLogout }) {
             to={item.path}
             end={item.path === '/'}
             className={({ isActive }) => `sidebar__link ${isActive ? 'is-active' : ''}`}
+            onClick={onModuleNavigate}
           >
             {t(item.labelKey)}
           </NavLink>

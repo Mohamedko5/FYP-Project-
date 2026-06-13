@@ -1,27 +1,27 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 import Table from '../components/ui/Table.jsx';
-import Tooltip from '../components/ui/Tooltip.jsx';
-import { formatCurrency, invoices, pendingCustomerRequests } from '../data/dummyData.js';
+import { formatCurrency, invoices, products } from '../data/dummyData.js';
+import { useCurrency } from '../i18n/CurrencyContext.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 
 const invoiceStorageKey = 'bayadIssuedInvoices';
 const orderStorageKey = 'bayadGeneratedOrders';
-const productOptions = ['Corn', 'White Sesame', 'Red Sesame', 'Plastic', 'Sacks / Khaysh', 'Dabara', 'Other'];
-const unitOptions = ['Qintar', 'Large Bag', 'Small Bag', 'kg', 'Bag / Jowal', 'Piece', 'Roll', 'Bundle', 'Bale', 'Other'];
-const paymentStatuses = ['Pending', 'Partially Paid', 'Paid'];
-const invoiceStatuses = ['Created', 'Printed', 'Completed', 'Cancelled'];
+const shipmentStorageKey = 'bayadShipments';
+const paymentStorageKey = 'bayadPaymentHistory';
 
-const initialFilters = {
-  productType: '',
-  status: '',
-  date: '',
-  search: '',
-};
+function getCurrentDateTime() {
+  const now = new Date();
+  return {
+    date: now.toISOString().slice(0, 10),
+    time: now.toTimeString().slice(0, 5),
+  };
+}
 
-function readStoredRows(key, fallback) {
+function readStoredRows(key, fallback = []) {
   try {
     const stored = JSON.parse(localStorage.getItem(key) || 'null');
     return Array.isArray(stored) && stored.length > 0 ? stored : fallback;
@@ -34,382 +34,307 @@ function writeStoredRows(key, rows) {
   localStorage.setItem(key, JSON.stringify(rows));
 }
 
-function createEmptyForm() {
+function normalizeInvoice(invoice) {
   return {
-    sourceRequestId: '',
-    orderSource: 'Admin Invoice',
-    invoiceNo: '',
-    customerName: '',
-    phone: '',
-    product: 'Corn',
-    quantity: '',
-    unit: 'Bag / Jowal',
-    price: '',
-    totalAmount: '',
-    paymentStatus: 'Pending',
-    notes: '',
-    adminName: 'Admin',
-  };
-}
-
-function getCurrentDateTime() {
-  const now = new Date();
-  return {
-    date: now.toISOString().slice(0, 10),
-    time: now.toTimeString().slice(0, 5),
-  };
-}
-
-function formatInvoiceNumber(invoiceDate, currentInvoices) {
-  const year = (invoiceDate || new Date().toISOString().slice(0, 10)).slice(0, 4);
-  const nextNumber = currentInvoices.length + 1;
-  return `INV-${year}-${String(nextNumber).padStart(4, '0')}`;
-}
-
-function formatOrderNumber(currentOrders) {
-  return `ORD-${String(currentOrders.length + 1).padStart(4, '0')}`;
-}
-
-function invoiceToOrder(invoice, currentOrders) {
-  const existingOrder = currentOrders.find((order) => order.invoiceNo === invoice.invoiceNo);
-  return {
-    id: existingOrder?.id || Date.now(),
-    orderNo: existingOrder?.orderNo || formatOrderNumber(currentOrders),
+    id: invoice.id,
     invoiceNo: invoice.invoiceNo,
-    customer: invoice.customerName,
-    phone: invoice.phone,
-    product: invoice.product,
-    quantity: invoice.quantity,
-    unit: invoice.unit,
-    orderSource: invoice.orderSource,
-    status: existingOrder?.status || 'Pending',
-    paymentStatus: invoice.paymentStatus,
-    shipmentStatus: existingOrder?.shipmentStatus || 'Pending',
-    orderDate: invoice.date,
-    orderTime: invoice.time,
-    totalAmount: invoice.totalAmount,
+    orderNo: invoice.orderNo || '',
+    customerName: invoice.customerName || invoice.personName || invoice.customer || '',
+    phone: invoice.phone || '',
+    product: invoice.product || invoice.productType || '',
+    quantity: Number(invoice.quantity || 0),
+    unit: invoice.unit || invoice.unitPackaging || 'Qintar',
+    price: Number(invoice.price || 0),
+    totalAmount: Number(invoice.totalAmount || 0),
+    currency: invoice.currency || 'SDG',
+    paymentStatus: invoice.paymentStatus === 'Pending' || invoice.paymentStatus === 'Partially Paid' ? 'Unpaid' : invoice.paymentStatus || 'Unpaid',
+    status: invoice.status === 'Created' || invoice.status === 'Printed' ? 'Issued' : invoice.status || 'Issued',
+    date: invoice.date,
+    time: invoice.time,
+    adminName: invoice.adminName || 'Admin',
     notes: invoice.notes || '',
   };
 }
 
-function upsertGeneratedOrder(invoice) {
-  const currentOrders = readStoredRows(orderStorageKey, []);
-  const nextOrder = invoiceToOrder(invoice, currentOrders);
-  const nextOrders = currentOrders.some((order) => order.invoiceNo === invoice.invoiceNo)
-    ? currentOrders.map((order) => (order.invoiceNo === invoice.invoiceNo ? { ...order, ...nextOrder } : order))
-    : [nextOrder, ...currentOrders];
+function seedInvoices() {
+  return invoices.map(normalizeInvoice);
+}
 
-  writeStoredRows(orderStorageKey, nextOrders);
+function shipmentIdFromInvoice(invoice) {
+  return `SHP-${invoice.invoiceNo.replace(/[^0-9]/g, '').slice(-6) || Date.now()}`;
+}
+
+function productPrice(productName) {
+  return Number(products.find((product) => product.name === productName)?.price || 0);
+}
+
+function formatInvoiceNumber(invoiceDate, currentInvoices) {
+  const year = invoiceDate.slice(0, 4);
+  return `INV-${year}-${String(currentInvoices.length + 1).padStart(4, '0')}`;
+}
+
+function createDraftFromOrder(order, currencyCode, currentInvoices) {
+  const timestamp = getCurrentDateTime();
+  const price = productPrice(order.product);
+  return {
+    id: '',
+    invoiceNo: formatInvoiceNumber(timestamp.date, currentInvoices),
+    orderNo: order.orderNo,
+    customerName: order.customer,
+    phone: order.phone || '',
+    product: order.product,
+    quantity: Number(order.quantity || 0),
+    unit: order.unit,
+    price,
+    totalAmount: Number(order.totalAmount || Number(order.quantity || 0) * price),
+    currency: currencyCode,
+    paymentStatus: 'Unpaid',
+    status: 'Issued',
+    adminName: 'Admin',
+    notes: order.notes || '',
+  };
 }
 
 export default function Invoices() {
   const { t } = useLanguage();
-  const [invoiceRows, setInvoiceRows] = useState(() => readStoredRows(invoiceStorageKey, invoices));
-  const [requestRows, setRequestRows] = useState(pendingCustomerRequests);
-  const [filters, setFilters] = useState(initialFilters);
-  const [showForm, setShowForm] = useState(false);
-  const [editingInvoiceId, setEditingInvoiceId] = useState(null);
-  const [form, setForm] = useState(createEmptyForm());
-  const [errors, setErrors] = useState([]);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const { currency } = useCurrency();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [invoiceRows, setInvoiceRows] = useState(() => readStoredRows(invoiceStorageKey, seedInvoices()).map(normalizeInvoice));
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
+  const [filter, setFilter] = useState('');
+  const [activeInvoiceTab, setActiveInvoiceTab] = useState('unpaid');
+  const [draftInvoice, setDraftInvoice] = useState(null);
 
+  const selectedInvoice = invoiceRows.find((invoice) => String(invoice.id) === String(selectedInvoiceId));
   const productLabel = (value) => t(`invoices.productTypes.${value}`) || value;
   const unitLabel = (value) => t(`invoices.unitPackagingOptions.${value}`) || value;
-  const sourceLabel = (value) => t(`orders.sources.${value}`) || value;
+
+  useEffect(() => {
+    const order = location.state?.orderForInvoice;
+    if (!order) return;
+
+    const existingInvoice = invoiceRows.find((invoice) => invoice.orderNo === order.orderNo);
+    if (existingInvoice) {
+      setSelectedInvoiceId(existingInvoice.id);
+    } else {
+      setSelectedInvoiceId('');
+      setDraftInvoice(createDraftFromOrder(order, currency, invoiceRows));
+    }
+    navigate('/invoices', { replace: true, state: null });
+  }, [currency, invoiceRows, location.state, navigate]);
+
+  const visibleInvoices = useMemo(() => {
+    if (activeInvoiceTab === 'paid') return invoiceRows.filter((invoice) => invoice.paymentStatus === 'Paid');
+    if (activeInvoiceTab === 'history') return invoiceRows;
+    return invoiceRows.filter((invoice) => invoice.paymentStatus !== 'Paid' && invoice.status !== 'Cancelled');
+  }, [activeInvoiceTab, invoiceRows]);
 
   const filteredInvoices = useMemo(() => {
-    const searchTerm = filters.search.trim().toLowerCase();
+    const search = filter.trim().toLowerCase();
+    if (!search) return visibleInvoices;
+    return visibleInvoices.filter((invoice) => `${invoice.invoiceNo} ${invoice.orderNo} ${invoice.customerName} ${invoice.product}`.toLowerCase().includes(search));
+  }, [filter, visibleInvoices]);
 
-    return invoiceRows.filter((invoice) => {
-      const matchesProduct = !filters.productType || invoice.product === filters.productType || invoice.productType === filters.productType;
-      const matchesStatus = !filters.status || invoice.status === filters.status;
-      const matchesDate = !filters.date || invoice.date === filters.date;
-      const searchableText = `${invoice.invoiceNo} ${invoice.customerName || invoice.personName} ${invoice.product || invoice.productType}`.toLowerCase();
-      const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
-
-      return matchesProduct && matchesStatus && matchesDate && matchesSearch;
-    });
-  }, [filters, invoiceRows]);
-
-  function normalizeInvoice(invoice) {
-    return {
-      ...invoice,
-      invoiceNo: invoice.invoiceNo,
-      customerName: invoice.customerName || invoice.personName || invoice.customer,
-      product: invoice.product || invoice.productType,
-      unit: invoice.unit || invoice.unitPackaging,
-      price: Number(invoice.price || 0),
-      quantity: Number(invoice.quantity || 0),
-      totalAmount: Number(invoice.totalAmount || 0),
-      paymentStatus: invoice.paymentStatus || 'Pending',
-      orderSource: invoice.orderSource || 'Admin Invoice',
-      status: invoice.status || 'Created',
-    };
+  function updateInvoices(nextRows) {
+    setInvoiceRows(nextRows);
+    writeStoredRows(invoiceStorageKey, nextRows);
   }
 
-  function updateFilter(event) {
-    const { name, value } = event.target;
-    setFilters((current) => ({ ...current, [name]: value }));
+  function updateStoredOrder(invoice, updates) {
+    const currentOrders = readStoredRows(orderStorageKey, []);
+    writeStoredRows(orderStorageKey, currentOrders.map((order) => (
+      order.orderNo === invoice.orderNo ? { ...order, ...updates } : order
+    )));
   }
 
-  function updateForm(event) {
+  function updateDraft(event) {
     const { name, value } = event.target;
-    setForm((current) => {
+    setDraftInvoice((current) => {
       const next = { ...current, [name]: value };
-      if (name === 'quantity' || name === 'price') {
-        const quantity = Number(name === 'quantity' ? value : next.quantity);
-        const price = Number(name === 'price' ? value : next.price);
-        next.totalAmount = quantity > 0 && price >= 0 ? quantity * price : '';
+      if (name === 'price' || name === 'quantity') {
+        next.totalAmount = Number(next.quantity || 0) * Number(next.price || 0);
       }
       return next;
     });
   }
 
-  function openCreateForm() {
-    setEditingInvoiceId(null);
-    setSelectedInvoice(null);
-    setErrors([]);
-    setForm(createEmptyForm());
-    setShowForm(true);
-  }
-
-  function openRequestInvoiceForm(request) {
-    const nextForm = createEmptyForm();
-    setEditingInvoiceId(null);
-    setSelectedInvoice(null);
-    setErrors([]);
-    setForm({
-      ...nextForm,
-      sourceRequestId: request.requestId,
-      orderSource: 'Mobile App Request',
-      customerName: request.customerName,
-      phone: request.phone,
-      product: request.product,
-      quantity: request.quantity,
-      unit: request.unit,
-      price: request.price,
-      totalAmount: Number(request.quantity) * Number(request.price),
-      notes: request.notes,
-    });
-    setShowForm(true);
-  }
-
-  function openEditForm(invoice) {
-    const normalizedInvoice = normalizeInvoice(invoice);
-    setEditingInvoiceId(invoice.id);
-    setSelectedInvoice(null);
-    setErrors([]);
-    setForm({
-      sourceRequestId: normalizedInvoice.sourceRequestId || '',
-      orderSource: normalizedInvoice.orderSource,
-      invoiceNo: normalizedInvoice.invoiceNo,
-      customerName: normalizedInvoice.customerName,
-      phone: normalizedInvoice.phone || '',
-      product: normalizedInvoice.product,
-      quantity: normalizedInvoice.quantity,
-      unit: normalizedInvoice.unit,
-      price: normalizedInvoice.price,
-      totalAmount: normalizedInvoice.totalAmount,
-      paymentStatus: normalizedInvoice.paymentStatus,
-      notes: normalizedInvoice.notes || '',
-      adminName: normalizedInvoice.adminName || 'Admin',
-    });
-    setShowForm(true);
-  }
-
-  function closeForm() {
-    setShowForm(false);
-    setEditingInvoiceId(null);
-    setErrors([]);
-    setForm(createEmptyForm());
-  }
-
-  function validateForm() {
-    const nextErrors = [];
-
-    if (!form.customerName.trim() || !form.product || !form.unit || !form.adminName.trim()) {
-      nextErrors.push(t('invoices.requiredFieldsError'));
-    }
-
-    if (Number(form.quantity) <= 0) nextErrors.push(t('invoices.quantityPositiveError'));
-    if (Number(form.price) < 0) nextErrors.push(t('invoices.pricePositiveError'));
-
-    setErrors(nextErrors);
-    return nextErrors.length === 0;
-  }
-
   function saveInvoice(event) {
     event.preventDefault();
-    if (!validateForm()) return;
-
-    let savedInvoice;
     const timestamp = getCurrentDateTime();
-    const baseInvoice = {
-      ...form,
+    const invoice = {
+      ...draftInvoice,
+      id: Date.now(),
+      quantity: Number(draftInvoice.quantity || 0),
+      price: Number(draftInvoice.price || 0),
+      totalAmount: Number(draftInvoice.totalAmount || 0),
       date: timestamp.date,
       time: timestamp.time,
-      invoiceNo: form.invoiceNo || formatInvoiceNumber(timestamp.date, invoiceRows),
-      quantity: Number(form.quantity),
-      price: Number(form.price || 0),
-      totalAmount: Number(form.totalAmount || Number(form.quantity) * Number(form.price || 0)),
-      status: 'Created',
+      paymentStatus: 'Unpaid',
+      status: 'Issued',
     };
-
-    const nextRows = editingInvoiceId
-      ? invoiceRows.map((invoice) => {
-          if (invoice.id !== editingInvoiceId) return invoice;
-          savedInvoice = { ...normalizeInvoice(invoice), ...baseInvoice };
-          return savedInvoice;
-        })
-      : [{ id: Date.now(), ...baseInvoice }, ...invoiceRows];
-
-    if (!editingInvoiceId) savedInvoice = nextRows[0];
-
-    setInvoiceRows(nextRows);
-    writeStoredRows(invoiceStorageKey, nextRows);
-    upsertGeneratedOrder(savedInvoice);
-    setSelectedInvoice(savedInvoice);
-
-    if (savedInvoice.sourceRequestId) {
-      setRequestRows((current) => current.map((request) => (
-        request.requestId === savedInvoice.sourceRequestId ? { ...request, status: 'Invoice Issued' } : request
-      )));
-    }
-
-    closeForm();
+    const nextRows = [invoice, ...invoiceRows];
+    updateInvoices(nextRows);
+    updateStoredOrder(invoice, {
+      invoiceNo: invoice.invoiceNo,
+      status: 'Invoiced',
+      paymentStatus: 'Unpaid',
+      totalAmount: invoice.totalAmount,
+      shipmentStatus: 'Not Ready',
+    });
+    setDraftInvoice(null);
+    setSelectedInvoiceId(invoice.id);
+    setActiveInvoiceTab('unpaid');
   }
 
-  function cancelInvoice(invoiceId) {
-    const nextRows = invoiceRows.map((invoice) => (
-      invoice.id === invoiceId ? { ...invoice, status: 'Cancelled', statusUpdatedDate: getCurrentDateTime().date, statusUpdatedTime: getCurrentDateTime().time } : invoice
+  function upsertReadyShipment(invoice) {
+    const currentShipments = readStoredRows(shipmentStorageKey, []);
+    if (currentShipments.some((shipment) => shipment.invoiceNo === invoice.invoiceNo)) return;
+    const timestamp = getCurrentDateTime();
+    const shipment = {
+      id: Date.now(),
+      shipmentId: shipmentIdFromInvoice(invoice),
+      invoiceNo: invoice.invoiceNo,
+      orderNo: invoice.orderNo,
+      customer: invoice.customerName,
+      product: invoice.product,
+      requestedQuantity: invoice.quantity,
+      unit: invoice.unit,
+      paymentStatus: 'Paid',
+      status: 'Ready for Shipment',
+      warehouseName: '',
+      actualQuantity: '',
+      numberOfBags: '',
+      totalWeight: '',
+      averageBagWeight: '',
+      driverName: '',
+      notes: invoice.notes || '',
+      date: timestamp.date,
+      time: timestamp.time,
+    };
+    writeStoredRows(shipmentStorageKey, [shipment, ...currentShipments]);
+  }
+
+  function recordPayment(invoice) {
+    const timestamp = getCurrentDateTime();
+    const payments = readStoredRows(paymentStorageKey, []);
+    writeStoredRows(paymentStorageKey, [
+      {
+        id: Date.now(),
+        invoiceNo: invoice.invoiceNo,
+        orderNo: invoice.orderNo,
+        customer: invoice.customerName,
+        amount: invoice.totalAmount,
+        currency,
+        date: timestamp.date,
+        time: timestamp.time,
+        type: 'Paid invoice for requested goods',
+        notes: invoice.notes || '',
+      },
+      ...payments,
+    ]);
+  }
+
+  function markAsPaid(invoice) {
+    const timestamp = getCurrentDateTime();
+    const paidInvoice = {
+      ...invoice,
+      paymentStatus: 'Paid',
+      status: 'Paid',
+      paidDate: timestamp.date,
+      paidTime: timestamp.time,
+    };
+    const nextRows = invoiceRows.map((row) => (row.id === invoice.id ? paidInvoice : row));
+    updateInvoices(nextRows);
+    setSelectedInvoiceId(invoice.id);
+    updateStoredOrder(invoice, {
+      status: 'Paid',
+      paymentStatus: 'Paid',
+      shipmentStatus: 'Ready for Shipment',
+      invoiceNo: invoice.invoiceNo,
+    });
+    recordPayment(paidInvoice);
+    upsertReadyShipment(paidInvoice);
+  }
+
+  function cancelInvoice(invoice) {
+    const timestamp = getCurrentDateTime();
+    const nextRows = invoiceRows.map((row) => (
+      row.id === invoice.id ? { ...row, status: 'Cancelled', statusUpdatedDate: timestamp.date, statusUpdatedTime: timestamp.time } : row
     ));
-    setInvoiceRows(nextRows);
-    writeStoredRows(invoiceStorageKey, nextRows);
-    setSelectedInvoice((current) => (
-      current?.id === invoiceId ? { ...current, status: 'Cancelled', statusUpdatedDate: getCurrentDateTime().date, statusUpdatedTime: getCurrentDateTime().time } : current
-    ));
+    updateInvoices(nextRows);
+    updateStoredOrder(invoice, { status: 'Pending', paymentStatus: 'Unpaid', shipmentStatus: 'Not Ready', invoiceNo: '' });
   }
 
   function printInvoice(invoice) {
-    const timestamp = getCurrentDateTime();
-    const printableInvoice = invoice.status === 'Created' ? { ...invoice, status: 'Printed', statusUpdatedDate: timestamp.date, statusUpdatedTime: timestamp.time } : invoice;
-    const nextRows = invoiceRows.map((row) => (
-      row.id === invoice.id && row.status === 'Created' ? printableInvoice : row
-    ));
-    setInvoiceRows(nextRows);
-    writeStoredRows(invoiceStorageKey, nextRows);
-    setSelectedInvoice(printableInvoice);
+    setSelectedInvoiceId(invoice.id);
     window.setTimeout(() => window.print(), 100);
   }
 
-  const requestColumns = [
-    { key: 'requestId', label: t('invoices.requestId') },
+  const columns = [
+    { key: 'invoiceNo', label: t('common.invoiceNumber') },
+    { key: 'orderNo', label: t('common.orderNumber') },
+    { key: 'date', label: t('common.date') },
+    { key: 'time', label: t('common.time') },
     { key: 'customerName', label: t('common.customerName') },
     { key: 'product', label: t('common.product'), render: (row) => productLabel(row.product) },
     { key: 'quantity', label: t('common.quantity') },
     { key: 'unit', label: t('common.unit'), render: (row) => unitLabel(row.unit) },
-    { key: 'requestDate', label: t('invoices.requestDate') },
-    { key: 'status', label: t('common.status'), render: (row) => <StatusBadge status={row.status} /> },
+    { key: 'totalAmount', label: t('common.totalAmount'), render: (row) => formatCurrency(row.totalAmount) },
+    { key: 'paymentStatus', label: t('orders.paymentStatus'), render: (row) => <StatusBadge status={row.paymentStatus} /> },
     {
       key: 'action',
       label: t('common.action'),
-      render: (row) => (
-        row.status === 'Invoice Issued'
-          ? <StatusBadge status="Invoice Issued" />
-          : <Button variant="secondary" onClick={() => openRequestInvoiceForm(row)}>{t('invoices.createInvoice')}</Button>
-      ),
+      render: (row) => <Button variant="secondary" onClick={() => setSelectedInvoiceId(row.id)}>{t('view')}</Button>,
     },
   ];
-
-  const columns = [
-    { key: 'invoiceNo', label: t('common.invoiceNumber') },
-    { key: 'date', label: t('common.date') },
-    { key: 'time', label: t('common.time') },
-    { key: 'customerName', label: t('common.customerName'), render: (row) => normalizeInvoice(row).customerName },
-    { key: 'product', label: t('common.product'), render: (row) => productLabel(normalizeInvoice(row).product) },
-    { key: 'quantity', label: t('common.quantity'), render: (row) => normalizeInvoice(row).quantity },
-    { key: 'unit', label: t('common.unit'), render: (row) => unitLabel(normalizeInvoice(row).unit) },
-    { key: 'price', label: t('common.price'), render: (row) => formatCurrency(normalizeInvoice(row).price) },
-    { key: 'totalAmount', label: t('common.totalAmount'), render: (row) => formatCurrency(normalizeInvoice(row).totalAmount) },
-    { key: 'paymentStatus', label: t('orders.paymentStatus'), render: (row) => <StatusBadge status={normalizeInvoice(row).paymentStatus} /> },
-    { key: 'status', label: t('common.status'), render: (row) => <StatusBadge status={row.status} /> },
-    {
-      key: 'actions',
-      label: t('common.action'),
-      render: (row) => (
-        <div className="table-action-group">
-          <Tooltip content={t('invoices.viewTooltip')}>
-            <button className="link-button" type="button" onClick={() => setSelectedInvoice(normalizeInvoice(row))}>{t('view')}</button>
-          </Tooltip>
-          <Tooltip content={t('tooltips.edit')}>
-            <button className="link-button" type="button" onClick={() => openEditForm(row)}>{t('edit')}</button>
-          </Tooltip>
-          <Tooltip content={t('invoices.printTooltip')}>
-            <button className="link-button" type="button" onClick={() => printInvoice(row)}>{t('invoices.print')}</button>
-          </Tooltip>
-          <Tooltip content={t('invoices.cancelTooltip')}>
-            <button className="link-button link-button--danger" type="button" onClick={() => cancelInvoice(row.id)}>{t('cancel')}</button>
-          </Tooltip>
-        </div>
-      ),
-    },
-  ];
-
-  const selected = selectedInvoice ? normalizeInvoice(selectedInvoice) : null;
 
   return (
     <div className="page-grid invoice-management-page">
-      <Card title={t('invoices.pendingRequestsTitle')} subtitle={t('invoices.pendingRequestsSubtitle')}>
-        <Table columns={requestColumns} rows={requestRows} emptyMessage={t('invoices.noRequests')} />
-      </Card>
-
-      <Card title={t('invoices.listTitle')} subtitle={t('invoices.listSubtitle')}>
+      <Card title={t('invoices.listTitle')} subtitle={t('invoices.billWorkflowSubtitle')}>
         <div className="workflow-toolbar">
           <div>
             <h3>{t('invoices.managementTitle')}</h3>
-            <p>{t('invoices.managementSubtitle')}</p>
+            <p>{t('invoices.paymentRequiredSubtitle')}</p>
           </div>
-          <Button onClick={openCreateForm} tooltip={t('invoices.createTooltip')}>
-            {t('invoices.createNewInvoice')}
-          </Button>
+          <label className="invoice-filter-grid__search">
+            {t('invoices.search')}
+            <input type="search" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder={t('invoices.searchPlaceholder')} />
+          </label>
+        </div>
+        <div className="customer-module-tabs shipment-tabs">
+          <button className={`customer-module-tabs__button ${activeInvoiceTab === 'unpaid' ? 'is-active' : ''}`} onClick={() => setActiveInvoiceTab('unpaid')}>{t('invoices.unpaidInvoices')}</button>
+          <button className={`customer-module-tabs__button ${activeInvoiceTab === 'paid' ? 'is-active' : ''}`} onClick={() => setActiveInvoiceTab('paid')}>{t('invoices.paidInvoices')}</button>
+          <button className={`customer-module-tabs__button ${activeInvoiceTab === 'history' ? 'is-active' : ''}`} onClick={() => setActiveInvoiceTab('history')}>{t('invoices.invoiceHistory')}</button>
         </div>
 
-        <div className="report-filter-grid invoice-filter-grid">
-          <label>{t('invoices.productType')}<select name="productType" value={filters.productType} onChange={updateFilter}><option value="">{t('invoices.allProducts')}</option>{productOptions.map((product) => <option key={product} value={product}>{productLabel(product)}</option>)}</select></label>
-          <label>{t('common.status')}<select name="status" value={filters.status} onChange={updateFilter}><option value="">{t('invoices.allStatuses')}</option>{invoiceStatuses.map((status) => <option key={status} value={status}>{t(`status.${status}`)}</option>)}</select></label>
-          <label>{t('common.date')}<input name="date" type="date" value={filters.date} onChange={updateFilter} /></label>
-          <label className="invoice-filter-grid__search">{t('invoices.search')}<input name="search" type="search" value={filters.search} onChange={updateFilter} placeholder={t('invoices.searchPlaceholder')} /></label>
-        </div>
-
-        {showForm && (
+        {draftInvoice && (
           <form className="section-panel invoice-form" onSubmit={saveInvoice}>
             <div className="section-panel__header">
               <div>
-                <h3>{editingInvoiceId ? t('invoices.editTitle') : t('invoices.createTitle')}</h3>
-                <p>{form.sourceRequestId ? t('invoices.mobileRequestInvoiceSubtitle') : t('invoices.formSubtitle')}</p>
+                <h3>{t('invoices.createTitle')}</h3>
+                <p>{t('invoices.formSubtitle')}</p>
               </div>
-              <span className="muted-text">{form.invoiceNo || t('invoices.invoiceNumberGenerated')}</span>
+              <span className="muted-text">{draftInvoice.invoiceNo}</span>
             </div>
-
-            {errors.length > 0 && <div className="form-error">{errors.map((error) => <p key={error}>{error}</p>)}</div>}
-
             <div className="form-grid">
-              <label>{t('common.invoiceNumber')}<input name="invoiceNo" value={form.invoiceNo || t('invoices.autoGenerated')} readOnly /></label>
-              <label>{t('common.customerName')}<input name="customerName" value={form.customerName} onChange={updateForm} placeholder={t('common.customerName')} /></label>
-              <label>{t('common.phone')}<input name="phone" value={form.phone} onChange={updateForm} placeholder={t('common.phone')} /></label>
-              <label>{t('common.product')}<select name="product" value={form.product} onChange={updateForm}>{productOptions.map((product) => <option key={product} value={product}>{productLabel(product)}</option>)}</select></label>
-              <label>{t('common.quantity')}<input name="quantity" type="number" min="1" value={form.quantity} onChange={updateForm} placeholder="0" /></label>
-              <label>{t('common.unit')}<select name="unit" value={form.unit} onChange={updateForm}>{unitOptions.map((unit) => <option key={unit} value={unit}>{unitLabel(unit)}</option>)}</select></label>
-              <label>{t('common.price')}<input name="price" type="number" min="0" value={form.price} onChange={updateForm} placeholder="0" /></label>
-              <label>{t('common.totalAmount')}<input name="totalAmount" type="number" min="0" value={form.totalAmount} onChange={updateForm} placeholder="0" /></label>
-              <label>{t('orders.paymentStatus')}<select name="paymentStatus" value={form.paymentStatus} onChange={updateForm}>{paymentStatuses.map((status) => <option key={status} value={status}>{t(`status.${status}`)}</option>)}</select></label>
-              <label>{t('invoices.adminName')}<input name="adminName" value={form.adminName} onChange={updateForm} placeholder={t('invoices.adminNamePlaceholder')} /></label>
-              <label className="form-grid--wide">{t('invoices.notes')}<textarea name="notes" value={form.notes} onChange={updateForm} placeholder={t('invoices.notesPlaceholder')} /></label>
+              <label>{t('common.invoiceNumber')}<input value={draftInvoice.invoiceNo} readOnly /></label>
+              <label>{t('common.orderNumber')}<input value={draftInvoice.orderNo} readOnly /></label>
+              <label>{t('common.customerName')}<input value={draftInvoice.customerName} readOnly /></label>
+              <label>{t('common.phone')}<input name="phone" value={draftInvoice.phone} onChange={updateDraft} /></label>
+              <label>{t('common.product')}<input value={productLabel(draftInvoice.product)} readOnly /></label>
+              <label>{t('common.quantity')}<input name="quantity" type="number" min="1" value={draftInvoice.quantity} onChange={updateDraft} /></label>
+              <label>{t('common.unit')}<input value={unitLabel(draftInvoice.unit)} readOnly /></label>
+              <label>{t('common.price')}<input name="price" type="number" min="0" value={draftInvoice.price} onChange={updateDraft} /></label>
+              <label>{t('common.totalAmount')}<input value={draftInvoice.totalAmount} readOnly /></label>
+              <label>{t('currency.label')}<input value={draftInvoice.currency} readOnly /></label>
+              <label>{t('orders.paymentStatus')}<input value={t('status.Unpaid')} readOnly /></label>
+              <label>{t('invoices.adminName')}<input name="adminName" value={draftInvoice.adminName} onChange={updateDraft} /></label>
+              <label className="form-grid--wide">{t('invoices.notes')}<textarea name="notes" value={draftInvoice.notes} onChange={updateDraft} /></label>
             </div>
-
             <div className="workflow-actions">
-              <Button type="submit" tooltip={t('tooltips.saveTransaction')}>{editingInvoiceId ? t('invoices.updateInvoice') : t('invoices.issueInvoice')}</Button>
-              <Button variant="secondary" onClick={closeForm} tooltip={t('tooltips.cancel')}>{t('cancel')}</Button>
+              <Button type="submit">{t('invoices.saveInvoice')}</Button>
+              <Button type="button" variant="secondary" onClick={() => setDraftInvoice(null)}>{t('cancel')}</Button>
             </div>
           </form>
         )}
@@ -417,53 +342,59 @@ export default function Invoices() {
         <Table columns={columns} rows={filteredInvoices} emptyMessage={t('invoices.noInvoices')} />
       </Card>
 
-      {selected && (
-        <Card title={t('invoices.previewTitle')} subtitle={t('invoices.previewSubtitle')}>
+      {selectedInvoice && (
+        <Card title={t('invoices.previewTitle')} subtitle={selectedInvoice.invoiceNo}>
           <div className="invoice-preview-actions no-print">
-            <Button onClick={() => printInvoice(selected)} tooltip={t('invoices.printTooltip')}>{t('invoices.printInvoice')}</Button>
-            <Button variant="secondary" onClick={() => setSelectedInvoice(null)} tooltip={t('tooltips.cancel')}>{t('invoices.closePreview')}</Button>
+            <Button onClick={() => printInvoice(selectedInvoice)}>{t('reports.printPdf')}</Button>
+            {selectedInvoice.paymentStatus !== 'Paid' && selectedInvoice.status !== 'Cancelled' && (
+              <Button variant="secondary" onClick={() => markAsPaid(selectedInvoice)}>{t('invoices.markAsPaid')}</Button>
+            )}
+            {selectedInvoice.status !== 'Cancelled' && selectedInvoice.paymentStatus !== 'Paid' && (
+              <Button variant="secondary" onClick={() => cancelInvoice(selectedInvoice)}>{t('cancel')}</Button>
+            )}
+            <Button variant="secondary" onClick={() => setSelectedInvoiceId('')}>{t('invoices.closePreview')}</Button>
           </div>
 
-          <div className="invoice-print-page">
+          <div className="invoice-print-page print-area">
             <article className="invoice-document">
               <header className="invoice-document__header">
                 <div><strong>{t('companyName')}</strong><span>{t('invoices.systemName')}</span></div>
-                <div className="invoice-document__meta"><span>{t('invoices.officialInvoice')}</span><strong>{selected.invoiceNo}</strong></div>
+                <div className="invoice-document__meta"><span>{t('invoices.officialInvoice')}</span><strong>{selectedInvoice.invoiceNo}</strong></div>
               </header>
 
               <section className="invoice-document__section invoice-document__summary">
-                <div><span>{t('common.date')}</span><strong>{selected.date}</strong></div>
-                <div><span>{t('common.time')}</span><strong>{selected.time}</strong></div>
-                <div><span>{t('orders.orderSource')}</span><strong>{sourceLabel(selected.orderSource)}</strong></div>
-                <div><span>{t('orders.paymentStatus')}</span><StatusBadge status={selected.paymentStatus} /></div>
+                <div><span>{t('common.orderNumber')}</span><strong>{selectedInvoice.orderNo || '-'}</strong></div>
+                <div><span>{t('common.date')}</span><strong>{selectedInvoice.date}</strong></div>
+                <div><span>{t('common.time')}</span><strong>{selectedInvoice.time}</strong></div>
+                <div><span>{t('currency.label')}</span><strong>{selectedInvoice.currency || currency}</strong></div>
+                <div><span>{t('orders.paymentStatus')}</span><StatusBadge status={selectedInvoice.paymentStatus} /></div>
               </section>
 
               <section className="invoice-document__section">
                 <h3>{t('invoices.personDetails')}</h3>
                 <div className="invoice-document__grid">
-                  <div><span>{t('common.customerName')}</span><strong>{selected.customerName}</strong></div>
-                  <div><span>{t('common.phone')}</span><strong>{selected.phone || '-'}</strong></div>
-                  <div><span>{t('invoices.adminName')}</span><strong>{selected.adminName}</strong></div>
-                  <div><span>{t('common.status')}</span><StatusBadge status={selected.status} /></div>
+                  <div><span>{t('common.customerName')}</span><strong>{selectedInvoice.customerName}</strong></div>
+                  <div><span>{t('common.phone')}</span><strong>{selectedInvoice.phone || '-'}</strong></div>
+                  <div><span>{t('invoices.adminName')}</span><strong>{selectedInvoice.adminName}</strong></div>
+                  <div><span>{t('common.status')}</span><StatusBadge status={selectedInvoice.status} /></div>
                 </div>
               </section>
 
               <section className="invoice-document__section">
                 <h3>{t('invoices.productDetails')}</h3>
                 <div className="invoice-document__grid">
-                  <div><span>{t('common.product')}</span><strong>{productLabel(selected.product)}</strong></div>
-                  <div><span>{t('common.quantity')}</span><strong>{selected.quantity}</strong></div>
-                  <div><span>{t('common.unit')}</span><strong>{unitLabel(selected.unit)}</strong></div>
-                  <div><span>{t('common.price')}</span><strong>{formatCurrency(selected.price)}</strong></div>
-                  <div><span>{t('common.totalAmount')}</span><strong>{formatCurrency(selected.totalAmount)}</strong></div>
-                  <div><span>{t('invoices.notes')}</span><strong>{selected.notes || t('warehouse.noNotes')}</strong></div>
+                  <div><span>{t('common.product')}</span><strong>{productLabel(selectedInvoice.product)}</strong></div>
+                  <div><span>{t('common.quantity')}</span><strong>{selectedInvoice.quantity}</strong></div>
+                  <div><span>{t('common.unit')}</span><strong>{unitLabel(selectedInvoice.unit)}</strong></div>
+                  <div><span>{t('common.price')}</span><strong>{formatCurrency(selectedInvoice.price)}</strong></div>
+                  <div><span>{t('common.totalAmount')}</span><strong>{formatCurrency(selectedInvoice.totalAmount)}</strong></div>
+                  <div><span>{t('invoices.notes')}</span><strong>{selectedInvoice.notes || t('warehouse.noNotes')}</strong></div>
                 </div>
               </section>
 
               <footer className="invoice-document__signatures">
                 <div><span>{t('invoices.adminSignature')}</span><strong>{t('invoices.signatureLine')}</strong></div>
-                <div><span>{t('invoices.companyStamp')}</span><strong>{t('invoices.signatureLine')}</strong></div>
-                <div><span>{t('invoices.personSignature')}</span><strong>{t('invoices.signatureLine')}</strong></div>
+                <div><span>{t('invoices.customerSignature')}</span><strong>{t('invoices.signatureLine')}</strong></div>
               </footer>
             </article>
           </div>

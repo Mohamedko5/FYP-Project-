@@ -386,7 +386,27 @@ export default function WarehouseInventory() {
           )}
         </div>
 
-        {!selectedWarehouse ? (
+        <div className="warehouse-add-new-section warehouse-add-new-section--top">
+          {activeForm !== 'warehouse' && (
+            <Button variant="secondary" onClick={openWarehouseForm}>{t('warehouse.actionAddNewWarehouse')}</Button>
+          )}
+        </div>
+
+        {activeForm === 'warehouse' ? (
+          <div className="warehouse-inline-form">
+            <Card className="warehouse-action-form" title={t('warehouse.addWarehouseTitle')} subtitle={t('warehouse.addWarehouseSubtitle')}>
+              <WarehouseForm
+                form={warehouseForm}
+                errors={warehouseErrors}
+                products={products}
+                unitRules={warehouseUnitOptionsByProduct}
+                onChange={handleWarehouseChange}
+                onSubmit={handleAddWarehouse}
+                onCancel={closeActiveForm}
+              />
+            </Card>
+          </div>
+        ) : !selectedWarehouse ? (
           <div className="warehouse-empty-state">{t('warehouse.selectWarehousePrompt')}</div>
         ) : (
           <>
@@ -438,26 +458,6 @@ export default function WarehouseInventory() {
             warehouse={selectedWarehouse}
             onChange={handleWithdrawChange}
             onSubmit={handleWithdrawSubmit}
-            onCancel={closeActiveForm}
-          />
-        </Card>
-      )}
-
-      <div className="warehouse-add-new-section">
-        {activeForm !== 'warehouse' && (
-          <Button variant="secondary" onClick={openWarehouseForm}>{t('warehouse.actionAddNewWarehouse')}</Button>
-        )}
-      </div>
-
-      {activeForm === 'warehouse' && (
-        <Card className="warehouse-action-form" title={t('warehouse.addWarehouseTitle')} subtitle={t('warehouse.addWarehouseSubtitle')}>
-          <WarehouseForm
-            form={warehouseForm}
-            errors={warehouseErrors}
-            products={products}
-            unitRules={warehouseUnitOptionsByProduct}
-            onChange={handleWarehouseChange}
-            onSubmit={handleAddWarehouse}
             onCancel={closeActiveForm}
           />
         </Card>

@@ -1,188 +1,148 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 import Table from '../components/ui/Table.jsx';
-import { invoices } from '../data/dummyData.js';
+import { formatCurrency, orders } from '../data/dummyData.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 
 const orderStorageKey = 'bayadGeneratedOrders';
 
-function readStoredOrders() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(orderStorageKey) || 'null');
-    if (Array.isArray(stored) && stored.length > 0) return stored.map(normalizeOrder);
-  } catch {
-    // Use invoice-seeded orders below when localStorage is not readable.
-  }
-
-  return invoices.map((invoice, index) => ({
-    id: invoice.id,
-    orderNo: invoice.orderNo || `ORD-${String(index + 1).padStart(4, '0')}`,
-    invoiceNo: invoice.invoiceNo,
-    customer: invoice.customerName || invoice.personName || invoice.customer,
-    phone: invoice.phone,
-    product: invoice.product || invoice.productType,
-    quantity: invoice.quantity,
-    unit: invoice.unit || invoice.unitPackaging,
-    orderSource: invoice.orderSource || 'Admin Invoice',
-    status: invoice.status === 'Completed' ? 'Completed' : 'Pending',
-    paymentStatus: invoice.paymentStatus || 'Pending',
-    shipmentStatus: 'Pending',
-    orderDate: invoice.date,
-    totalAmount: invoice.totalAmount || 0,
-    notes: invoice.notes || '',
-  }));
-}
-
-function normalizeOrder(order) {
-  const statusMap = {
-    Created: 'Pending',
-    Approved: 'Confirmed',
-    'Sent to Weighing': 'Processing',
-    'In Transit': 'Shipped',
-  };
-
-  return {
-    ...order,
-    status: statusMap[order.status] || order.status || 'Pending',
-  };
-}
-
-function writeStoredOrders(rows) {
-  localStorage.setItem(orderStorageKey, JSON.stringify(rows));
-}
-
 function getCurrentDateTime() {
   const now = new Date();
   return {
-    statusUpdatedDate: now.toISOString().slice(0, 10),
-    statusUpdatedTime: now.toTimeString().slice(0, 5),
+    date: now.toISOString().slice(0, 10),
+    time: now.toTimeString().slice(0, 5),
   };
+}
+
+function readStoredRows(key, fallback = []) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(key) || 'null');
+    return Array.isArray(stored) && stored.length > 0 ? stored : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStoredRows(key, rows) {
+  localStorage.setItem(key, JSON.stringify(rows));
+}
+
+function normalizeOrder(order, index = 0) {
+  const statusMap = {
+    Created: 'Pending',
+    Approved: 'Pending',
+    Confirmed: 'Pending',
+    Processing: 'Ready for Shipment',
+    Shipped: 'Completed',
+  };
+  const timestamp = getCurrentDateTime();
+
+  return {
+    id: order.id || Date.now() + index,
+    orderNo: order.orderNo || `ORD-${String(index + 1).padStart(4, '0')}`,
+    invoiceNo: order.invoiceNo || '',
+    customer: order.customer || order.customerName || order.personName || '',
+    phone: order.phone || '',
+    product: order.product || order.productType || '',
+    quantity: Number(String(order.quantity || '').match(/\d+/)?.[0] || order.quantity || 0),
+    unit: order.unit || order.unitPackaging || 'Qintar',
+    orderDate: order.orderDate || order.date || timestamp.date,
+    orderTime: order.orderTime || order.time || timestamp.time,
+    status: statusMap[order.status] || order.status || 'Pending',
+    paymentStatus: order.paymentStatus || 'Unpaid',
+    shipmentStatus: order.shipmentStatus || 'Not Ready',
+    totalAmount: Number(order.totalAmount || 0),
+    notes: order.notes || order.customerNote || '',
+  };
+}
+
+function seedOrders() {
+  return orders.map(normalizeOrder);
 }
 
 export default function Orders() {
   const { t } = useLanguage();
-  const [orderRows, setOrderRows] = useState(readStoredOrders);
+  const navigate = useNavigate();
+  const [orderRows, setOrderRows] = useState(() => readStoredRows(orderStorageKey, seedOrders()).map(normalizeOrder));
   const [selectedOrderId, setSelectedOrderId] = useState('');
+  const [activeTab, setActiveTab] = useState('pending');
 
   const selectedOrder = orderRows.find((order) => String(order.id) === String(selectedOrderId));
-  const statusCounts = {
-    total: orderRows.length,
-    created: orderRows.filter((order) => order.status === 'Pending').length,
-    approved: orderRows.filter((order) => order.status === 'Confirmed').length,
-    completed: orderRows.filter((order) => order.status === 'Completed').length,
-  };
-
   const productLabel = (value) => t(`invoices.productTypes.${value}`) || value;
   const unitLabel = (value) => t(`invoices.unitPackagingOptions.${value}`) || value;
-  const sourceLabel = (value) => t(`orders.sources.${value}`) || value;
+  const canCreateInvoice = (order) => !['Paid', 'Ready for Shipment', 'Completed', 'Cancelled'].includes(order.status);
 
-  function updateOrder(orderId, updates) {
-    const timestamp = getCurrentDateTime();
-    const nextRows = orderRows.map((order) => (
-      String(order.id) === String(orderId) ? { ...order, ...updates, ...timestamp } : order
-    ));
+  const filteredOrders = useMemo(() => {
+    if (activeTab === 'paid') return orderRows.filter((order) => order.status === 'Paid' || order.status === 'Ready for Shipment');
+    if (activeTab === 'completed') return orderRows.filter((order) => order.status === 'Completed');
+    return orderRows.filter((order) => !['Paid', 'Ready for Shipment', 'Completed', 'Cancelled'].includes(order.status));
+  }, [activeTab, orderRows]);
+
+  function updateOrders(nextRows) {
     setOrderRows(nextRows);
-    writeStoredOrders(nextRows);
+    writeStoredRows(orderStorageKey, nextRows);
   }
 
-  function approveOrder(order) {
-    updateOrder(order.id, { status: 'Confirmed' });
-  }
-
-  function sendToWeighing(order) {
-    updateOrder(order.id, {
-      status: 'Processing',
-      shipmentStatus: 'Pending Weighing',
-    });
-  }
-
-  function markShipped(order) {
-    updateOrder(order.id, {
-      status: 'Shipped',
-      shipmentStatus: 'Shipped',
-    });
-  }
-
-  function markCompleted(order) {
-    updateOrder(order.id, {
-      status: 'Completed',
-      shipmentStatus: order.shipmentStatus === 'Pending' ? 'Completed' : order.shipmentStatus,
-      paymentStatus: order.paymentStatus === 'Pending' ? 'Paid' : order.paymentStatus,
-    });
-  }
-
-  function cancelOrder(order) {
-    updateOrder(order.id, { status: 'Cancelled' });
-  }
-
-  function orderActions(order) {
-    const actions = [];
-    if (order.status === 'Pending') actions.push({ label: t('orders.approveOrder'), onClick: () => approveOrder(order) });
-    if (order.status === 'Confirmed') actions.push({ label: t('orders.sendToShipment'), onClick: () => sendToWeighing(order) });
-    if (order.status === 'Processing') actions.push({ label: t('orders.markShipped'), onClick: () => markShipped(order) });
-    if (['Processing', 'Shipped'].includes(order.status)) actions.push({ label: t('orders.markCompleted'), onClick: () => markCompleted(order) });
-    if (!['Completed', 'Cancelled'].includes(order.status)) actions.push({ label: t('orders.cancelOrder'), onClick: () => cancelOrder(order), variant: 'secondary' });
-    return actions;
+  function openInvoiceDraft(order) {
+    writeStoredRows(orderStorageKey, orderRows);
+    navigate('/invoices', { state: { orderForInvoice: order } });
   }
 
   const columns = [
-    { key: 'orderNo', label: t('orders.orderId') },
-    { key: 'invoiceNo', label: t('common.invoiceNumber') },
+    { key: 'orderNo', label: t('common.orderNumber') },
     { key: 'customer', label: t('common.customerName') },
     { key: 'product', label: t('common.product'), render: (row) => productLabel(row.product) },
     { key: 'quantity', label: t('common.quantity') },
     { key: 'unit', label: t('common.unit'), render: (row) => unitLabel(row.unit) },
-    { key: 'orderSource', label: t('orders.orderSource'), render: (row) => sourceLabel(row.orderSource) },
+    { key: 'orderDate', label: t('common.date') },
+    { key: 'orderTime', label: t('common.time') },
     { key: 'status', label: t('orders.orderStatus'), render: (row) => <StatusBadge status={row.status} /> },
-    { key: 'paymentStatus', label: t('orders.paymentStatus'), render: (row) => <StatusBadge status={row.paymentStatus} /> },
-    { key: 'shipmentStatus', label: t('orders.shipmentStatus'), render: (row) => <StatusBadge status={row.shipmentStatus} /> },
     {
       key: 'action',
       label: t('common.action'),
       render: (row) => (
-        <Button variant="secondary" onClick={() => setSelectedOrderId(row.id)}>
-          {t('orders.viewOrder')}
-        </Button>
+        <div className="table-action-group">
+          <Button variant="secondary" onClick={() => setSelectedOrderId(row.id)}>{t('orders.viewOrder')}</Button>
+          {canCreateInvoice(row) && (
+            <Button onClick={() => openInvoiceDraft(row)}>{t('invoices.createInvoice')}</Button>
+          )}
+        </div>
       ),
     },
   ];
 
   return (
     <div className="page-grid workflow-page">
-      <div className="summary-grid summary-grid--four">
-        <Card className="summary-card"><p>{t('orders.totalOrders')}</p><strong>{statusCounts.total}</strong></Card>
-        <Card className="summary-card"><p>{t('orders.createdOrders')}</p><strong>{statusCounts.created}</strong></Card>
-        <Card className="summary-card"><p>{t('orders.approvedOrders')}</p><strong>{statusCounts.approved}</strong></Card>
-        <Card className="summary-card"><p>{t('orders.completedOrders')}</p><strong>{statusCounts.completed}</strong></Card>
-      </div>
-
-      <Card title={t('orders.listTitle')} subtitle={t('orders.invoiceGeneratedSubtitle')}>
-        <Table columns={columns} rows={orderRows} emptyMessage={t('orders.noInvoiceOrders')} />
+      <Card title={t('orders.listTitle')} subtitle={t('orders.customerOrderSubtitle')}>
+        <div className="customer-module-tabs shipment-tabs">
+          <button className={`customer-module-tabs__button ${activeTab === 'pending' ? 'is-active' : ''}`} onClick={() => setActiveTab('pending')}>{t('orders.pendingOrders')}</button>
+          <button className={`customer-module-tabs__button ${activeTab === 'paid' ? 'is-active' : ''}`} onClick={() => setActiveTab('paid')}>{t('orders.paidOrders')}</button>
+          <button className={`customer-module-tabs__button ${activeTab === 'completed' ? 'is-active' : ''}`} onClick={() => setActiveTab('completed')}>{t('orders.completedOrders')}</button>
+        </div>
+        <Table columns={columns} rows={filteredOrders} emptyMessage={t('orders.noOrders')} />
       </Card>
 
       {selectedOrder && (
-        <Card title={t('orders.detailTitle')} subtitle={t('orders.detailSubtitle')}>
+        <Card title={t('orders.detailTitle')} subtitle={selectedOrder.orderNo}>
           <div className="detail-panel">
-            <div><span>{t('common.customer')}</span><strong>{selectedOrder.customer}</strong></div>
-            <div><span>{t('common.phone')}</span><strong>{selectedOrder.phone || '-'}</strong></div>
-            <div><span>{t('common.invoiceNumber')}</span><strong>{selectedOrder.invoiceNo}</strong></div>
-            <div><span>{t('orders.orderSource')}</span><strong>{sourceLabel(selectedOrder.orderSource)}</strong></div>
+            <div><span>{t('common.customerName')}</span><strong>{selectedOrder.customer}</strong></div>
             <div><span>{t('common.product')}</span><strong>{productLabel(selectedOrder.product)}</strong></div>
             <div><span>{t('common.quantity')}</span><strong>{selectedOrder.quantity}</strong></div>
             <div><span>{t('common.unit')}</span><strong>{unitLabel(selectedOrder.unit)}</strong></div>
+            <div><span>{t('common.date')}</span><strong>{selectedOrder.orderDate}</strong></div>
+            <div><span>{t('common.time')}</span><strong>{selectedOrder.orderTime}</strong></div>
             <div><span>{t('orders.orderStatus')}</span><StatusBadge status={selectedOrder.status} /></div>
-            <div><span>{t('orders.paymentStatus')}</span><StatusBadge status={selectedOrder.paymentStatus} /></div>
-            <div><span>{t('orders.shipmentStatus')}</span><StatusBadge status={selectedOrder.shipmentStatus} /></div>
+            <div><span>{t('common.invoiceNumber')}</span><strong>{selectedOrder.invoiceNo || '-'}</strong></div>
+            <div><span>{t('common.totalAmount')}</span><strong>{formatCurrency(selectedOrder.totalAmount)}</strong></div>
           </div>
           <p className="customer-notes">{selectedOrder.notes || t('warehouse.noNotes')}</p>
           <div className="workflow-actions">
-            {orderActions(selectedOrder).map((action) => (
-              <Button key={action.label} variant={action.variant || 'primary'} onClick={action.onClick}>
-                {action.label}
-              </Button>
-            ))}
+            {canCreateInvoice(selectedOrder) && (
+              <Button onClick={() => openInvoiceDraft(selectedOrder)}>{t('invoices.createInvoice')}</Button>
+            )}
             <Button variant="secondary" onClick={() => setSelectedOrderId('')}>{t('customers.closeSection')}</Button>
           </div>
         </Card>
