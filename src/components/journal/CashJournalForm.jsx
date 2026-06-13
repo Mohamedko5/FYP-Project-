@@ -10,14 +10,6 @@ export default function CashJournalForm({ form, errors, isEditing, onChange, onS
       )}
 
       <label>
-        {t('common.date')}
-        <input name="date" type="date" value={form.date} onChange={onChange} />
-      </label>
-      <label>
-        {t('common.time')}
-        <input name="time" type="time" value={form.time} onChange={onChange} />
-      </label>
-      <label>
         {t('journal.transactionType')}
         <select name="type" value={form.type} onChange={onChange}>
           <option value="Income">{statusLabel('Income')}</option>

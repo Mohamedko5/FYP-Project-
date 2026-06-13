@@ -1,10 +1,12 @@
+import { formatMoney } from './currencyFormat.js';
+
 export const dashboardSummary = [
-  { labelKey: 'dashboard.dailyCashBalance', value: 'SDG 1,245,000', noteKey: 'dashboard.dailyCashBalanceNote' },
+  { labelKey: 'dashboard.dailyCashBalance', value: '1,245,000', noteKey: 'dashboard.dailyCashBalanceNote' },
   { labelKey: 'dashboard.totalInventory', value: '4,870 bags', noteKey: 'dashboard.totalInventoryNote' },
-  { labelKey: 'dashboard.customerDebts', value: 'SDG 620,000', noteKey: 'dashboard.customerDebtsNote' },
+  { labelKey: 'dashboard.customerDebts', value: '620,000', noteKey: 'dashboard.customerDebtsNote' },
   { labelKey: 'dashboard.pendingOrders', value: '8', noteKey: 'dashboard.pendingOrdersNote' },
   { labelKey: 'dashboard.pendingShipments', value: '5', noteKey: 'dashboard.pendingShipmentsNote' },
-  { labelKey: 'dashboard.totalSales', value: 'SDG 3,850,000', noteKey: 'dashboard.totalSalesNote' },
+  { labelKey: 'dashboard.totalSales', value: '3,850,000', noteKey: 'dashboard.totalSalesNote' },
 ];
 
 export const warehouses = [
@@ -135,8 +137,8 @@ export const warehouseUnitOptionsByProduct = {
 };
 
 export const products = [
-  { id: 1, name: 'White Sesame', category: 'Commodity', unit: 'Bag / Jowal', price: 82000, stock: 1280, status: 'Available' },
-  { id: 2, name: 'Red Sesame', category: 'Commodity', unit: 'Bag / Jowal', price: 76000, stock: 940, status: 'Available' },
+  { id: 1, name: 'White Sesame', category: 'Commodity', unit: 'Qintar', price: 82000, stock: 1280, status: 'Available' },
+  { id: 2, name: 'Red Sesame', category: 'Commodity', unit: 'Qintar', price: 76000, stock: 940, status: 'Available' },
   { id: 3, name: 'Corn', category: 'Commodity', unit: 'Bag / Jowal', price: 42000, stock: 1980, status: 'Available' },
   { id: 4, name: 'Sacks / Khaysh', category: 'Packaging', unit: 'Piece', price: 1100, stock: 420, status: 'Low Stock' },
   { id: 5, name: 'Plastic', category: 'Packaging', unit: 'Roll', price: 18500, stock: 85, status: 'Available' },
@@ -171,12 +173,12 @@ export const journalEntries = [
 ];
 
 export const commodityJournalEntries = [
-  { id: 101, date: '2026-05-17', product: 'White Sesame', quantity: 60, unit: 'Qintar', party: 'Al-Noor Trading', lahuWaAlayh: 'Lahu', estimatedValue: 4920000, description: 'Sesame delivered on account' },
-  { id: 102, date: '2026-05-17', product: 'Corn', quantity: 120, unit: 'Large Bag', party: 'Blue Nile Stores', lahuWaAlayh: 'Alayh', estimatedValue: 5040000, description: 'Corn reserved for pending balance' },
-  { id: 103, date: '2026-05-16', product: 'Red Sesame', quantity: 25, unit: 'Qintar', party: 'Central Market Buyer', lahuWaAlayh: 'Lahu', estimatedValue: 1900000, description: 'Red sesame customer account entry' },
-  { id: 104, date: '2026-05-16', product: 'Dabara', quantity: 12, unit: 'Piece', party: 'Warehouse Team', lahuWaAlayh: 'Alayh', estimatedValue: 86400, description: 'Dabara issued for shipment preparation' },
-  { id: 105, date: '2026-05-15', product: 'Sacks / Khaysh', quantity: 6, unit: 'Bale', party: 'Packaging Supplier', lahuWaAlayh: 'Alayh', estimatedValue: 330000, description: 'Khaysh packaging received on account' },
-  { id: 106, date: '2026-05-15', product: 'Plastic', quantity: 18, unit: 'Roll', party: 'Hamad Agro Supply', lahuWaAlayh: 'Lahu', estimatedValue: 333000, description: 'Plastic rolls recorded for commodity account' },
+  { id: 101, date: '2026-05-17', time: '09:35', product: 'White Sesame', quantity: 60, unit: 'Qintar', party: 'Al-Noor Trading', lahuWaAlayh: 'Lahu', estimatedValue: 4920000, description: 'Sesame delivered on account' },
+  { id: 102, date: '2026-05-17', time: '10:20', product: 'Corn', quantity: 120, unit: 'Large Bag', party: 'Blue Nile Stores', lahuWaAlayh: 'Alayh', estimatedValue: 5040000, description: 'Corn reserved for pending balance' },
+  { id: 103, date: '2026-05-16', time: '11:15', product: 'Red Sesame', quantity: 25, unit: 'Qintar', party: 'Central Market Buyer', lahuWaAlayh: 'Lahu', estimatedValue: 1900000, description: 'Red sesame customer account entry' },
+  { id: 104, date: '2026-05-16', time: '14:05', product: 'Dabara', quantity: 12, unit: 'Piece', party: 'Warehouse Team', lahuWaAlayh: 'Alayh', estimatedValue: 86400, description: 'Dabara issued for shipment preparation' },
+  { id: 105, date: '2026-05-15', time: '08:50', product: 'Sacks / Khaysh', quantity: 6, unit: 'Bale', party: 'Packaging Supplier', lahuWaAlayh: 'Alayh', estimatedValue: 330000, description: 'Khaysh packaging received on account' },
+  { id: 106, date: '2026-05-15', time: '13:40', product: 'Plastic', quantity: 18, unit: 'Roll', party: 'Hamad Agro Supply', lahuWaAlayh: 'Lahu', estimatedValue: 333000, description: 'Plastic rolls recorded for commodity account' },
 ];
 
 export const customers = [
@@ -307,17 +309,17 @@ export const customerCommodityTransactions = [
 ];
 
 export const orders = [
-  { id: 1, orderNo: 'ORD-1001', customer: 'Al-Noor Trading', product: 'White Sesame', quantity: '60 bags', totalAmount: 4920000, status: 'Pending' },
-  { id: 2, orderNo: 'ORD-1002', customer: 'Blue Nile Stores', product: 'Corn', quantity: '120 bags', totalAmount: 5040000, status: 'Approved' },
-  { id: 3, orderNo: 'ORD-1003', customer: 'Central Market Buyer', product: 'Red Sesame', quantity: '25 bags', totalAmount: 1900000, status: 'Shipped' },
-  { id: 4, orderNo: 'ORD-1004', customer: 'Hamad Agro Supply', product: 'Sacks / Khaysh', quantity: '300 pieces', totalAmount: 330000, status: 'Completed' },
-  { id: 5, orderNo: 'ORD-1005', customer: 'Omdurman Buyer', product: 'Corn', quantity: '40 bags', totalAmount: 1680000, status: 'Cancelled' },
+  { id: 1, orderNo: 'ORD-1001', customer: 'Al-Noor Trading', product: 'White Sesame', quantity: '60 Qintar', unit: 'Qintar', totalAmount: 4920000, status: 'Pending' },
+  { id: 2, orderNo: 'ORD-1002', customer: 'Blue Nile Stores', product: 'Corn', quantity: '120 Large Bag', unit: 'Large Bag', totalAmount: 5040000, status: 'Confirmed' },
+  { id: 3, orderNo: 'ORD-1003', customer: 'Central Market Buyer', product: 'Red Sesame', quantity: '25 Qintar', unit: 'Qintar', totalAmount: 1900000, status: 'Shipped' },
+  { id: 4, orderNo: 'ORD-1004', customer: 'Hamad Agro Supply', product: 'Sacks / Khaysh', quantity: '300 Piece', unit: 'Piece', totalAmount: 330000, status: 'Completed' },
+  { id: 5, orderNo: 'ORD-1005', customer: 'Omdurman Buyer', product: 'Corn', quantity: '40 Large Bag', unit: 'Large Bag', totalAmount: 1680000, status: 'Cancelled' },
 ];
 
 export const shipments = [
-  { id: 1, batchNo: 'BAT-501', orderNo: 'ORD-1001', customer: 'Al-Noor Trading', grossWeight: 6120, tareWeight: 320, netWeight: 5800, status: 'Pending Approval', tracking: 'At warehouse gate' },
-  { id: 2, batchNo: 'BAT-502', orderNo: 'ORD-1002', customer: 'Blue Nile Stores', grossWeight: 12450, tareWeight: 450, netWeight: 12000, status: 'Approved', tracking: 'Loaded on truck' },
-  { id: 3, batchNo: 'BAT-503', orderNo: 'ORD-1003', customer: 'Central Market Buyer', grossWeight: 2600, tareWeight: 180, netWeight: 2420, status: 'In Transit', tracking: 'On route to customer' },
+  { id: 1, batchNo: 'BAT-501', orderNo: 'ORD-1001', customer: 'Al-Noor Trading', product: 'White Sesame', warehouseName: 'Main Warehouse', numberOfBags: 60, totalWeight: 60, averageBagWeight: 1, driverName: 'Hassan Adam', date: '2026-06-01', time: '10:30', status: 'Pending Approval', tracking: 'At warehouse gate' },
+  { id: 2, batchNo: 'BAT-502', orderNo: 'ORD-1002', customer: 'Blue Nile Stores', product: 'Corn', warehouseName: 'North Store', numberOfBags: 120, totalWeight: 12000, averageBagWeight: 100, driverName: 'Musa Ali', date: '2026-06-01', time: '11:20', status: 'Approved', tracking: 'Loaded on truck' },
+  { id: 3, batchNo: 'BAT-503', orderNo: 'ORD-1003', customer: 'Central Market Buyer', product: 'Red Sesame', warehouseName: 'Main Warehouse', numberOfBags: 25, totalWeight: 25, averageBagWeight: 1, driverName: 'Osman Yousif', date: '2026-06-01', time: '12:05', status: 'Completed', tracking: 'Delivered to customer' },
 ];
 
 export const invoices = [
@@ -330,12 +332,15 @@ export const invoices = [
     phone: '+249 91 222 1100',
     productType: 'White Sesame',
     quantity: 60,
-    unitPackaging: 'Quintal',
+    unitPackaging: 'Qintar',
+    price: 82000,
     date: '2026-05-17',
     time: '09:30',
     notes: 'Sales invoice for white sesame order.',
     adminName: 'Admin',
     status: 'Created',
+    paymentStatus: 'Partially Paid',
+    orderSource: 'Admin Invoice',
     customer: 'Al-Noor Trading',
     orderNo: 'ORD-1001',
     totalAmount: 4920000,
@@ -350,12 +355,15 @@ export const invoices = [
     phone: '+249 92 830 7711',
     productType: 'Corn',
     quantity: 120,
-    unitPackaging: 'Sacks',
+    unitPackaging: 'Bag / Jowal',
+    price: 42000,
     date: '2026-05-17',
     time: '11:15',
     notes: 'Purchase record for corn received into North Store.',
     adminName: 'Admin',
     status: 'Printed',
+    paymentStatus: 'Paid',
+    orderSource: 'Admin Invoice',
     customer: 'Blue Nile Stores',
     orderNo: 'ORD-1002',
     totalAmount: 5040000,
@@ -370,16 +378,48 @@ export const invoices = [
     phone: '+249 99 118 2005',
     productType: 'Red Sesame',
     quantity: 25,
-    unitPackaging: 'Quintal',
+    unitPackaging: 'Qintar',
+    price: 76000,
     date: '2026-05-16',
     time: '14:00',
     notes: 'Storage invoice for red sesame kept in Main Warehouse.',
     adminName: 'Admin',
     status: 'Completed',
+    paymentStatus: 'Partially Paid',
+    orderSource: 'Mobile App Request',
     customer: 'Central Market Buyer',
     orderNo: 'ORD-1003',
     totalAmount: 1900000,
     paidAmount: 1200000,
+  },
+];
+
+export const pendingCustomerRequests = [
+  {
+    id: 1,
+    requestId: 'REQ-MOB-2026-0001',
+    customerName: 'Omdurman Buyer',
+    phone: '+249 91 520 4410',
+    product: 'Corn',
+    quantity: 80,
+    unit: 'Bag / Jowal',
+    price: 42000,
+    requestDate: '2026-06-02',
+    status: 'Pending Customer Request',
+    notes: 'Mobile app request for corn supply.',
+  },
+  {
+    id: 2,
+    requestId: 'REQ-MOB-2026-0002',
+    customerName: 'Hamad Agro Supply',
+    phone: '+249 90 441 6520',
+    product: 'Plastic',
+    quantity: 12,
+    unit: 'Roll',
+    price: 18500,
+    requestDate: '2026-06-02',
+    status: 'Pending Customer Request',
+    notes: 'Packaging material request from mobile app.',
   },
 ];
 
@@ -393,5 +433,5 @@ export const reports = [
 ];
 
 export function formatCurrency(value) {
-  return `SDG ${value.toLocaleString()}`;
+  return formatMoney(value);
 }

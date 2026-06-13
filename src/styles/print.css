@@ -49,7 +49,11 @@
   }
 
   .print-area,
-  .print-area * {
+  .print-area *,
+  .invoice-print-page,
+  .invoice-print-page *,
+  .customer-statement,
+  .customer-statement * {
     visibility: visible;
   }
 

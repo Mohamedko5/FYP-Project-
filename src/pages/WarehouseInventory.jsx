@@ -22,7 +22,16 @@ import {
 } from '../data/dummyData.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 
-const today = new Date().toISOString().slice(0, 10);
+function getCurrentDateTime() {
+  const now = new Date();
+  return {
+    date: now.toISOString().slice(0, 10),
+    time: now.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  };
+}
 
 function createWarehouseForm() {
   return {
@@ -45,7 +54,6 @@ function createStockForm(warehouseId = '') {
     driverName: '',
     quantity: '',
     unit: 'Qintar',
-    date: today,
     notes: '',
   };
 }
@@ -59,7 +67,6 @@ function createWithdrawForm(warehouse) {
     driverName: '',
     quantity: '',
     unit: firstStock?.unit || '',
-    date: today,
     notes: '',
   };
 }
@@ -110,13 +117,6 @@ function updateStoredProduct(items, stockItem, operation = 'add') {
 function hasEnoughStock(warehouse, product, unit, quantity) {
   const stockItem = warehouse.storedProducts.find((item) => item.productName === product && item.unit === unit);
   return Number(stockItem?.quantity || 0) >= Number(quantity);
-}
-
-function getCurrentTime() {
-  return new Date().toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 export default function WarehouseInventory() {
@@ -262,6 +262,7 @@ export default function WarehouseInventory() {
   }
 
   function recordMovement(type, warehouse, form) {
+    const timestamp = getCurrentDateTime();
     setMovementHistory((current) => [
       {
         id: Date.now(),
@@ -271,8 +272,8 @@ export default function WarehouseInventory() {
         product: form.product,
         quantity: Number(form.quantity),
         unit: form.unit,
-        date: form.date,
-        time: getCurrentTime(),
+        date: timestamp.date,
+        time: timestamp.time,
         adminName: t('admin'),
         driverName: form.driverName || '',
         notes: form.notes || t('warehouse.noNotes'),
@@ -290,7 +291,6 @@ export default function WarehouseInventory() {
     if (!targetWarehouse) errors.push(t('warehouse.selectWarehouseError'));
     if (!stockForm.product) errors.push(t('warehouse.productRequired'));
     if (!stockForm.unit) errors.push(t('warehouse.unitRequired'));
-    if (!stockForm.date) errors.push(t('warehouse.dateRequired'));
     if (!stockForm.quantity || quantity <= 0) errors.push(t('warehouse.quantityPositive'));
 
     if (targetWarehouse && quantity > getAvailableCapacity(targetWarehouse)) {
@@ -336,7 +336,6 @@ export default function WarehouseInventory() {
     if (!fromWarehouse) errors.push(t('warehouse.selectWarehouseError'));
     if (!withdrawForm.product) errors.push(t('warehouse.productRequired'));
     if (!withdrawForm.unit) errors.push(t('warehouse.unitRequired'));
-    if (!withdrawForm.date) errors.push(t('warehouse.dateRequired'));
     if (!withdrawForm.quantity || quantity <= 0) errors.push(t('warehouse.quantityPositive'));
     if (fromWarehouse && !hasEnoughStock(fromWarehouse, withdrawForm.product, withdrawForm.unit, quantity)) {
       errors.push(t('warehouse.notEnoughStock'));

@@ -2,7 +2,7 @@ import Button from '../ui/Button.jsx';
 import Table from '../ui/Table.jsx';
 import { commodityProductLabels, commodityUnits, formatCurrency } from '../../data/dummyData.js';
 
-export default function CommodityJournalTable({ entries, onEdit, t, statusLabel, isArabic, emptyMessage }) {
+export default function CommodityJournalTable({ entries, onEdit, onDelete, t, statusLabel, isArabic, emptyMessage }) {
   function productLabel(productName) {
     return commodityProductLabels[productName]?.[isArabic ? 'ar' : 'en'] || productName;
   }
@@ -15,11 +15,11 @@ export default function CommodityJournalTable({ entries, onEdit, t, statusLabel,
 
   const columns = [
     { key: 'date', label: t('common.date') },
+    { key: 'time', label: t('common.time'), render: (row) => row.time || '-' },
     { key: 'product', label: t('common.product'), render: (row) => productLabel(row.product) },
     { key: 'quantity', label: t('common.quantity') },
     { key: 'unit', label: t('common.unit'), render: (row) => unitLabel(row.unit) },
     { key: 'party', label: t('common.customerSupplier') },
-    { key: 'lahuWaAlayh', label: t('journal.lahuAlayh'), render: (row) => statusLabel(row.lahuWaAlayh) },
     { key: 'estimatedValue', label: t('journal.estimatedValue'), render: (row) => formatCurrency(row.estimatedValue) },
     { key: 'description', label: t('common.description') },
     {
@@ -28,6 +28,7 @@ export default function CommodityJournalTable({ entries, onEdit, t, statusLabel,
       render: (row) => (
         <div className="table-actions">
           <Button variant="secondary" onClick={() => onEdit(row)}>{t('edit')}</Button>
+          <Button variant="secondary" onClick={() => onDelete(row.id)}>{t('delete')}</Button>
         </div>
       ),
     },

@@ -20,14 +20,6 @@ export default function WorkerTransactionForm({ form, errors, warehouses, worker
       )}
 
       <label>
-        {t('common.date')}
-        <input name="date" type="date" value={form.date} onChange={onChange} />
-      </label>
-      <label>
-        {t('common.time')}
-        <input name="time" type="time" value={form.time} onChange={onChange} />
-      </label>
-      <label>
         {isGeneralWorker ? t('customers.assignedLocationWarehouse') : t('warehouse.warehouse')}
         <select name="warehouseName" value={form.warehouseName} onChange={onChange}>
           {warehouses.map((warehouse) => (

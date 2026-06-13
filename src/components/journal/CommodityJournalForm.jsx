@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import Button from '../ui/Button.jsx';
 import { commodityProductLabels } from '../../data/dummyData.js';
 
-export default function CommodityJournalForm({ form, errors, isEditing, products, units, isArabic, onChange, onSubmit, onCancel, t, statusLabel }) {
+export default function CommodityJournalForm({ form, errors, isEditing, products, units, isArabic, onChange, onSubmit, onCancel, t }) {
   const unitOptionsByProduct = {
     'White Sesame': ['Qintar'],
     'Red Sesame': ['Qintar'],
@@ -49,10 +49,6 @@ export default function CommodityJournalForm({ form, errors, isEditing, products
       )}
 
       <label>
-        {t('common.date')}
-        <input name="date" type="date" value={form.date} onChange={onChange} />
-      </label>
-      <label>
         {t('common.productName')}
         <select name="product" value={form.product} onChange={handleProductChange}>
           {products.map((product) => <option key={product.id} value={product.name}>{productLabel(product.name)}</option>)}
@@ -75,13 +71,6 @@ export default function CommodityJournalForm({ form, errors, isEditing, products
       <label>
         {t('common.customerSupplier')}
         <input name="party" value={form.party} onChange={onChange} placeholder={t('journal.partyPlaceholder')} />
-      </label>
-      <label>
-        {t('journal.lahuAlayh')}
-        <select name="lahuWaAlayh" value={form.lahuWaAlayh} onChange={onChange}>
-          <option value="Lahu">{statusLabel('Lahu')}</option>
-          <option value="Alayh">{statusLabel('Alayh')}</option>
-        </select>
       </label>
       <label>
         {t('journal.estimatedValue')}

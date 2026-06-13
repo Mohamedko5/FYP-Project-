@@ -13,6 +13,7 @@ import {
   shipments,
   warehouses,
 } from '../data/dummyData.js';
+import { useCurrency } from '../i18n/CurrencyContext.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 
 const reportTypes = [
@@ -37,8 +38,110 @@ function calculateJournalSummary(rows) {
   return { opening, income, expenses, closing: opening + income - expenses };
 }
 
+function shipmentReportUnit(product) {
+  if (['White Sesame', 'Red Sesame'].includes(product)) return 'Qintar';
+  if (product === 'Corn') return 'kg';
+  if (product === 'Dabara') return 'Piece';
+  if (['Plastic', 'Sacks / Khaysh'].includes(product)) return 'Bale';
+  return '';
+}
+
+function shipmentReportQuantity(row) {
+  const unit = shipmentReportUnit(row.product);
+  const value = Number(row.totalWeight || row.quantity || 0);
+  return unit ? `${value.toLocaleString()} ${unit}` : value.toLocaleString();
+}
+
+function getGeneratedTimestamp() {
+  return new Date().toLocaleString();
+}
+
+function PrintableReport({
+  columns,
+  companyName,
+  currency,
+  generatedAt,
+  isArabic,
+  rows,
+  statusLabel,
+  summaryItems,
+  t,
+  title,
+}) {
+  return (
+    <section className="print-area" aria-label="Printable report">
+      <div className="print-report" dir={isArabic ? 'rtl' : 'ltr'}>
+        <header className="print-report__header">
+          <h1>{companyName}</h1>
+          <p>{t('invoices.systemName')}</p>
+          <h2>{title}</h2>
+        </header>
+
+        <div className="print-report__meta">
+          <div>
+            <span>{t('reports.generatedAt')}</span>
+            <strong>{generatedAt}</strong>
+          </div>
+          <div>
+            <span>{t('currency.label')}</span>
+            <strong>{currency}</strong>
+          </div>
+          <div>
+            <span>{t('reports.records')}</span>
+            <strong>{rows.length.toLocaleString()}</strong>
+          </div>
+        </div>
+
+        {summaryItems.length > 0 && (
+          <section className="print-report__section">
+            <h3>{t('reports.summaryTotals')}</h3>
+            <div className="print-report__summary">
+              {summaryItems.map((item) => (
+                <div key={item.label}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="print-report__section">
+          <h3>{t('reports.reportData')}</h3>
+          <table className="print-table">
+            <thead>
+              <tr>
+                {columns.map((column) => <th key={column.key}>{column.label}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length}>{t('emptyMessage')}</td>
+                </tr>
+              ) : (
+                rows.map((row) => (
+                  <tr key={row.id || row.orderNo || row.shipmentId || row.label}>
+                    {columns.map((column) => {
+                      const value = column.printRender ? column.printRender(row) : row[column.key];
+                      const statusKeys = ['status', 'type', 'paymentStatus', 'shipmentStatus'];
+                      const printableValue = statusKeys.includes(column.key) ? statusLabel(value) : value;
+                      return <td key={column.key}>{printableValue ?? '-'}</td>;
+                    })}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </section>
+  );
+}
+
 export default function Reports() {
-  const { t } = useLanguage();
+  const { t, statusLabel, isArabic } = useLanguage();
+  const { currency } = useCurrency();
   const [selectedReportId, setSelectedReportId] = useState('');
   const [filters, setFilters] = useState({
     fromDate: '',
@@ -91,10 +194,10 @@ export default function Reports() {
         return {
           ...shipment,
           shipmentId: shipment.batchNo,
-          product: order.product,
-          warehouse: warehouses.find((warehouse) => warehouse.productType === order.product)?.warehouseName || warehouses[0]?.warehouseName,
-          numberOfBags: Number(String(order.quantity || '').match(/\d+/)?.[0] || 0),
-          totalWeight: shipment.netWeight,
+          product: shipment.product || order.product,
+          warehouse: shipment.warehouseName || warehouses.find((warehouse) => warehouse.productType === order.product)?.warehouseName || warehouses[0]?.warehouseName,
+          numberOfBags: shipment.numberOfBags || Number(String(order.quantity || '').match(/\d+/)?.[0] || 0),
+          totalWeight: shipment.totalWeight || shipment.netWeight || 0,
           driver: shipment.driverName || '',
           date: shipment.date || '2026-05-17',
         };
@@ -129,7 +232,7 @@ export default function Reports() {
       { key: 'type', label: t('common.type'), render: (row) => <StatusBadge status={row.type} /> },
       { key: 'category', label: t('common.category') },
       { key: 'party', label: t('common.customerSupplier') },
-      { key: 'amount', label: t('common.amount'), render: (row) => formatCurrency(row.amount) },
+      { key: 'amount', label: t('common.amount'), render: (row) => formatCurrency(row.amount), printRender: (row) => formatCurrency(row.amount) },
       { key: 'description', label: t('common.description') },
     ],
     inventory: [
@@ -141,7 +244,7 @@ export default function Reports() {
     ],
     'customer-account': [
       { key: 'name', label: t('common.customerName') },
-      { key: 'cashAccount', label: t('customers.cashBalance'), render: (row) => formatCurrency(row.cashAccount) },
+      { key: 'cashAccount', label: t('customers.cashBalance'), render: (row) => formatCurrency(row.cashAccount), printRender: (row) => formatCurrency(row.cashAccount) },
       { key: 'commodityBalance', label: t('customers.commodityBalance') },
       { key: 'payments', label: t('customers.paymentHistory') },
       { key: 'orders', label: t('customers.orderHistory') },
@@ -162,7 +265,7 @@ export default function Reports() {
       { key: 'product', label: t('common.product') },
       { key: 'warehouse', label: t('warehouse.warehouse') },
       { key: 'numberOfBags', label: t('shipments.numberOfBags') },
-      { key: 'totalWeight', label: t('shipments.totalWeight'), render: (row) => `${row.totalWeight.toLocaleString()} kg` },
+      { key: 'totalWeight', label: t('shipments.totalQuantity'), render: (row) => shipmentReportQuantity(row), printRender: (row) => shipmentReportQuantity(row) },
       { key: 'driver', label: t('warehouse.driverName') },
       { key: 'status', label: t('common.status'), render: (row) => <StatusBadge status={row.status} /> },
     ],
@@ -180,6 +283,56 @@ export default function Reports() {
     if (selectedReportId === 'shipment') return reportContent.shipmentRows;
     if (selectedReportId === 'financial-summary') return reportContent.financialRows;
     return [];
+  }
+
+  function reportSummaryItems() {
+    if (selectedReportId === 'daily-journal') {
+      return [
+        { label: t('journal.openingBalance'), value: formatCurrency(reportContent.journalSummary.opening) },
+        { label: t('journal.totalIncome'), value: formatCurrency(reportContent.journalSummary.income) },
+        { label: t('journal.totalExpenses'), value: formatCurrency(reportContent.journalSummary.expenses) },
+        { label: t('journal.closingBalance'), value: formatCurrency(reportContent.journalSummary.closing) },
+      ];
+    }
+
+    if (selectedReportId === 'inventory') {
+      const totalQuantity = reportContent.inventoryRows.reduce((total, row) => total + Number(row.quantity || 0), 0);
+      return [
+        { label: t('dashboard.totalInventory'), value: totalQuantity.toLocaleString() },
+        { label: t('dashboard.totalWarehouses'), value: warehouses.length.toLocaleString() },
+      ];
+    }
+
+    if (selectedReportId === 'customer-account') {
+      const totalDebt = reportContent.customerRows.reduce((total, row) => total + Number(row.remainingBalance || 0), 0);
+      return [
+        { label: t('dashboard.totalCustomers'), value: reportContent.customerRows.length.toLocaleString() },
+        { label: t('reports.customerDebts'), value: formatCurrency(totalDebt) },
+      ];
+    }
+
+    if (selectedReportId === 'orders') {
+      return [
+        { label: t('orders.totalOrders'), value: reportContent.orderRows.length.toLocaleString() },
+        { label: t('orders.completedOrders'), value: reportContent.orderRows.filter((row) => row.status === 'Completed').length.toLocaleString() },
+      ];
+    }
+
+    if (selectedReportId === 'shipment') {
+      const totalWeight = reportContent.shipmentRows.reduce((total, row) => total + Number(row.totalWeight || 0), 0);
+      return [
+        { label: t('shipments.completedShipments'), value: reportContent.shipmentRows.filter((row) => row.status === 'Completed').length.toLocaleString() },
+        { label: t('shipments.totalQuantity'), value: totalWeight.toLocaleString() },
+      ];
+    }
+
+    if (selectedReportId === 'financial-summary') return reportContent.financialRows;
+
+    return [];
+  }
+
+  function printReport() {
+    window.setTimeout(() => window.print(), 100);
   }
 
   return (
@@ -205,8 +358,8 @@ export default function Reports() {
           <div className="workflow-toolbar workflow-toolbar--split">
             <Button variant="secondary" onClick={resetReport}>{t('reports.backToReports')}</Button>
             <div className="workflow-actions">
-              <Button variant="secondary" onClick={() => window.print()}>{t('reports.printReport')}</Button>
-              <Button variant="secondary" onClick={() => window.print()}>{t('reports.exportPdf')}</Button>
+              <Button variant="secondary" onClick={printReport}>{t('reports.printPdf')}</Button>
+              <Button variant="secondary" onClick={printReport}>{t('reports.exportPdf')}</Button>
             </div>
           </div>
 
@@ -216,7 +369,7 @@ export default function Reports() {
             <label>{t('common.customer')}<select name="customer" value={filters.customer} onChange={handleFilterChange}><option value="">{t('reports.all')}</option>{customers.map((customer) => <option key={customer.id} value={customer.name}>{customer.name}</option>)}</select></label>
             <label>{t('warehouse.warehouse')}<select name="warehouse" value={filters.warehouse} onChange={handleFilterChange}><option value="">{t('reports.all')}</option>{warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.warehouseName}>{warehouse.warehouseName}</option>)}</select></label>
             <label>{t('common.product')}<select name="product" value={filters.product} onChange={handleFilterChange}><option value="">{t('reports.all')}</option>{[...new Set(orders.map((order) => order.product))].map((product) => <option key={product} value={product}>{product}</option>)}</select></label>
-            <label>{t('common.status')}<select name="status" value={filters.status} onChange={handleFilterChange}><option value="">{t('reports.all')}</option>{['Pending', 'Approved', 'Completed', 'Cancelled', 'Pending Approval', 'In Transit'].map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
+            <label>{t('common.status')}<select name="status" value={filters.status} onChange={handleFilterChange}><option value="">{t('reports.all')}</option>{['Pending', 'Confirmed', 'Processing', 'Shipped', 'Completed', 'Cancelled', 'Pending Approval', 'Approved', 'In Transit'].map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
           </div>
 
           {selectedReportId === 'daily-journal' && (
@@ -229,6 +382,18 @@ export default function Reports() {
           )}
 
           <Table columns={columnsByReport[selectedReportId]} rows={selectedRows()} />
+          <PrintableReport
+            columns={columnsByReport[selectedReportId]}
+            companyName={t('companyName')}
+            currency={currency}
+            generatedAt={getGeneratedTimestamp()}
+            isArabic={isArabic}
+            rows={selectedRows()}
+            statusLabel={statusLabel}
+            summaryItems={reportSummaryItems()}
+            t={t}
+            title={t(selectedReport.titleKey)}
+          />
         </Card>
       )}
     </div>

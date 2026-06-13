@@ -20,10 +20,16 @@ function getTodayDate() {
   return `${year}-${month}-${day}`;
 }
 
-function createEmptyCashForm(date) {
+function getCurrentDateTime() {
+  const now = new Date();
   return {
-    date,
-    time: '09:00',
+    date: getTodayDate(),
+    time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+  };
+}
+
+function createEmptyCashForm() {
+  return {
     type: 'Income',
     amount: '',
     description: '',
@@ -31,9 +37,8 @@ function createEmptyCashForm(date) {
   };
 }
 
-function createEmptyCommodityForm(date) {
+function createEmptyCommodityForm() {
   return {
-    date,
     product: 'White Sesame',
     quantity: '',
     unit: 'Qintar',
@@ -44,6 +49,25 @@ function createEmptyCommodityForm(date) {
   };
 }
 
+function JournalConfirmationDialog({ confirmation, onCancel, onConfirm, t }) {
+  if (!confirmation) return null;
+
+  return (
+    <div className="confirmation-overlay" role="presentation">
+      <div className="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="journal-confirmation-title">
+        <h3 id="journal-confirmation-title">{confirmation.title}</h3>
+        <p>{confirmation.message}</p>
+        <div className="confirmation-dialog__actions">
+          <Button type="button" variant="secondary" onClick={onCancel}>{t('cancel')}</Button>
+          <Button type="button" variant={confirmation.variant || 'primary'} onClick={onConfirm}>
+            {confirmation.confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DailyJournal() {
   const { t, statusLabel, isArabic } = useLanguage();
   const { setHeaderAddon } = useOutletContext();
@@ -52,14 +76,15 @@ export default function DailyJournal() {
   const [journalType, setJournalType] = useState('cash');
   const [cashEntries, setCashEntries] = useState(journalEntries);
   const [commodityEntries, setCommodityEntries] = useState(commodityJournalEntries);
-  const [cashForm, setCashForm] = useState(() => createEmptyCashForm(getTodayDate()));
-  const [commodityForm, setCommodityForm] = useState(() => createEmptyCommodityForm(getTodayDate()));
+  const [cashForm, setCashForm] = useState(() => createEmptyCashForm());
+  const [commodityForm, setCommodityForm] = useState(() => createEmptyCommodityForm());
   const [editingCashId, setEditingCashId] = useState(null);
   const [editingCommodityId, setEditingCommodityId] = useState(null);
   const [showCashForm, setShowCashForm] = useState(false);
   const [showCommodityForm, setShowCommodityForm] = useState(false);
   const [cashErrors, setCashErrors] = useState([]);
   const [commodityErrors, setCommodityErrors] = useState([]);
+  const [confirmation, setConfirmation] = useState(null);
   const [adminName, setAdminName] = useState('Bayad Admin');
 
   const dailyCashEntries = useMemo(
@@ -99,8 +124,9 @@ export default function DailyJournal() {
     setEditingCommodityId(null);
     setShowCashForm(false);
     setShowCommodityForm(false);
-    setCashForm(createEmptyCashForm(selectedDate));
-    setCommodityForm(createEmptyCommodityForm(selectedDate));
+    setCashForm(createEmptyCashForm());
+    setCommodityForm(createEmptyCommodityForm());
+    setConfirmation(null);
   }
 
   function loadJournalDate(nextDate) {
@@ -110,10 +136,11 @@ export default function DailyJournal() {
     setEditingCommodityId(null);
     setShowCashForm(false);
     setShowCommodityForm(false);
-    setCashForm(createEmptyCashForm(nextDate));
-    setCommodityForm(createEmptyCommodityForm(nextDate));
+    setCashForm(createEmptyCashForm());
+    setCommodityForm(createEmptyCommodityForm());
     setCashErrors([]);
     setCommodityErrors([]);
+    setConfirmation(null);
   }
 
   function handleViewJournal() {
@@ -132,7 +159,7 @@ export default function DailyJournal() {
 
   function validateCashForm() {
     const nextErrors = [];
-    if (!cashForm.date || !cashForm.time || !cashForm.party.trim() || cashForm.amount === '' || !cashForm.description.trim()) {
+    if (!cashForm.party.trim() || cashForm.amount === '' || !cashForm.description.trim()) {
       nextErrors.push(t('journal.requiredFieldsError'));
     }
     if (Number(cashForm.amount) < 0) {
@@ -144,7 +171,7 @@ export default function DailyJournal() {
 
   function validateCommodityForm() {
     const nextErrors = [];
-    if (!commodityForm.date || !commodityForm.product || commodityForm.quantity === '' || !commodityForm.party.trim() || commodityForm.estimatedValue === '' || !commodityForm.description.trim()) {
+    if (!commodityForm.product || commodityForm.quantity === '' || !commodityForm.party.trim() || commodityForm.estimatedValue === '' || !commodityForm.description.trim()) {
       nextErrors.push(t('journal.commodityRequiredFieldsError'));
     }
     if (Number(commodityForm.quantity) < 0) {
@@ -157,20 +184,49 @@ export default function DailyJournal() {
     return nextErrors.length === 0;
   }
 
+  function saveCashPayload(payload) {
+    const systemTimestamp = getCurrentDateTime();
+    if (editingCashId) {
+      setCashEntries((current) => current.map((entry) => (entry.id === editingCashId ? { ...entry, ...payload } : entry)));
+      setEditingCashId(null);
+    } else {
+      setCashEntries((current) => [{ id: Date.now(), ...systemTimestamp, ...payload }, ...current]);
+    }
+    setCashForm(createEmptyCashForm());
+    setCashErrors([]);
+    setShowCashForm(false);
+  }
+
+  function saveCommodityPayload(payload) {
+    const systemTimestamp = getCurrentDateTime();
+    if (editingCommodityId) {
+      setCommodityEntries((current) => current.map((entry) => (entry.id === editingCommodityId ? { ...entry, ...payload } : entry)));
+      setEditingCommodityId(null);
+    } else {
+      setCommodityEntries((current) => [{ id: Date.now(), ...systemTimestamp, ...payload }, ...current]);
+    }
+    setCommodityForm(createEmptyCommodityForm());
+    setCommodityErrors([]);
+    setShowCommodityForm(false);
+  }
+
   function handleCashSubmit(event) {
     event.preventDefault();
     if (!validateCashForm()) return;
 
     const payload = { ...cashForm, amount: Number(cashForm.amount) };
     if (editingCashId) {
-      setCashEntries((current) => current.map((entry) => (entry.id === editingCashId ? { ...entry, ...payload } : entry)));
-      setEditingCashId(null);
-    } else {
-      setCashEntries((current) => [{ id: Date.now(), ...payload }, ...current]);
+      setConfirmation({
+        action: 'saveCash',
+        payload,
+        title: t('journal.confirmSaveTitle'),
+        message: t('journal.confirmSaveMessage'),
+        confirmLabel: t('journal.confirmSave'),
+      });
+      return;
     }
-    setCashForm(createEmptyCashForm(selectedDate));
-    setCashErrors([]);
-    setShowCashForm(false);
+
+    saveCashPayload(payload);
   }
 
   function handleCommoditySubmit(event) {
@@ -184,14 +240,17 @@ export default function DailyJournal() {
     };
 
     if (editingCommodityId) {
-      setCommodityEntries((current) => current.map((entry) => (entry.id === editingCommodityId ? { ...entry, ...payload } : entry)));
-      setEditingCommodityId(null);
-    } else {
-      setCommodityEntries((current) => [{ id: Date.now(), ...payload }, ...current]);
+      setConfirmation({
+        action: 'saveCommodity',
+        payload,
+        title: t('journal.confirmSaveTitle'),
+        message: t('journal.confirmSaveMessage'),
+        confirmLabel: t('journal.confirmSave'),
+      });
+      return;
     }
-    setCommodityForm(createEmptyCommodityForm(selectedDate));
-    setCommodityErrors([]);
-    setShowCommodityForm(false);
+
+    saveCommodityPayload(payload);
   }
 
   function handleCashEdit(entry) {
@@ -206,6 +265,7 @@ export default function DailyJournal() {
     setShowCommodityForm(true);
     setCommodityForm({
       date: entry.date,
+      time: entry.time,
       product: entry.product,
       quantity: String(entry.quantity),
       unit: entry.unit,
@@ -220,34 +280,81 @@ export default function DailyJournal() {
   function handleCashCancel() {
     setEditingCashId(null);
     setShowCashForm(false);
-    setCashForm(createEmptyCashForm(selectedDate));
+    setCashForm(createEmptyCashForm());
     setCashErrors([]);
   }
 
   function handleCashDelete(entryId) {
-    setCashEntries((current) => current.filter((entry) => entry.id !== entryId));
-    if (editingCashId === entryId) {
-      handleCashCancel();
-    }
+    setConfirmation({
+      action: 'deleteCash',
+      entryId,
+      title: t('journal.confirmDeleteTitle'),
+      message: t('journal.confirmDeleteMessage'),
+      confirmLabel: t('journal.confirmDelete'),
+      variant: 'secondary',
+    });
   }
 
   function handleCommodityCancel() {
     setEditingCommodityId(null);
     setShowCommodityForm(false);
-    setCommodityForm(createEmptyCommodityForm(selectedDate));
+    setCommodityForm(createEmptyCommodityForm());
     setCommodityErrors([]);
   }
 
   function handleAddCommodityTransaction() {
     setEditingCommodityId(null);
-    setCommodityForm(createEmptyCommodityForm(selectedDate));
+    setCommodityForm(createEmptyCommodityForm());
     setCommodityErrors([]);
     setShowCommodityForm(true);
   }
 
+  function handleCommodityDelete(entryId) {
+    setConfirmation({
+      action: 'deleteCommodity',
+      entryId,
+      title: t('journal.confirmDeleteTitle'),
+      message: t('journal.confirmDeleteMessage'),
+      confirmLabel: t('journal.confirmDelete'),
+      variant: 'secondary',
+    });
+  }
+
+  function closeConfirmation() {
+    setConfirmation(null);
+  }
+
+  function confirmJournalAction() {
+    if (!confirmation) return;
+
+    if (confirmation.action === 'saveCash') {
+      saveCashPayload(confirmation.payload);
+    }
+
+    if (confirmation.action === 'saveCommodity') {
+      saveCommodityPayload(confirmation.payload);
+    }
+
+    if (confirmation.action === 'deleteCash') {
+      setCashEntries((current) => current.filter((entry) => entry.id !== confirmation.entryId));
+      if (editingCashId === confirmation.entryId) {
+        handleCashCancel();
+      }
+    }
+
+    if (confirmation.action === 'deleteCommodity') {
+      setCommodityEntries((current) => current.filter((entry) => entry.id !== confirmation.entryId));
+      if (editingCommodityId === confirmation.entryId) {
+        handleCommodityCancel();
+      }
+    }
+
+    setConfirmation(null);
+  }
+
   function handleAddCashTransaction() {
     setEditingCashId(null);
-    setCashForm(createEmptyCashForm(selectedDate));
+    setCashForm(createEmptyCashForm());
     setCashErrors([]);
     setShowCashForm(true);
   }
@@ -361,6 +468,7 @@ export default function DailyJournal() {
             <CommodityJournalTable
               entries={dailyCommodityEntries}
               onEdit={handleCommodityEdit}
+              onDelete={handleCommodityDelete}
               t={t}
               statusLabel={statusLabel}
               isArabic={isArabic}
@@ -399,6 +507,12 @@ export default function DailyJournal() {
           />
         </>
       )}
+      <JournalConfirmationDialog
+        confirmation={confirmation}
+        onCancel={closeConfirmation}
+        onConfirm={confirmJournalAction}
+        t={t}
+      />
     </div>
   );
 }

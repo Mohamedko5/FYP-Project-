@@ -13,13 +13,16 @@ import CustomerCommodityTransactionForm from './CustomerCommodityTransactionForm
 import CustomerStatement from './CustomerStatement.jsx';
 import { customerTypeLabel } from './customerHelpers.js';
 
-const today = new Date().toISOString().slice(0, 10);
-const currentTime = () => new Date().toTimeString().slice(0, 5);
+function getCurrentDateTime() {
+  const now = new Date();
+  return {
+    date: now.toISOString().slice(0, 10),
+    time: now.toTimeString().slice(0, 5),
+  };
+}
 
 function createCashForm(customerName = '') {
   return {
-    date: today,
-    time: currentTime(),
     type: 'Payment Received',
     customer: customerName,
     amount: '',
@@ -29,8 +32,6 @@ function createCashForm(customerName = '') {
 
 function createCommodityForm(customerName = '', product = 'White Sesame') {
   return {
-    date: today,
-    time: currentTime(),
     transactionType: 'Product Received',
     product,
     quantity: '',
@@ -125,7 +126,7 @@ export default function CustomerProfile({
     const errors = [];
     const amount = Number(cashForm.amount);
 
-    if (!cashForm.date || !cashForm.time || !cashForm.type || !cashForm.customer || !cashForm.description.trim()) {
+    if (!cashForm.type || !cashForm.customer || !cashForm.description.trim()) {
       errors.push(t('customers.transactionRequiredFieldsError'));
     }
     if (!cashForm.amount || amount <= 0) errors.push(t('customers.amountPositiveError'));
@@ -136,11 +137,12 @@ export default function CustomerProfile({
     }
 
     const paidAmount = cashForm.type === 'Payment Received' ? amount : 0;
+    const timestamp = getCurrentDateTime();
     onAddCashTransaction({
       id: Date.now(),
       customer: customer.name,
-      date: cashForm.date,
-      time: cashForm.time,
+      date: timestamp.date,
+      time: timestamp.time,
       type: cashForm.type,
       amount,
       paidAmount,
@@ -159,8 +161,6 @@ export default function CustomerProfile({
     const quantity = Number(commodityForm.quantity);
 
     if (
-      !commodityForm.date ||
-      !commodityForm.time ||
       !commodityForm.transactionType ||
       !commodityForm.product ||
       !commodityForm.unit ||
@@ -176,11 +176,12 @@ export default function CustomerProfile({
       return;
     }
 
+    const timestamp = getCurrentDateTime();
     onAddCommodityTransaction({
       id: Date.now(),
       customer: customer.name,
-      date: commodityForm.date,
-      time: commodityForm.time,
+      date: timestamp.date,
+      time: timestamp.time,
       transactionType: commodityForm.transactionType,
       product: commodityForm.product,
       quantity,

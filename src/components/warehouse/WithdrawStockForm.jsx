@@ -82,10 +82,6 @@ export default function WithdrawStockForm({ form, errors, warehouse, onChange, o
         <span>{t('warehouse.availableStock')}</span>
         <strong>{Number(selectedStock?.quantity || 0).toLocaleString()} {form.unit ? unitLabel(form.unit) : ''}</strong>
       </div>
-      <label>
-        {t('common.date')}
-        <input name="date" type="date" value={form.date} onChange={onChange} />
-      </label>
       <label className="form-grid__wide">
         {t('warehouse.notes')}
         <textarea name="notes" value={form.notes} onChange={onChange} placeholder={t('warehouse.withdrawNotesPlaceholder')} />

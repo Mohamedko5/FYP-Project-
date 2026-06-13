@@ -52,14 +52,6 @@ export default function CustomerCommodityTransactionForm({
       )}
 
       <label>
-        {t('common.date')}
-        <input name="date" type="date" value={form.date} onChange={onChange} />
-      </label>
-      <label>
-        {t('common.time')}
-        <input name="time" type="time" value={form.time} onChange={onChange} />
-      </label>
-      <label>
         {t('journal.transactionType')}
         <select name="transactionType" value={form.transactionType} onChange={onChange}>
           <option value="Product Received">{t('customers.productReceived')}</option>

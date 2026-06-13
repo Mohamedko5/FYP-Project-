@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
+import { CurrencyProvider } from './i18n/CurrencyContext.jsx';
 import { LanguageProvider } from './i18n/LanguageContext.jsx';
 import './styles/global.css';
 import './styles/print.css';
@@ -9,9 +10,11 @@ import './styles/print.css';
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <LanguageProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <CurrencyProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </CurrencyProvider>
     </LanguageProvider>
   </React.StrictMode>
 );

@@ -6,7 +6,7 @@ import Table from '../components/ui/Table.jsx';
 import { inventoryMovementHistory, orders, shipments, warehouses } from '../data/dummyData.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 
-const bagWeights = [50, 60, 70];
+const orderStorageKey = 'bayadGeneratedOrders';
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -14,6 +14,35 @@ function today() {
 
 function currentTime() {
   return new Date().toTimeString().slice(0, 5);
+}
+
+function currentTimestamp() {
+  return {
+    date: today(),
+    time: currentTime(),
+  };
+}
+
+function readStoredOrders() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(orderStorageKey) || '[]');
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredOrders(rows) {
+  localStorage.setItem(orderStorageKey, JSON.stringify(rows));
+}
+
+function updateStoredOrderFromShipment(orderNo, updates) {
+  const currentOrders = readStoredOrders();
+  if (currentOrders.length === 0) return;
+
+  writeStoredOrders(currentOrders.map((order) => (
+    order.orderNo === orderNo ? { ...order, ...updates } : order
+  )));
 }
 
 function quantityNumber(quantity) {
@@ -28,12 +57,54 @@ function warehouseForProduct(product) {
   return warehouses.find((warehouse) => warehouse.productType === product || warehouse.storedProducts.some((item) => item.productName === product)) || warehouses[0];
 }
 
+function averageBagWeight(numberOfBags, totalWeight) {
+  const bags = Number(numberOfBags || 0);
+  const weight = Number(totalWeight || 0);
+  return bags > 0 && weight > 0 ? Number((weight / bags).toFixed(2)) : 0;
+}
+
+function isSesame(product) {
+  return ['White Sesame', 'Red Sesame'].includes(product);
+}
+
+function isCorn(product) {
+  return product === 'Corn';
+}
+
+function productShipmentUnit(product) {
+  if (isSesame(product)) return 'Qintar';
+  if (isCorn(product)) return 'kg';
+  if (product === 'Plastic') return 'Bale';
+  if (product === 'Sacks / Khaysh') return 'Bale';
+  if (product === 'Dabara') return 'Piece';
+  return '';
+}
+
+function shipmentQuantityLabel(shipment) {
+  const unit = productShipmentUnit(shipment.product);
+  const value = Number(shipment.totalWeight || shipment.quantity || 0);
+  return unit ? `${value.toLocaleString()} ${unit}` : value.toLocaleString();
+}
+
+function shipmentAverageLabel(shipment) {
+  if (!shipment.averageBagWeight) return '-';
+  if (isSesame(shipment.product)) return `${shipment.averageBagWeight.toLocaleString()} Qintar`;
+  if (isCorn(shipment.product)) return `${shipment.averageBagWeight.toLocaleString()} kg`;
+  return '-';
+}
+
+function stockDeductionQuantity(shipment) {
+  return isSesame(shipment.product)
+    ? Number(shipment.totalWeight || 0)
+    : Number(shipment.numberOfBags || shipment.quantity || shipment.totalWeight || 0);
+}
+
 function normalizeShipment(shipment) {
   const order = orderForShipment(shipment);
   const warehouse = warehouseForProduct(order.product);
   const numberOfBags = shipment.numberOfBags || quantityNumber(order.quantity);
   const totalWeight = shipment.totalWeight || shipment.netWeight || 0;
-  const bagWeight = shipment.bagWeight || (numberOfBags ? Math.round(totalWeight / numberOfBags) : 50);
+  const averageWeight = shipment.averageBagWeight || averageBagWeight(numberOfBags, totalWeight);
   return {
     date: shipment.date || today(),
     time: shipment.time || currentTime(),
@@ -41,26 +112,25 @@ function normalizeShipment(shipment) {
     product: shipment.product || order.product || 'White Sesame',
     warehouseName: shipment.warehouseName || warehouse?.warehouseName || '',
     numberOfBags,
-    bagWeight,
     totalWeight,
     driverName: shipment.driverName || '',
     notes: shipment.notes || shipment.tracking || '',
     ...shipment,
+    averageBagWeight: shipment.averageBagWeight || averageWeight,
   };
 }
 
 function createShipmentForm(shipment) {
   return {
     id: shipment.id,
-    date: today(),
-    time: currentTime(),
     orderNo: shipment.orderNo,
     customer: shipment.customer,
     product: shipment.product,
     warehouseName: shipment.warehouseName,
     numberOfBags: shipment.numberOfBags || '',
-    bagWeight: 50,
-    driverName: '',
+    totalWeight: shipment.totalWeight || shipment.netWeight || '',
+    driverName: shipment.driverName || '',
+    approvalStatus: 'Weighed',
     notes: '',
   };
 }
@@ -72,11 +142,12 @@ export default function WeighingShipment() {
   const [movementRows, setMovementRows] = useState(inventoryMovementHistory);
   const [processingShipment, setProcessingShipment] = useState(null);
   const [shipmentForm, setShipmentForm] = useState(null);
+  const [activeShipmentTab, setActiveShipmentTab] = useState('completed');
   const [errors, setErrors] = useState([]);
 
   const pendingShipments = shipmentRows.filter((shipment) => !['Completed', 'Shipped'].includes(shipment.status));
   const completedShipments = shipmentRows.filter((shipment) => ['Completed', 'Shipped'].includes(shipment.status));
-  const totalShipmentWeight = shipmentRows.reduce((total, shipment) => total + Number(shipment.totalWeight || shipment.netWeight || 0), 0);
+  const historyShipments = shipmentRows.filter((shipment) => shipment.status !== 'Pending Approval');
 
   function openShipmentForm(shipment) {
     setErrors([]);
@@ -98,11 +169,12 @@ export default function WeighingShipment() {
   function saveShipment(event) {
     event.preventDefault();
     const numberOfBags = Number(shipmentForm.numberOfBags);
-    const bagWeight = Number(shipmentForm.bagWeight);
+    const totalWeight = Number(shipmentForm.totalWeight);
+    const calculatedAverageWeight = averageBagWeight(numberOfBags, totalWeight);
     const formErrors = [];
 
-    if (!shipmentForm.date || !shipmentForm.time) formErrors.push(t('shipments.dateTimeRequired'));
     if (!numberOfBags || numberOfBags <= 0) formErrors.push(t('shipments.bagsRequired'));
+    if (!totalWeight || totalWeight <= 0) formErrors.push(t('shipments.totalWeightRequired'));
     if (!shipmentForm.driverName.trim()) formErrors.push(t('shipments.driverRequired'));
 
     if (formErrors.length > 0) {
@@ -110,17 +182,20 @@ export default function WeighingShipment() {
       return;
     }
 
+    const timestamp = currentTimestamp();
     setShipmentRows((current) =>
       current.map((shipment) =>
         shipment.id === shipmentForm.id
           ? {
               ...shipment,
               ...shipmentForm,
+              date: timestamp.date,
+              time: timestamp.time,
               numberOfBags,
-              bagWeight,
-              totalWeight: numberOfBags * bagWeight,
-              netWeight: numberOfBags * bagWeight,
-              status: 'Weighed',
+              totalWeight,
+              netWeight: totalWeight,
+              averageBagWeight: calculatedAverageWeight,
+              status: shipmentForm.approvalStatus,
               tracking: t('shipments.weighedTracking'),
             }
           : shipment
@@ -130,10 +205,11 @@ export default function WeighingShipment() {
   }
 
   function approveShipment(shipment) {
+    const timestamp = currentTimestamp();
     setShipmentRows((current) =>
       current.map((row) =>
         row.id === shipment.id
-          ? { ...row, status: 'Approved', tracking: t('shipments.approvedTracking') }
+          ? { ...row, ...timestamp, status: 'Approved', tracking: t('shipments.approvedTracking') }
           : row
       )
     );
@@ -143,10 +219,10 @@ export default function WeighingShipment() {
         if (warehouse.warehouseName !== shipment.warehouseName) return warehouse;
         return {
           ...warehouse,
-          currentStock: Math.max(warehouse.currentStock - shipment.numberOfBags, 0),
+          currentStock: Math.max(warehouse.currentStock - stockDeductionQuantity(shipment), 0),
           storedProducts: warehouse.storedProducts.map((product) =>
             product.productName === shipment.product
-              ? { ...product, quantity: Math.max(product.quantity - shipment.numberOfBags, 0) }
+              ? { ...product, quantity: Math.max(product.quantity - stockDeductionQuantity(shipment), 0) }
               : product
           ),
         };
@@ -159,24 +235,38 @@ export default function WeighingShipment() {
         warehouseName: shipment.warehouseName,
         type: 'Withdraw Stock',
         product: shipment.product,
-        quantity: shipment.numberOfBags,
-        unit: 'Bag',
-        date: shipment.date,
-        time: shipment.time,
+        quantity: stockDeductionQuantity(shipment),
+        unit: productShipmentUnit(shipment.product) || 'Unit',
+        date: timestamp.date,
+        time: timestamp.time,
         adminName: t('admin'),
         driverName: shipment.driverName,
         notes: shipment.notes || t('shipments.approvedTracking'),
       },
       ...current,
     ]);
+
+    updateStoredOrderFromShipment(shipment.orderNo, {
+      status: 'Shipped',
+      shipmentStatus: 'Shipped',
+      statusUpdatedDate: timestamp.date,
+      statusUpdatedTime: timestamp.time,
+    });
   }
 
   function completeShipment(shipment) {
+    const timestamp = currentTimestamp();
     setShipmentRows((current) =>
       current.map((row) =>
-        row.id === shipment.id ? { ...row, status: 'Completed', tracking: t('shipments.completedTracking') } : row
+        row.id === shipment.id ? { ...row, ...timestamp, status: 'Completed', tracking: t('shipments.completedTracking') } : row
       )
     );
+    updateStoredOrderFromShipment(shipment.orderNo, {
+      status: 'Completed',
+      shipmentStatus: 'Completed',
+      statusUpdatedDate: timestamp.date,
+      statusUpdatedTime: timestamp.time,
+    });
   }
 
   const shipmentColumns = [
@@ -186,8 +276,9 @@ export default function WeighingShipment() {
     { key: 'product', label: t('common.product') },
     { key: 'warehouseName', label: t('warehouse.warehouse') },
     { key: 'numberOfBags', label: t('shipments.numberOfBags') },
-    { key: 'bagWeight', label: t('shipments.bagWeight'), render: (row) => `${row.bagWeight} kg` },
-    { key: 'totalWeight', label: t('shipments.totalWeight'), render: (row) => `${Number(row.totalWeight || row.netWeight || 0).toLocaleString()} kg` },
+    { key: 'totalWeight', label: t('shipments.totalQuantity'), render: (row) => shipmentQuantityLabel(row) },
+    { key: 'averageBagWeight', label: t('shipments.averageUnitPerBag'), render: (row) => shipmentAverageLabel(row) },
+    { key: 'driverName', label: t('warehouse.driverName'), render: (row) => row.driverName || '-' },
     { key: 'status', label: t('common.status'), render: (row) => <StatusBadge status={row.status} /> },
     {
       key: 'action',
@@ -210,11 +301,13 @@ export default function WeighingShipment() {
     { key: 'product', label: t('common.product') },
     { key: 'warehouseName', label: t('warehouse.warehouse') },
     { key: 'numberOfBags', label: t('shipments.numberOfBags') },
-    { key: 'bagWeight', label: t('shipments.bagWeight'), render: (row) => `${row.bagWeight} kg` },
-    { key: 'totalWeight', label: t('shipments.totalWeight'), render: (row) => `${Number(row.totalWeight || 0).toLocaleString()} kg` },
+    { key: 'totalWeight', label: t('shipments.totalQuantity'), render: (row) => shipmentQuantityLabel(row) },
+    { key: 'averageBagWeight', label: t('shipments.averageUnitPerBag'), render: (row) => shipmentAverageLabel(row) },
     { key: 'driverName', label: t('warehouse.driverName') },
     { key: 'status', label: t('common.status'), render: (row) => <StatusBadge status={row.status} /> },
   ];
+
+  const formAverageBagWeight = shipmentForm ? averageBagWeight(shipmentForm.numberOfBags, shipmentForm.totalWeight) : 0;
 
   return (
     <div className="page-grid workflow-page">
@@ -222,7 +315,7 @@ export default function WeighingShipment() {
         <Card className="summary-card"><p>{t('shipments.pendingWeighing')}</p><strong>{pendingShipments.length}</strong></Card>
         <Card className="summary-card"><p>{t('shipments.approvedShipments')}</p><strong>{shipmentRows.filter((shipment) => shipment.status === 'Approved').length}</strong></Card>
         <Card className="summary-card"><p>{t('shipments.completedShipments')}</p><strong>{completedShipments.length}</strong></Card>
-        <Card className="summary-card"><p>{t('shipments.totalShipmentWeight')}</p><strong>{totalShipmentWeight.toLocaleString()} kg</strong></Card>
+        <Card className="summary-card"><p>{t('dashboard.pendingShipments')}</p><strong>{pendingShipments.length}</strong></Card>
       </div>
 
       <Card title={t('shipments.pendingTitle')} subtitle={t('shipments.pendingSubtitle')}>
@@ -233,16 +326,18 @@ export default function WeighingShipment() {
         <Card title={t('shipments.processShipment')} subtitle={processingShipment.shipmentId}>
           <form className="form-grid" onSubmit={saveShipment}>
             {errors.length > 0 && <div className="form-error form-grid__wide">{errors.map((error) => <p key={error}>{error}</p>)}</div>}
-            <label>{t('common.date')}<input name="date" type="date" value={shipmentForm.date} onChange={handleFormChange} /></label>
-            <label>{t('common.time')}<input name="time" type="time" value={shipmentForm.time} onChange={handleFormChange} /></label>
             <label>{t('common.orderNumber')}<input name="orderNo" value={shipmentForm.orderNo} readOnly /></label>
             <label>{t('common.customerName')}<input name="customer" value={shipmentForm.customer} readOnly /></label>
             <label>{t('common.product')}<input name="product" value={shipmentForm.product} readOnly /></label>
             <label>{t('warehouse.warehouse')}<select name="warehouseName" value={shipmentForm.warehouseName} onChange={handleFormChange}>{warehouseRows.map((warehouse) => <option key={warehouse.id} value={warehouse.warehouseName}>{warehouse.warehouseName}</option>)}</select></label>
             <label>{t('shipments.numberOfBags')}<input name="numberOfBags" type="number" min="0" value={shipmentForm.numberOfBags} onChange={handleFormChange} /></label>
-            <label>{t('shipments.bagWeight')}<select name="bagWeight" value={shipmentForm.bagWeight} onChange={handleFormChange}>{bagWeights.map((weight) => <option key={weight} value={weight}>{weight} kg</option>)}</select></label>
-            <label>{t('shipments.totalWeight')}<input value={`${(Number(shipmentForm.numberOfBags || 0) * Number(shipmentForm.bagWeight || 0)).toLocaleString()} kg`} readOnly /></label>
+            <label>{isSesame(shipmentForm.product) ? t('shipments.totalQintar') : t('shipments.totalWeight')}<input name="totalWeight" type="number" min="0" value={shipmentForm.totalWeight} onChange={handleFormChange} /></label>
+            <label>{t('shipments.averageUnitPerBag')}<input value={formAverageBagWeight ? `${formAverageBagWeight.toLocaleString()} ${isSesame(shipmentForm.product) ? 'Qintar' : 'kg'}` : '-'} readOnly /></label>
             <label>{t('warehouse.driverName')}<input name="driverName" value={shipmentForm.driverName} onChange={handleFormChange} /></label>
+            <label>{t('shipments.approvalStatus')}<select name="approvalStatus" value={shipmentForm.approvalStatus} onChange={handleFormChange}>
+              <option value="Weighed">{t('status.Weighed')}</option>
+              <option value="Approved">{t('status.Approved')}</option>
+            </select></label>
             <label className="form-grid__wide">{t('warehouse.notes')}<textarea name="notes" value={shipmentForm.notes} onChange={handleFormChange} /></label>
             <div className="form-grid__actions form-grid__actions--split">
               <Button type="submit">{t('shipments.saveWeighing')}</Button>
@@ -252,12 +347,24 @@ export default function WeighingShipment() {
         </Card>
       )}
 
-      <Card title={t('shipments.completedTitle')} subtitle={t('shipments.completedSubtitle')}>
-        <Table columns={historyColumns} rows={completedShipments} />
-      </Card>
-
-      <Card title={t('shipments.historyTitle')} subtitle={t('shipments.historySubtitle')}>
-        <Table columns={historyColumns} rows={shipmentRows.filter((shipment) => shipment.status !== 'Pending Approval')} />
+      <Card title={activeShipmentTab === 'completed' ? t('shipments.completedTitle') : t('shipments.historyTitle')} subtitle={activeShipmentTab === 'completed' ? t('shipments.completedSubtitle') : t('shipments.historySubtitle')}>
+        <div className="customer-module-tabs shipment-tabs">
+          <button
+            className={`customer-module-tabs__button ${activeShipmentTab === 'completed' ? 'is-active' : ''}`}
+            onClick={() => setActiveShipmentTab('completed')}
+          >
+            {t('shipments.completedTitle')}
+          </button>
+          <button
+            className={`customer-module-tabs__button ${activeShipmentTab === 'history' ? 'is-active' : ''}`}
+            onClick={() => setActiveShipmentTab('history')}
+          >
+            {t('shipments.historyTitle')}
+          </button>
+        </div>
+        <div className="section-spacer">
+          <Table columns={historyColumns} rows={activeShipmentTab === 'completed' ? completedShipments : historyShipments} />
+        </div>
       </Card>
     </div>
   );

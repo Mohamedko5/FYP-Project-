@@ -79,10 +79,6 @@ export default function StockMovementForm({ form, errors, warehouses, products, 
           {unitOptions.map((unit) => <option key={unit.value} value={unit.value}>{unitLabel(unit)}</option>)}
         </select>
       </label>
-      <label>
-        {t('common.date')}
-        <input name="date" type="date" value={form.date} onChange={onChange} />
-      </label>
       <label className="form-grid__wide">
         {t('warehouse.notes')}
         <textarea name="notes" value={form.notes} onChange={onChange} placeholder={t('warehouse.movementNotesPlaceholder')} />

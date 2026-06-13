@@ -13,15 +13,24 @@ import Reports from './pages/Reports.jsx';
 import Login from './pages/Login.jsx';
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('bayadAuth') === 'true');
+  const [isAuthenticated, setIsAuthenticated] = useState(() => (
+    sessionStorage.getItem('bayadAuthSession') === 'true' || localStorage.getItem('bayadAuthRemembered') === 'true'
+  ));
 
-  function handleLogin() {
-    localStorage.setItem('bayadAuth', 'true');
+  function handleLogin(remember = false) {
+    sessionStorage.setItem('bayadAuthSession', 'true');
+    if (remember) {
+      localStorage.setItem('bayadAuthRemembered', 'true');
+    } else {
+      localStorage.removeItem('bayadAuthRemembered');
+    }
     setIsAuthenticated(true);
   }
 
   function handleLogout() {
     localStorage.removeItem('bayadAuth');
+    localStorage.removeItem('bayadAuthRemembered');
+    sessionStorage.removeItem('bayadAuthSession');
     setIsAuthenticated(false);
   }
 

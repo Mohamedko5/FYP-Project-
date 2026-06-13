@@ -8,13 +8,16 @@ import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import { workerTypeLabel } from './workerHelpers.js';
 import WorkerTransactionForm from './WorkerTransactionForm.jsx';
 
-const today = new Date().toISOString().slice(0, 10);
-const currentTime = () => new Date().toTimeString().slice(0, 5);
+function getCurrentDateTime() {
+  const now = new Date();
+  return {
+    date: now.toISOString().slice(0, 10),
+    time: now.toTimeString().slice(0, 5),
+  };
+}
 
 function createTransactionForm(warehouses) {
   return {
-    date: today,
-    time: currentTime(),
     warehouseName: warehouses[0]?.warehouseName || '',
     paymentMode: 'bag',
     numberOfBags: '',
@@ -112,7 +115,7 @@ export default function WorkerProfile({ worker, warehouses = [], onClose, onAddT
     const dailyWage = Number(transactionForm.dailyWage);
     const usesDailyWage = isGeneralWorker || (isWeighingWorker && transactionForm.paymentMode === 'daily');
 
-    if (!transactionForm.date || !transactionForm.time || !transactionForm.warehouseName) {
+    if (!transactionForm.warehouseName) {
       errors.push(t('customers.workerTransactionRequiredError'));
     }
 
@@ -130,10 +133,11 @@ export default function WorkerProfile({ worker, warehouses = [], onClose, onAddT
     }
 
     const totalWage = usesDailyWage ? dailyWage : numberOfBags * pricePerBag;
+    const timestamp = getCurrentDateTime();
     const transaction = {
       id: Date.now(),
-      date: transactionForm.date,
-      time: transactionForm.time,
+      date: timestamp.date,
+      time: timestamp.time,
       warehouseName: transactionForm.warehouseName,
       paymentMethod: usesDailyWage ? 'Daily Wage' : 'Bag Based',
       totalWage,

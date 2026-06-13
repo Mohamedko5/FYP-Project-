@@ -158,7 +158,6 @@ export default function Dashboard() {
             <DashboardIcon name="cash" />
             <div>
               <p>{t('dashboard.currentCashBalance')}</p>
-              <small>{t('dashboard.businessDate')}: {businessDate}</small>
             </div>
           </div>
           <strong>{formatCurrency(cashSummary.closingBalance)}</strong>

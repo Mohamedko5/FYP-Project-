@@ -94,6 +94,7 @@ export default function PrintableDailyJournal({
               {isCommodityReport ? (
                 <tr>
                   <th>{t('common.date')}</th>
+                  <th>{t('common.time')}</th>
                   <th>{t('common.product')}</th>
                   <th>{t('common.quantity')}</th>
                   <th>{t('common.unit')}</th>
@@ -118,6 +119,7 @@ export default function PrintableDailyJournal({
                 isCommodityReport ? (
                   <tr key={entry.id}>
                     <td>{entry.date}</td>
+                    <td>{entry.time || '-'}</td>
                     <td>{productLabel(entry.product)}</td>
                     <td>{entry.quantity}</td>
                     <td>{unitLabel(entry.unit)}</td>
