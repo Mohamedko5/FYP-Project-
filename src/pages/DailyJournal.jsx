@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
@@ -9,8 +9,15 @@ import CashJournalTable from '../components/journal/CashJournalTable.jsx';
 import CommodityJournalForm from '../components/journal/CommodityJournalForm.jsx';
 import CommodityJournalTable from '../components/journal/CommodityJournalTable.jsx';
 import CommoditySummaryCards from '../components/journal/CommoditySummaryCards.jsx';
-import { commodityJournalEntries, commodityUnits, formatCurrency, journalEntries, products } from '../data/dummyData.js';
+import { commodityProductLabels, formatCurrency, products } from '../data/dummyData.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
+import {
+  createJournalTransaction,
+  deleteJournalTransaction,
+  getDailyJournalSummary,
+  listJournalTransactions,
+  updateJournalTransaction,
+} from '../services/dailyJournalApi.js';
 
 function getTodayDate() {
   const today = new Date();
@@ -20,17 +27,10 @@ function getTodayDate() {
   return `${year}-${month}-${day}`;
 }
 
-function getCurrentDateTime() {
-  const now = new Date();
-  return {
-    date: getTodayDate(),
-    time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-  };
-}
-
 function createEmptyCashForm() {
   return {
     type: 'Income',
+    paymentMethod: 'cash',
     amount: '',
     description: '',
     party: '',
@@ -43,13 +43,76 @@ function createEmptyCommodityForm() {
     quantity: '',
     unit: 'Qintar',
     party: '',
-    lahuWaAlayh: 'Lahu',
     estimatedValue: '',
     description: '',
   };
 }
 
-function JournalConfirmationDialog({ confirmation, onCancel, onConfirm, t }) {
+function apiCashType(type) {
+  return type === 'Expense' ? 'expense' : 'income';
+}
+
+function uiCashType(cashType) {
+  return cashType === 'expense' ? 'Expense' : 'Income';
+}
+
+function decimalNumber(value) {
+  return Number(value || 0);
+}
+
+function mapCashTransaction(row) {
+  return {
+    id: row.id,
+    date: row.date,
+    time: row.time,
+    type: uiCashType(row.cash_type),
+    paymentMethod: row.payment_method,
+    amount: decimalNumber(row.amount),
+    description: row.description,
+    party: row.party,
+  };
+}
+
+function mapCommodityTransaction(row) {
+  return {
+    id: row.id,
+    date: row.date,
+    time: row.time,
+    product: row.product_name,
+    quantity: decimalNumber(row.quantity),
+    unit: row.unit,
+    party: row.party,
+    estimatedValue: decimalNumber(row.estimated_value),
+    description: row.description,
+  };
+}
+
+function cashSummaryFromApi(summary) {
+  return {
+    openingBalance: decimalNumber(summary?.cash?.opening_balance),
+    income: decimalNumber(summary?.cash?.total_income),
+    expenses: decimalNumber(summary?.cash?.total_expenses),
+    net: decimalNumber(summary?.cash?.net),
+    closing: decimalNumber(summary?.cash?.closing_balance),
+  };
+}
+
+function storedAdminName() {
+  try {
+    const user = JSON.parse(localStorage.getItem('bayadUser') || '{}');
+    return user.username || user.email || 'Bayad Admin';
+  } catch {
+    return 'Bayad Admin';
+  }
+}
+
+function formatApiError(error) {
+  return String(error?.message || 'Unable to complete this request. Please try again.')
+    .split('\n')
+    .filter(Boolean);
+}
+
+function JournalConfirmationDialog({ confirmation, onCancel, onConfirm, t, isDeleting }) {
   if (!confirmation) return null;
 
   return (
@@ -58,9 +121,9 @@ function JournalConfirmationDialog({ confirmation, onCancel, onConfirm, t }) {
         <h3 id="journal-confirmation-title">{confirmation.title}</h3>
         <p>{confirmation.message}</p>
         <div className="confirmation-dialog__actions">
-          <Button type="button" variant="secondary" onClick={onCancel}>{t('cancel')}</Button>
-          <Button type="button" variant={confirmation.variant || 'primary'} onClick={onConfirm}>
-            {confirmation.confirmLabel}
+          <Button type="button" variant="secondary" onClick={onCancel} disabled={isDeleting}>{t('cancel')}</Button>
+          <Button type="button" variant={confirmation.variant || 'primary'} onClick={onConfirm} disabled={isDeleting}>
+            {isDeleting ? t('journal.deleting') : confirmation.confirmLabel}
           </Button>
         </div>
       </div>
@@ -74,8 +137,9 @@ export default function DailyJournal() {
   const [selectedDate, setSelectedDate] = useState(getTodayDate());
   const [draftDate, setDraftDate] = useState(getTodayDate());
   const [journalType, setJournalType] = useState('cash');
-  const [cashEntries, setCashEntries] = useState(journalEntries);
-  const [commodityEntries, setCommodityEntries] = useState(commodityJournalEntries);
+  const [cashEntries, setCashEntries] = useState([]);
+  const [commodityEntries, setCommodityEntries] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [cashForm, setCashForm] = useState(() => createEmptyCashForm());
   const [commodityForm, setCommodityForm] = useState(() => createEmptyCommodityForm());
   const [editingCashId, setEditingCashId] = useState(null);
@@ -85,62 +149,61 @@ export default function DailyJournal() {
   const [cashErrors, setCashErrors] = useState([]);
   const [commodityErrors, setCommodityErrors] = useState([]);
   const [confirmation, setConfirmation] = useState(null);
-  const [adminName, setAdminName] = useState('Bayad Admin');
+  const [adminName] = useState(storedAdminName);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [apiError, setApiError] = useState('');
+  const [cashFilters, setCashFilters] = useState({ payment_method: '' });
+  const [commodityFilters, setCommodityFilters] = useState({ product_name: '', unit: '' });
 
-  const dailyCashEntries = useMemo(
-    () => cashEntries.filter((entry) => entry.date === selectedDate),
-    [cashEntries, selectedDate]
-  );
+  const cashTotals = useMemo(() => cashSummaryFromApi(summary), [summary]);
 
-  const dailyCommodityEntries = useMemo(
-    () => commodityEntries.filter((entry) => entry.date === selectedDate),
-    [commodityEntries, selectedDate]
-  );
+  const loadJournalData = useCallback(async () => {
+    setIsLoading(true);
+    setApiError('');
+    try {
+      const commonParams = { date: selectedDate, ordering: '-created_at' };
+      const [cashRows, commodityRows, summaryData] = await Promise.all([
+        listJournalTransactions({ ...commonParams, journal_type: 'cash', ...cashFilters }),
+        listJournalTransactions({ ...commonParams, journal_type: 'commodity', ...commodityFilters }),
+        getDailyJournalSummary({ date: selectedDate }),
+      ]);
+      setCashEntries(cashRows.map(mapCashTransaction));
+      setCommodityEntries(commodityRows.map(mapCommodityTransaction));
+      setSummary(summaryData);
+    } catch (error) {
+      setApiError(error.message || 'Unable to load journal data.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedDate, cashFilters, commodityFilters]);
 
-  const openingBalanceEntry = useMemo(() => {
-    return dailyCashEntries
-      .filter((entry) => entry.type === 'Income')
-      .reduce((firstEntry, entry) => {
-        if (!firstEntry) return entry;
-        return Number(entry.id) < Number(firstEntry.id) ? entry : firstEntry;
-      }, null);
-  }, [dailyCashEntries]);
+  useEffect(() => {
+    loadJournalData();
+  }, [loadJournalData]);
 
-  const openingBalance = openingBalanceEntry?.amount || 0;
-
-  const cashTotals = useMemo(() => {
-    const income = dailyCashEntries
-      .filter((entry) => entry.type === 'Income' && entry.id !== openingBalanceEntry?.id)
-      .reduce((sum, entry) => sum + entry.amount, 0);
-    const expenses = dailyCashEntries.filter((entry) => entry.type === 'Expense').reduce((sum, entry) => sum + entry.amount, 0);
-    return { income, expenses, net: income - expenses, closing: openingBalance + income - expenses };
-  }, [dailyCashEntries, openingBalance, openingBalanceEntry]);
-
-  function handleJournalTypeChange(nextType) {
-    setJournalType(nextType);
-    setCashErrors([]);
-    setCommodityErrors([]);
+  function resetForms() {
     setEditingCashId(null);
     setEditingCommodityId(null);
     setShowCashForm(false);
     setShowCommodityForm(false);
     setCashForm(createEmptyCashForm());
     setCommodityForm(createEmptyCommodityForm());
+    setCashErrors([]);
+    setCommodityErrors([]);
     setConfirmation(null);
+  }
+
+  function handleJournalTypeChange(nextType) {
+    setJournalType(nextType);
+    resetForms();
   }
 
   function loadJournalDate(nextDate) {
     setSelectedDate(nextDate);
     setDraftDate(nextDate);
-    setEditingCashId(null);
-    setEditingCommodityId(null);
-    setShowCashForm(false);
-    setShowCommodityForm(false);
-    setCashForm(createEmptyCashForm());
-    setCommodityForm(createEmptyCommodityForm());
-    setCashErrors([]);
-    setCommodityErrors([]);
-    setConfirmation(null);
+    resetForms();
   }
 
   function handleViewJournal() {
@@ -162,8 +225,11 @@ export default function DailyJournal() {
     if (!cashForm.party.trim() || cashForm.amount === '' || !cashForm.description.trim()) {
       nextErrors.push(t('journal.requiredFieldsError'));
     }
-    if (Number(cashForm.amount) < 0) {
-      nextErrors.push(t('journal.negativeAmountError'));
+    if (!cashForm.paymentMethod) {
+      nextErrors.push(t('journal.paymentMethodRequiredError'));
+    }
+    if (Number(cashForm.amount) <= 0) {
+      nextErrors.push(t('journal.positiveAmountError'));
     }
     setCashErrors(nextErrors);
     return nextErrors.length === 0;
@@ -174,8 +240,8 @@ export default function DailyJournal() {
     if (!commodityForm.product || commodityForm.quantity === '' || !commodityForm.party.trim() || commodityForm.estimatedValue === '' || !commodityForm.description.trim()) {
       nextErrors.push(t('journal.commodityRequiredFieldsError'));
     }
-    if (Number(commodityForm.quantity) < 0) {
-      nextErrors.push(t('journal.negativeQuantityError'));
+    if (Number(commodityForm.quantity) <= 0) {
+      nextErrors.push(t('journal.positiveQuantityError'));
     }
     if (Number(commodityForm.estimatedValue) < 0) {
       nextErrors.push(t('journal.negativeEstimatedValueError'));
@@ -184,37 +250,68 @@ export default function DailyJournal() {
     return nextErrors.length === 0;
   }
 
-  function saveCashPayload(payload) {
-    const systemTimestamp = getCurrentDateTime();
-    if (editingCashId) {
-      setCashEntries((current) => current.map((entry) => (entry.id === editingCashId ? { ...entry, ...payload } : entry)));
-      setEditingCashId(null);
-    } else {
-      setCashEntries((current) => [{ id: Date.now(), ...systemTimestamp, ...payload }, ...current]);
-    }
-    setCashForm(createEmptyCashForm());
+  async function saveCashPayload(payload) {
+    setIsSaving(true);
     setCashErrors([]);
-    setShowCashForm(false);
+    try {
+      const apiPayload = {
+        journal_type: 'cash',
+        cash_type: apiCashType(payload.type),
+        payment_method: payload.paymentMethod,
+        amount: payload.amount,
+        party: payload.party,
+        description: payload.description,
+      };
+      if (editingCashId) {
+        await updateJournalTransaction(editingCashId, apiPayload);
+      } else {
+        await createJournalTransaction(apiPayload);
+      }
+      setEditingCashId(null);
+      setCashForm(createEmptyCashForm());
+      setShowCashForm(false);
+      await loadJournalData();
+    } catch (error) {
+      setCashErrors(formatApiError(error));
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  function saveCommodityPayload(payload) {
-    const systemTimestamp = getCurrentDateTime();
-    if (editingCommodityId) {
-      setCommodityEntries((current) => current.map((entry) => (entry.id === editingCommodityId ? { ...entry, ...payload } : entry)));
-      setEditingCommodityId(null);
-    } else {
-      setCommodityEntries((current) => [{ id: Date.now(), ...systemTimestamp, ...payload }, ...current]);
-    }
-    setCommodityForm(createEmptyCommodityForm());
+  async function saveCommodityPayload(payload) {
+    setIsSaving(true);
     setCommodityErrors([]);
-    setShowCommodityForm(false);
+    try {
+      const apiPayload = {
+        journal_type: 'commodity',
+        product_name: payload.product,
+        quantity: payload.quantity,
+        unit: payload.unit,
+        estimated_value: payload.estimatedValue,
+        party: payload.party,
+        description: payload.description,
+      };
+      if (editingCommodityId) {
+        await updateJournalTransaction(editingCommodityId, apiPayload);
+      } else {
+        await createJournalTransaction(apiPayload);
+      }
+      setEditingCommodityId(null);
+      setCommodityForm(createEmptyCommodityForm());
+      setShowCommodityForm(false);
+      await loadJournalData();
+    } catch (error) {
+      setCommodityErrors(formatApiError(error));
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   function handleCashSubmit(event) {
     event.preventDefault();
     if (!validateCashForm()) return;
 
-    const payload = { ...cashForm, amount: Number(cashForm.amount) };
+    const payload = { ...cashForm, amount: cashForm.amount };
     if (editingCashId) {
       setConfirmation({
         action: 'saveCash',
@@ -235,8 +332,8 @@ export default function DailyJournal() {
 
     const payload = {
       ...commodityForm,
-      quantity: Number(commodityForm.quantity),
-      estimatedValue: Number(commodityForm.estimatedValue),
+      quantity: commodityForm.quantity,
+      estimatedValue: commodityForm.estimatedValue,
     };
 
     if (editingCommodityId) {
@@ -256,7 +353,13 @@ export default function DailyJournal() {
   function handleCashEdit(entry) {
     setEditingCashId(entry.id);
     setShowCashForm(true);
-    setCashForm({ ...entry, amount: String(entry.amount) });
+    setCashForm({
+      type: entry.type,
+      paymentMethod: entry.paymentMethod || 'cash',
+      amount: String(entry.amount),
+      party: entry.party,
+      description: entry.description,
+    });
     setCashErrors([]);
   }
 
@@ -264,13 +367,10 @@ export default function DailyJournal() {
     setEditingCommodityId(entry.id);
     setShowCommodityForm(true);
     setCommodityForm({
-      date: entry.date,
-      time: entry.time,
       product: entry.product,
       quantity: String(entry.quantity),
       unit: entry.unit,
       party: entry.party,
-      lahuWaAlayh: entry.lahuWaAlayh,
       estimatedValue: String(entry.estimatedValue),
       description: entry.description,
     });
@@ -284,6 +384,13 @@ export default function DailyJournal() {
     setCashErrors([]);
   }
 
+  function handleCommodityCancel() {
+    setEditingCommodityId(null);
+    setShowCommodityForm(false);
+    setCommodityForm(createEmptyCommodityForm());
+    setCommodityErrors([]);
+  }
+
   function handleCashDelete(entryId) {
     setConfirmation({
       action: 'deleteCash',
@@ -293,20 +400,6 @@ export default function DailyJournal() {
       confirmLabel: t('journal.confirmDelete'),
       variant: 'secondary',
     });
-  }
-
-  function handleCommodityCancel() {
-    setEditingCommodityId(null);
-    setShowCommodityForm(false);
-    setCommodityForm(createEmptyCommodityForm());
-    setCommodityErrors([]);
-  }
-
-  function handleAddCommodityTransaction() {
-    setEditingCommodityId(null);
-    setCommodityForm(createEmptyCommodityForm());
-    setCommodityErrors([]);
-    setShowCommodityForm(true);
   }
 
   function handleCommodityDelete(entryId) {
@@ -320,38 +413,6 @@ export default function DailyJournal() {
     });
   }
 
-  function closeConfirmation() {
-    setConfirmation(null);
-  }
-
-  function confirmJournalAction() {
-    if (!confirmation) return;
-
-    if (confirmation.action === 'saveCash') {
-      saveCashPayload(confirmation.payload);
-    }
-
-    if (confirmation.action === 'saveCommodity') {
-      saveCommodityPayload(confirmation.payload);
-    }
-
-    if (confirmation.action === 'deleteCash') {
-      setCashEntries((current) => current.filter((entry) => entry.id !== confirmation.entryId));
-      if (editingCashId === confirmation.entryId) {
-        handleCashCancel();
-      }
-    }
-
-    if (confirmation.action === 'deleteCommodity') {
-      setCommodityEntries((current) => current.filter((entry) => entry.id !== confirmation.entryId));
-      if (editingCommodityId === confirmation.entryId) {
-        handleCommodityCancel();
-      }
-    }
-
-    setConfirmation(null);
-  }
-
   function handleAddCashTransaction() {
     setEditingCashId(null);
     setCashForm(createEmptyCashForm());
@@ -359,8 +420,55 @@ export default function DailyJournal() {
     setShowCashForm(true);
   }
 
+  function handleAddCommodityTransaction() {
+    setEditingCommodityId(null);
+    setCommodityForm(createEmptyCommodityForm());
+    setCommodityErrors([]);
+    setShowCommodityForm(true);
+  }
+
+  function closeConfirmation() {
+    if (!isSaving && !isDeleting) setConfirmation(null);
+  }
+
+  async function confirmJournalAction() {
+    if (!confirmation) return;
+
+    if (confirmation.action === 'saveCash') {
+      await saveCashPayload(confirmation.payload);
+      setConfirmation(null);
+      return;
+    }
+
+    if (confirmation.action === 'saveCommodity') {
+      await saveCommodityPayload(confirmation.payload);
+      setConfirmation(null);
+      return;
+    }
+
+    if (confirmation.action === 'deleteCash' || confirmation.action === 'deleteCommodity') {
+      setIsDeleting(true);
+      setApiError('');
+      try {
+        await deleteJournalTransaction(confirmation.entryId);
+        if (editingCashId === confirmation.entryId) handleCashCancel();
+        if (editingCommodityId === confirmation.entryId) handleCommodityCancel();
+        setConfirmation(null);
+        await loadJournalData();
+      } catch (error) {
+        setApiError(error.message || 'Unable to delete transaction.');
+      } finally {
+        setIsDeleting(false);
+      }
+    }
+  }
+
   function handlePrint() {
     window.print();
+  }
+
+  function productLabel(productName) {
+    return commodityProductLabels[productName]?.[isArabic ? 'ar' : 'en'] || productName;
   }
 
   useEffect(() => {
@@ -382,7 +490,7 @@ export default function DailyJournal() {
             <input type="date" value={draftDate} onChange={(event) => setDraftDate(event.target.value)} />
           </label>
           <div className="journal-date-search__actions">
-            <Button onClick={handleViewJournal}>{t('journal.viewJournal')}</Button>
+            <Button onClick={handleViewJournal} disabled={isLoading}>{t('journal.viewJournal')}</Button>
             <Button variant="secondary" onClick={handlePrint}>{t('journal.printPdf')}</Button>
           </div>
           <p>
@@ -391,12 +499,19 @@ export default function DailyJournal() {
         </div>
       </Card>
 
+      {apiError && (
+        <div className="form-error">
+          <p>{apiError}</p>
+          <Button type="button" variant="secondary" onClick={loadJournalData}>{t('journal.retry')}</Button>
+        </div>
+      )}
+
       {journalType === 'cash' ? (
         <>
           <div className="summary-grid">
             <Card className="summary-card">
               <p>{t('journal.openingBalance')}</p>
-              <strong>{formatCurrency(openingBalance)}</strong>
+              <strong>{formatCurrency(cashTotals.openingBalance)}</strong>
               <small>{selectedDate}</small>
             </Card>
             <Card className="summary-card">
@@ -417,17 +532,30 @@ export default function DailyJournal() {
           </div>
 
           <Card title={t('journal.endOfDaySummary')} subtitle={t('journal.historySubtitle')}>
-            <div className="journal-table-toolbar">
+            <div className="journal-table-toolbar journal-table-toolbar--filters">
+              <div className="journal-filter-group">
+                <select
+                  value={cashFilters.payment_method}
+                  onChange={(event) => setCashFilters((current) => ({ ...current, payment_method: event.target.value }))}
+                >
+                  <option value="">{t('journal.allPaymentMethods')}</option>
+                  <option value="cash">{t('journal.paymentMethods.cash')}</option>
+                  <option value="online">{t('journal.paymentMethods.online')}</option>
+                </select>
+              </div>
               <Button onClick={handleAddCashTransaction}>{t('journal.addTransaction')}</Button>
             </div>
-            <CashJournalTable
-              entries={dailyCashEntries}
-              openingBalanceEntryId={openingBalanceEntry?.id}
-              onEdit={handleCashEdit}
-              onDelete={handleCashDelete}
-              t={t}
-              emptyMessage={t('journal.noTransactionsForDate')}
-            />
+            {isLoading ? (
+              <div className="journal-state">{t('journal.loading')}</div>
+            ) : (
+              <CashJournalTable
+                entries={cashEntries}
+                onEdit={handleCashEdit}
+                onDelete={handleCashDelete}
+                t={t}
+                emptyMessage={t('journal.noTransactionsForDate')}
+              />
+            )}
           </Card>
 
           {showCashForm && (
@@ -440,6 +568,7 @@ export default function DailyJournal() {
                 form={cashForm}
                 errors={cashErrors}
                 isEditing={Boolean(editingCashId)}
+                isSaving={isSaving}
                 onChange={handleCashChange}
                 onSubmit={handleCashSubmit}
                 onCancel={handleCashCancel}
@@ -450,30 +579,50 @@ export default function DailyJournal() {
           )}
 
           <PrintableDailyJournal
-            entries={dailyCashEntries}
+            entries={cashEntries}
             reportDate={selectedDate}
             adminName={adminName}
-            openingBalance={openingBalance}
+            openingBalance={cashTotals.openingBalance}
             totals={cashTotals}
           />
         </>
       ) : (
         <>
-          <CommoditySummaryCards entries={dailyCommodityEntries} t={t} statusLabel={statusLabel} isArabic={isArabic} />
+          <CommoditySummaryCards summary={summary?.commodity} entries={commodityEntries} t={t} statusLabel={statusLabel} isArabic={isArabic} />
 
           <Card title={t('journal.commodityJournalTitle')} subtitle={t('journal.commodityHistorySubtitle')}>
-            <div className="journal-table-toolbar">
+            <div className="journal-table-toolbar journal-table-toolbar--filters">
+              <div className="journal-filter-group journal-filter-group--wide">
+                <select
+                  value={commodityFilters.product_name}
+                  onChange={(event) => setCommodityFilters((current) => ({ ...current, product_name: event.target.value }))}
+                >
+                  <option value="">{t('journal.allProducts')}</option>
+                  {products.map((product) => <option key={product.id} value={product.name}>{productLabel(product.name)}</option>)}
+                </select>
+                <select
+                  value={commodityFilters.unit}
+                  onChange={(event) => setCommodityFilters((current) => ({ ...current, unit: event.target.value }))}
+                >
+                  <option value="">{t('journal.allUnits')}</option>
+                  {['Qintar', 'KG', 'Bag', 'Bale', 'Unit'].map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+                </select>
+              </div>
               <Button onClick={handleAddCommodityTransaction}>{t('journal.addTransaction')}</Button>
             </div>
-            <CommodityJournalTable
-              entries={dailyCommodityEntries}
-              onEdit={handleCommodityEdit}
-              onDelete={handleCommodityDelete}
-              t={t}
-              statusLabel={statusLabel}
-              isArabic={isArabic}
-              emptyMessage={t('journal.noTransactionsForDate')}
-            />
+            {isLoading ? (
+              <div className="journal-state">{t('journal.loading')}</div>
+            ) : (
+              <CommodityJournalTable
+                entries={commodityEntries}
+                onEdit={handleCommodityEdit}
+                onDelete={handleCommodityDelete}
+                t={t}
+                statusLabel={statusLabel}
+                isArabic={isArabic}
+                emptyMessage={t('journal.noTransactionsForDate')}
+              />
+            )}
           </Card>
 
           {showCommodityForm && (
@@ -486,24 +635,24 @@ export default function DailyJournal() {
                 form={commodityForm}
                 errors={commodityErrors}
                 isEditing={Boolean(editingCommodityId)}
+                isSaving={isSaving}
                 products={products}
-                units={commodityUnits}
                 isArabic={isArabic}
                 onChange={handleCommodityChange}
                 onSubmit={handleCommoditySubmit}
                 onCancel={handleCommodityCancel}
                 t={t}
-                statusLabel={statusLabel}
               />
             </Card>
           )}
 
           <PrintableDailyJournal
-            entries={dailyCommodityEntries}
+            entries={commodityEntries}
             reportDate={selectedDate}
             adminName={adminName}
             openingBalance={0}
             totals={{ income: 0, expenses: 0, net: 0, closing: 0 }}
+            commoditySummary={summary?.commodity}
           />
         </>
       )}
@@ -512,6 +661,7 @@ export default function DailyJournal() {
         onCancel={closeConfirmation}
         onConfirm={confirmJournalAction}
         t={t}
+        isDeleting={isDeleting}
       />
     </div>
   );

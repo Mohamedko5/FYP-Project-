@@ -6,17 +6,32 @@ export function productLabel(productName, isArabic) {
 
 export function unitLabel(unitValue, isArabic) {
   const unit = commodityUnits.find((item) => item.value === unitValue);
-  return isArabic ? (unit?.arabicLabel || unitValue) : (unit?.englishLabel || unitValue);
+  const fallback = {
+    Qintar: { en: 'Qintar', ar: 'Qintar' },
+    KG: { en: 'KG', ar: 'KG' },
+    Bag: { en: 'Bag', ar: 'Bag' },
+    Bale: { en: 'Bale', ar: 'Bale' },
+    Unit: { en: 'Unit', ar: 'Unit' },
+  }[unitValue];
+  return isArabic ? (unit?.arabicLabel || fallback?.ar || unitValue) : (unit?.englishLabel || fallback?.en || unitValue);
 }
 
 export function customerTypeLabel(type, isArabic) {
+  const normalized = {
+    farmer: 'Farmer',
+    investor: 'Investor',
+    consumer: 'Consumer',
+    exporter: 'Exporter',
+    factory: 'Factory',
+    supplier: 'Supplier',
+  }[type] || type;
   const labels = {
-    Farmer: 'مزارع',
-    Investor: 'مستثمر',
-    Consumer: 'مستهلك',
-    Exporter: 'مصدر',
-    Factory: 'مصنع',
-    Supplier: 'مورد',
+    Farmer: 'Farmer',
+    Investor: 'Investor',
+    Consumer: 'Consumer',
+    Exporter: 'Exporter',
+    Factory: 'Factory',
+    Supplier: 'Supplier',
   };
-  return isArabic ? (labels[type] || type) : type;
+  return isArabic ? (labels[normalized] || normalized) : normalized;
 }

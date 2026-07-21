@@ -4,7 +4,7 @@ import { commodityProductLabels, commodityUnits } from '../../data/dummyData.js'
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import { getUnitOptions } from './warehouseUtils.js';
 
-export default function WarehouseForm({ form, errors, products, unitRules, onChange, onSubmit, onCancel }) {
+export default function WarehouseForm({ form, errors, products, unitRules, isSaving = false, onChange, onSubmit, onCancel }) {
   const { t, isArabic } = useLanguage();
   const unitOptions = useMemo(() => getUnitOptions(unitRules, form.productType), [unitRules, form.productType]);
 
@@ -48,7 +48,7 @@ export default function WarehouseForm({ form, errors, products, unitRules, onCha
       </label>
       <label>
         {t('warehouse.storageCapacity')}
-        <input name="capacity" type="number" min="0" value={form.capacity} onChange={onChange} placeholder="0" />
+        <input name="capacity" type="number" min="0" step="0.001" value={form.capacity} onChange={onChange} placeholder="0" />
       </label>
       <label>
         {t('warehouse.capacityUnit')}
@@ -69,8 +69,8 @@ export default function WarehouseForm({ form, errors, products, unitRules, onCha
         <textarea name="notes" value={form.notes} onChange={onChange} placeholder={t('warehouse.notesPlaceholder')} />
       </label>
       <div className="form-grid__actions form-grid__actions--split">
-        <Button type="submit">{t('warehouse.addWarehouse')}</Button>
-        {onCancel && <Button type="button" variant="secondary" onClick={onCancel}>{t('cancel')}</Button>}
+        <Button type="submit" disabled={isSaving}>{isSaving ? t('journal.saving') : t('warehouse.addWarehouse')}</Button>
+        {onCancel && <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>{t('cancel')}</Button>}
       </div>
     </form>
   );

@@ -2,11 +2,14 @@ import Button from '../ui/Button.jsx';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import { workerTypeLabel, workerTypes } from './workerHelpers.js';
 
-export default function WorkerForm({ form, errors, onChange, onSubmit, onCancel }) {
+export default function WorkerForm({ form, errors, onChange, onSubmit, onCancel, isSaving = false }) {
   const { t, isArabic } = useLanguage();
-  const preview = form.photoUrl
-    ? <img src={form.photoUrl} alt={form.name || t('customers.workerName')} />
+  const preview = form.photoPreview
+    ? <img src={form.photoPreview} alt={form.name || t('customers.workerName')} />
     : <span>{(form.name || t('customers.workerAvatar')).slice(0, 1).toUpperCase()}</span>;
+  const isGeneral = form.workerType === 'general_worker';
+  const isBag = form.workerType === 'bag_carrying_worker';
+  const isWeighing = form.workerType === 'weighing_worker';
 
   return (
     <form className="form-grid" onSubmit={onSubmit}>
@@ -20,7 +23,7 @@ export default function WorkerForm({ form, errors, onChange, onSubmit, onCancel 
         {t('customers.photo')}
         <div className="customer-photo-input">
           <div className="customer-avatar">{preview}</div>
-          <input name="photoUrl" type="file" accept="image/*" onChange={onChange} />
+          <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onChange} />
         </div>
       </label>
       <label>
@@ -30,6 +33,10 @@ export default function WorkerForm({ form, errors, onChange, onSubmit, onCancel 
       <label>
         {t('common.phone')}
         <input name="phone" value={form.phone} onChange={onChange} placeholder="+249..." />
+      </label>
+      <label>
+        {t('customers.secondaryPhone')}
+        <input name="secondaryPhone" value={form.secondaryPhone || ''} onChange={onChange} placeholder="+249..." />
       </label>
       <label>
         {t('customers.workerType')}
@@ -43,13 +50,33 @@ export default function WorkerForm({ form, errors, onChange, onSubmit, onCancel 
         {t('customers.assignedWork')}
         <input name="assignedWork" value={form.assignedWork} onChange={onChange} placeholder={t('customers.assignedWorkPlaceholder')} />
       </label>
+      {(isGeneral || isWeighing) && (
+        <label>
+          {t('customers.defaultDailyWage')}
+          <input name="defaultDailyWage" type="number" min="0" step="0.01" value={form.defaultDailyWage || ''} onChange={onChange} placeholder="0" />
+        </label>
+      )}
+      {(isBag || isWeighing) && (
+        <label>
+          {t('customers.defaultPricePerBag')}
+          <input name="defaultPricePerBag" type="number" min="0" step="0.01" value={form.defaultPricePerBag || ''} onChange={onChange} placeholder="0" />
+        </label>
+      )}
+      <label>
+        {t('common.status')}
+        <select name="status" value={form.status} onChange={onChange}>
+          <option value="available">{t('status.Available')}</option>
+          <option value="working">{t('status.Working')}</option>
+          <option value="inactive">{t('status.Inactive')}</option>
+        </select>
+      </label>
       <label className="form-grid__wide">
         {t('customers.workNotes')}
         <textarea name="notes" value={form.notes} onChange={onChange} placeholder={t('customers.workNotesPlaceholder')} />
       </label>
       <div className="form-grid__actions form-grid__actions--split">
-        <Button type="submit">{t('customers.addWorker')}</Button>
-        <Button type="button" variant="secondary" onClick={onCancel}>{t('cancel')}</Button>
+        <Button type="submit" disabled={isSaving}>{isSaving ? t('journal.saving') : t('customers.addWorker')}</Button>
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>{t('cancel')}</Button>
       </div>
     </form>
   );

@@ -7,25 +7,38 @@ export default function PrintableDailyJournal({
   adminName,
   openingBalance,
   totals,
+  commoditySummary = null,
 }) {
   const { t, statusLabel, isArabic } = useLanguage();
   const closingBalance = openingBalance + totals.net;
   const isCommodityReport = entries.some((entry) => entry.product);
-  const incomingQuantity = isCommodityReport
-    ? entries.filter((entry) => entry.lahuWaAlayh === 'Lahu').reduce((sum, entry) => sum + entry.quantity, 0)
-    : 0;
-  const outgoingQuantity = isCommodityReport
-    ? entries.filter((entry) => entry.lahuWaAlayh === 'Alayh').reduce((sum, entry) => sum + entry.quantity, 0)
-    : 0;
+  const commodityGroups = commoditySummary?.groups || [];
+  const commodityTransactionCount = commoditySummary?.transaction_count ?? entries.length;
+  const commodityEstimatedTotalValue = commoditySummary?.estimated_total_value ?? entries.reduce((sum, entry) => sum + entry.estimatedValue, 0);
+  const unitLabels = {
+    Qintar: { en: 'Qintar', ar: commodityUnits.find((unit) => unit.value === 'Qintar')?.arabicLabel || 'Qintar' },
+    KG: { en: 'KG', ar: 'KG' },
+    Bag: { en: 'Bag', ar: 'Bag' },
+    Bale: { en: 'Bale', ar: commodityUnits.find((unit) => unit.value === 'Bale')?.arabicLabel || 'Bale' },
+    Unit: { en: 'Unit', ar: commodityUnits.find((unit) => unit.value === 'Piece')?.arabicLabel || 'Unit' },
+  };
 
   function productLabel(productName) {
     return commodityProductLabels[productName]?.[isArabic ? 'ar' : 'en'] || productName;
   }
 
   function unitLabel(unitValue) {
+    if (unitLabels[unitValue]) return unitLabels[unitValue][isArabic ? 'ar' : 'en'];
     const unit = commodityUnits.find((item) => item.value === unitValue);
     if (!unit) return unitValue;
     return isArabic ? unit.arabicLabel : unit.englishLabel;
+  }
+
+  function renderCommodityGroups(groups) {
+    if (groups.length === 0) return t('journal.noCommodityMovement');
+    return groups
+      .map((group) => `${Number(group.quantity).toLocaleString()} ${unitLabel(group.unit)} ${productLabel(group.product_name)} (${formatCurrency(Number(group.estimated_value))})`)
+      .join(' / ');
   }
 
   return (
@@ -50,15 +63,11 @@ export default function PrintableDailyJournal({
             <>
               <div>
                 <span>{t('journal.dailyCommodityMovement')}</span>
-                <strong>{entries.length.toLocaleString()}</strong>
+                <strong>{Number(commodityTransactionCount).toLocaleString()}</strong>
               </div>
               <div>
-                <span>{t('journal.totalCommodityIn')}</span>
-                <strong>{incomingQuantity.toLocaleString()}</strong>
-              </div>
-              <div>
-                <span>{t('journal.totalCommodityOut')}</span>
-                <strong>{outgoingQuantity.toLocaleString()}</strong>
+                <span>{t('journal.totalEstimatedValue')}</span>
+                <strong>{formatCurrency(Number(commodityEstimatedTotalValue))}</strong>
               </div>
             </>
           ) : (
@@ -99,7 +108,6 @@ export default function PrintableDailyJournal({
                   <th>{t('common.quantity')}</th>
                   <th>{t('common.unit')}</th>
                   <th>{t('common.customerSupplier')}</th>
-                  <th>{t('journal.lahuAlayh')}</th>
                   <th>{t('journal.estimatedValue')}</th>
                   <th>{t('common.description')}</th>
                 </tr>
@@ -108,6 +116,7 @@ export default function PrintableDailyJournal({
                   <th>{t('common.date')}</th>
                   <th>{t('common.time')}</th>
                   <th>{t('common.type')}</th>
+                  <th>{t('journal.paymentMethod')}</th>
                   <th>{t('common.customerSupplier')}</th>
                   <th>{t('common.amount')}</th>
                   <th>{t('common.description')}</th>
@@ -124,7 +133,6 @@ export default function PrintableDailyJournal({
                     <td>{entry.quantity}</td>
                     <td>{unitLabel(entry.unit)}</td>
                     <td>{entry.party}</td>
-                    <td>{statusLabel(entry.lahuWaAlayh)}</td>
                     <td>{formatCurrency(entry.estimatedValue)}</td>
                     <td>{entry.description}</td>
                   </tr>
@@ -133,6 +141,7 @@ export default function PrintableDailyJournal({
                     <td>{entry.date}</td>
                     <td>{entry.time}</td>
                     <td>{statusLabel(entry.type)}</td>
+                    <td>{t(`journal.paymentMethods.${entry.paymentMethod || 'cash'}`)}</td>
                     <td>{entry.party}</td>
                     <td>{formatCurrency(entry.amount)}</td>
                     <td>{entry.description}</td>
@@ -146,9 +155,7 @@ export default function PrintableDailyJournal({
         <section className="print-report__section">
           <h3>{t('print.endOfDaySummary')}</h3>
           {isCommodityReport ? (
-            <p>
-              {t('journal.dailyCommodityMovement')}: {entries.length.toLocaleString()} {t('journal.movementOperations')}.
-            </p>
+            <p>{t('journal.productGroups')}: {renderCommodityGroups(commodityGroups)}.</p>
           ) : (
             <p>
               {t('print.summarySentence')} {formatCurrency(closingBalance)}.

@@ -16,6 +16,11 @@ export default function CashJournalTable({ entries, openingBalanceEntryId, onEdi
           : <StatusBadge status={row.type} />
       ),
     },
+    {
+      key: 'paymentMethod',
+      label: t('journal.paymentMethod'),
+      render: (row) => <span className="status-badge">{t(`journal.paymentMethods.${row.paymentMethod || 'cash'}`)}</span>,
+    },
     { key: 'party', label: t('common.customerSupplier') },
     {
       key: 'amount',

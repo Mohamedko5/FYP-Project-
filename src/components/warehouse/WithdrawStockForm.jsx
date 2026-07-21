@@ -3,7 +3,7 @@ import Button from '../ui/Button.jsx';
 import { commodityProductLabels, commodityUnits } from '../../data/dummyData.js';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
-export default function WithdrawStockForm({ form, errors, warehouse, onChange, onSubmit, onCancel }) {
+export default function WithdrawStockForm({ form, errors, warehouse, isSaving = false, onChange, onSubmit, onCancel }) {
   const { t, isArabic } = useLanguage();
   const stockItems = warehouse?.storedProducts || [];
   const productOptions = [...new Set(stockItems.map((item) => item.productName))];
@@ -70,7 +70,7 @@ export default function WithdrawStockForm({ form, errors, warehouse, onChange, o
       </label>
       <label>
         {t('common.quantity')}
-        <input name="quantity" type="number" min="0" value={form.quantity} onChange={onChange} placeholder="0" />
+        <input name="quantity" type="number" min="0" step="0.001" value={form.quantity} onChange={onChange} placeholder="0" />
       </label>
       <label>
         {t('common.unit')}
@@ -87,8 +87,8 @@ export default function WithdrawStockForm({ form, errors, warehouse, onChange, o
         <textarea name="notes" value={form.notes} onChange={onChange} placeholder={t('warehouse.withdrawNotesPlaceholder')} />
       </label>
       <div className="form-grid__actions form-grid__actions--split">
-        <Button type="submit">{t('warehouse.withdrawStock')}</Button>
-        <Button type="button" variant="secondary" onClick={onCancel}>{t('cancel')}</Button>
+        <Button type="submit" disabled={isSaving}>{isSaving ? t('journal.saving') : t('warehouse.withdrawStock')}</Button>
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>{t('cancel')}</Button>
       </div>
     </form>
   );

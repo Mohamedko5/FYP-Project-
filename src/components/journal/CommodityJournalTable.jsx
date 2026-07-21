@@ -3,11 +3,20 @@ import Table from '../ui/Table.jsx';
 import { commodityProductLabels, commodityUnits, formatCurrency } from '../../data/dummyData.js';
 
 export default function CommodityJournalTable({ entries, onEdit, onDelete, t, statusLabel, isArabic, emptyMessage }) {
+  const unitLabels = {
+    Qintar: { en: 'Qintar', ar: commodityUnits.find((unit) => unit.value === 'Qintar')?.arabicLabel || 'Qintar' },
+    KG: { en: 'KG', ar: 'KG' },
+    Bag: { en: 'Bag', ar: 'Bag' },
+    Bale: { en: 'Bale', ar: commodityUnits.find((unit) => unit.value === 'Bale')?.arabicLabel || 'Bale' },
+    Unit: { en: 'Unit', ar: commodityUnits.find((unit) => unit.value === 'Piece')?.arabicLabel || 'Unit' },
+  };
+
   function productLabel(productName) {
     return commodityProductLabels[productName]?.[isArabic ? 'ar' : 'en'] || productName;
   }
 
   function unitLabel(unitValue) {
+    if (unitLabels[unitValue]) return unitLabels[unitValue][isArabic ? 'ar' : 'en'];
     const unit = commodityUnits.find((item) => item.value === unitValue);
     if (!unit) return unitValue;
     return isArabic ? unit.arabicLabel : unit.englishLabel;

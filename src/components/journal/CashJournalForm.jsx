@@ -1,6 +1,6 @@
 import Button from '../ui/Button.jsx';
 
-export default function CashJournalForm({ form, errors, isEditing, onChange, onSubmit, onCancel, t, statusLabel }) {
+export default function CashJournalForm({ form, errors, isEditing, isSaving = false, onChange, onSubmit, onCancel, t, statusLabel }) {
   return (
     <form className="form-grid" onSubmit={onSubmit}>
       {errors.length > 0 && (
@@ -17,20 +17,27 @@ export default function CashJournalForm({ form, errors, isEditing, onChange, onS
         </select>
       </label>
       <label>
+        {t('journal.paymentMethod')}
+        <select name="paymentMethod" value={form.paymentMethod} onChange={onChange} required>
+          <option value="cash">{t('journal.paymentMethods.cash')}</option>
+          <option value="online">{t('journal.paymentMethods.online')}</option>
+        </select>
+      </label>
+      <label>
         {t('common.customerSupplier')}
         <input name="party" value={form.party} onChange={onChange} placeholder={t('journal.partyPlaceholder')} />
       </label>
       <label>
         {t('common.amount')}
-        <input name="amount" type="number" min="0" value={form.amount} onChange={onChange} placeholder={t('journal.amountPlaceholder')} />
+        <input name="amount" type="number" min="0" step="0.01" value={form.amount} onChange={onChange} placeholder={t('journal.amountPlaceholder')} />
       </label>
       <label className="form-grid__wide">
         {t('common.description')}
         <textarea name="description" value={form.description} onChange={onChange} placeholder={t('journal.descriptionPlaceholder')} />
       </label>
       <div className="form-grid__actions form-grid__actions--split">
-        <Button type="submit">{isEditing ? t('journal.saveChanges') : t('journal.saveTransaction')}</Button>
-        <Button type="button" variant="secondary" onClick={onCancel}>{t('cancel')}</Button>
+        <Button type="submit" disabled={isSaving}>{isSaving ? t('journal.saving') : isEditing ? t('journal.saveChanges') : t('journal.saveTransaction')}</Button>
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>{t('cancel')}</Button>
       </div>
     </form>
   );

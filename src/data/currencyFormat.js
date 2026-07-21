@@ -2,14 +2,15 @@ export const currencyStorageKey = 'bayadCurrency';
 
 export function getStoredCurrency() {
   if (typeof localStorage === 'undefined') return 'SDG';
-  return localStorage.getItem(currencyStorageKey) || 'SDG';
+  const storedCurrency = localStorage.getItem(currencyStorageKey);
+  return storedCurrency === 'SDG' ? storedCurrency : 'SDG';
 }
 
 export function setStoredCurrency(currency) {
-  localStorage.setItem(currencyStorageKey, currency);
+  localStorage.setItem(currencyStorageKey, 'SDG');
 }
 
 export function formatMoney(value, currency = getStoredCurrency()) {
   const numericValue = Number(value || 0);
-  return `${currency} ${numericValue.toLocaleString()}`;
+  return `SDG ${numericValue.toLocaleString()}`;
 }

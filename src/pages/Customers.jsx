@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import Tooltip from '../components/ui/Tooltip.jsx';
@@ -8,28 +8,39 @@ import CustomerProfile from '../components/customers/CustomerProfile.jsx';
 import WorkerForm from '../components/customers/WorkerForm.jsx';
 import WorkerList from '../components/customers/WorkerList.jsx';
 import WorkerProfile from '../components/customers/WorkerProfile.jsx';
-import {
-  companyWorkers,
-  customerCashTransactions,
-  customerCommodityTransactions,
-  commodityUnits,
-  customers,
-  orders,
-  paymentHistory,
-  products,
-  warehouses,
-} from '../data/dummyData.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
+import {
+  createCustomer,
+  createCustomerCashTransaction,
+  createCustomerCommodityTransaction,
+  getCustomer,
+  getCustomerCashTransactions,
+  getCustomerCommodityTransactions,
+  getCustomerStatement,
+  getCustomers,
+} from '../services/customersApi.js';
+import { getProducts, getWarehouses } from '../services/inventoryApi.js';
+import {
+  createWorker,
+  createWorkerWorkRecord,
+  getWorker,
+  getWorkerStatement,
+  getWorkerWorkRecords,
+  getWorkers,
+  markWorkerWorkRecordPaid,
+} from '../services/workersApi.js';
 
 function createCustomerForm() {
   return {
     name: '',
     phone: '',
+    secondaryPhone: '',
     address: '',
-    customerType: 'Farmer',
-    photoUrl: '',
-    cashAccount: '',
-    commodityBalance: '',
+    customerType: 'farmer',
+    photo: null,
+    photoPreview: '',
+    openingBalanceAmount: '',
+    openingBalanceType: 'customer_owes_company',
     notes: '',
   };
 }
@@ -38,60 +49,221 @@ function createWorkerForm() {
   return {
     name: '',
     phone: '',
-    workerType: 'General Worker',
+    secondaryPhone: '',
+    workerType: 'general_worker',
     assignedWork: '',
-    photoUrl: '',
+    defaultDailyWage: '',
+    defaultPricePerBag: '',
+    status: 'available',
+    photo: null,
+    photoPreview: '',
     notes: '',
+  };
+}
+
+function formatApiError(error) {
+  return String(error?.message || 'Unable to complete this request. Please try again.');
+}
+
+function storedAdminName() {
+  try {
+    const user = JSON.parse(localStorage.getItem('bayadUser') || '{}');
+    return user.username || user.email || 'Bayad Admin';
+  } catch {
+    return 'Bayad Admin';
+  }
+}
+
+function mapProduct(row) {
+  return {
+    id: row.id,
+    name: row.name_en,
+    nameAr: row.name_ar,
+    category: row.category,
+    units: (row.units || []).map((unit) => ({
+      value: unit.unit,
+      label: unit.unit,
+      isDefault: unit.is_default,
+    })),
+  };
+}
+
+function mapWarehouse(row) {
+  return {
+    id: row.id,
+    warehouseName: row.warehouse_name,
+    location: row.location,
   };
 }
 
 export default function Customers() {
   const { t } = useLanguage();
   const [activeCustomerTab, setActiveCustomerTab] = useState('business');
-  const [customerList, setCustomerList] = useState(customers);
-  const [workerList, setWorkerList] = useState(companyWorkers);
+  const [customerList, setCustomerList] = useState([]);
+  const [workerList, setWorkerList] = useState([]);
+  const [warehouseList, setWarehouseList] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedWorkerId, setSelectedWorkerId] = useState('');
+  const [selectedWorker, setSelectedWorker] = useState(null);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [showWorkerForm, setShowWorkerForm] = useState(false);
   const [customerForm, setCustomerForm] = useState(createCustomerForm());
   const [workerForm, setWorkerForm] = useState(createWorkerForm());
-  const [cashTransactions, setCashTransactions] = useState(customerCashTransactions);
-  const [commodityTransactions, setCommodityTransactions] = useState(customerCommodityTransactions);
+  const [cashTransactions, setCashTransactions] = useState([]);
+  const [commodityTransactions, setCommodityTransactions] = useState([]);
+  const [statement, setStatement] = useState(null);
+  const [products, setProducts] = useState([]);
   const [formErrors, setFormErrors] = useState([]);
   const [workerErrors, setWorkerErrors] = useState([]);
+  const [apiError, setApiError] = useState('');
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
+  const [isSavingCash, setIsSavingCash] = useState(false);
+  const [isSavingCommodity, setIsSavingCommodity] = useState(false);
+  const [isLoadingWorkers, setIsLoadingWorkers] = useState(false);
+  const [isLoadingWorkerProfile, setIsLoadingWorkerProfile] = useState(false);
+  const [isSavingWorker, setIsSavingWorker] = useState(false);
+  const [isSavingWorkRecord, setIsSavingWorkRecord] = useState(false);
+  const [isMarkingPaid, setIsMarkingPaid] = useState(false);
+  const [filters, setFilters] = useState({ search: '', customer_type: '', cash_status: '' });
+  const [workerFilters, setWorkerFilters] = useState({ search: '', worker_type: '', status: '' });
+  const [workerRecords, setWorkerRecords] = useState([]);
+  const [workerStatement, setWorkerStatement] = useState(null);
+  const adminName = storedAdminName();
 
-  const selectedCustomer = useMemo(
-    () => customerList.find((customer) => String(customer.id) === String(selectedCustomerId)),
-    [customerList, selectedCustomerId]
-  );
-  const selectedWorker = useMemo(
-    () => workerList.find((worker) => String(worker.id) === String(selectedWorkerId)),
-    [workerList, selectedWorkerId]
-  );
+  const selectedPayments = cashTransactions.filter((transaction) => transaction.transaction_type === 'payment_received');
 
-  const selectedCashTransactions = cashTransactions.filter(
-    (transaction) => transaction.customer === selectedCustomer?.name
-  );
-  const selectedCommodityTransactions = commodityTransactions.filter(
-    (transaction) => transaction.customer === selectedCustomer?.name
-  );
-  const selectedOrders = orders.filter((order) => order.customer === selectedCustomer?.name);
-  const selectedPayments = paymentHistory.filter((payment) => payment.customer === selectedCustomer?.name);
+  const loadCustomers = useCallback(async () => {
+    setIsLoadingCustomers(true);
+    setApiError('');
+    try {
+      const [customerResponse, productResponse] = await Promise.all([
+        getCustomers({ ...filters, page_size: 100 }),
+        getProducts({ active: true }),
+      ]);
+      const rows = Array.isArray(customerResponse) ? customerResponse : customerResponse.results || [];
+      setCustomerList(rows);
+      setProducts((Array.isArray(productResponse) ? productResponse : productResponse.results || productResponse).map(mapProduct));
+      if (selectedCustomerId && !rows.some((customer) => String(customer.id) === String(selectedCustomerId))) {
+        setSelectedCustomerId('');
+        setSelectedCustomer(null);
+      }
+    } catch (error) {
+      setApiError(formatApiError(error));
+    } finally {
+      setIsLoadingCustomers(false);
+    }
+  }, [filters, selectedCustomerId]);
+
+  const loadSelectedCustomer = useCallback(async (customerId) => {
+    if (!customerId) return;
+    setIsLoadingProfile(true);
+    setApiError('');
+    try {
+      const [customer, cashRows, commodityRows] = await Promise.all([
+        getCustomer(customerId),
+        getCustomerCashTransactions(customerId),
+        getCustomerCommodityTransactions(customerId),
+      ]);
+      setSelectedCustomer(customer);
+      setCashTransactions(cashRows);
+      setCommodityTransactions(commodityRows);
+      setStatement(null);
+    } catch (error) {
+      setApiError(formatApiError(error));
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  }, []);
+
+  const loadWorkers = useCallback(async () => {
+    setIsLoadingWorkers(true);
+    setApiError('');
+    try {
+      const [workerResponse, warehouseResponse] = await Promise.all([
+        getWorkers({ ...workerFilters, page_size: 100 }),
+        getWarehouses({ is_active: true }),
+      ]);
+      const rows = Array.isArray(workerResponse) ? workerResponse : workerResponse.results || [];
+      setWorkerList(rows);
+      setWarehouseList((Array.isArray(warehouseResponse) ? warehouseResponse : warehouseResponse.results || warehouseResponse).map(mapWarehouse));
+      if (selectedWorkerId && !rows.some((worker) => String(worker.id) === String(selectedWorkerId))) {
+        setSelectedWorkerId('');
+        setSelectedWorker(null);
+      }
+    } catch (error) {
+      setApiError(formatApiError(error));
+    } finally {
+      setIsLoadingWorkers(false);
+    }
+  }, [workerFilters, selectedWorkerId]);
+
+  const loadSelectedWorker = useCallback(async (workerId) => {
+    if (!workerId) return;
+    setIsLoadingWorkerProfile(true);
+    setApiError('');
+    try {
+      const [worker, records] = await Promise.all([
+        getWorker(workerId),
+        getWorkerWorkRecords(workerId),
+      ]);
+      setSelectedWorker(worker);
+      setWorkerRecords(records);
+      setWorkerStatement(null);
+    } catch (error) {
+      setApiError(formatApiError(error));
+    } finally {
+      setIsLoadingWorkerProfile(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeCustomerTab === 'business') loadCustomers();
+  }, [activeCustomerTab, loadCustomers]);
+
+  useEffect(() => {
+    if (activeCustomerTab === 'workers') loadWorkers();
+  }, [activeCustomerTab, loadWorkers]);
+
+  useEffect(() => {
+    if (selectedCustomerId) loadSelectedCustomer(selectedCustomerId);
+  }, [selectedCustomerId, loadSelectedCustomer]);
+
+  useEffect(() => {
+    if (selectedWorkerId) loadSelectedWorker(selectedWorkerId);
+  }, [selectedWorkerId, loadSelectedWorker]);
 
   function switchCustomerTab(tab) {
     setActiveCustomerTab(tab);
     setSelectedCustomerId('');
+    setSelectedCustomer(null);
     setSelectedWorkerId('');
+    setSelectedWorker(null);
     setShowCustomerForm(false);
     setShowWorkerForm(false);
+  }
+
+  function handleFilterChange(event) {
+    const { name, value } = event.target;
+    setFilters((current) => ({ ...current, [name]: value }));
+  }
+
+  function handleWorkerFilterChange(event) {
+    const { name, value } = event.target;
+    setWorkerFilters((current) => ({ ...current, [name]: value }));
   }
 
   function handleChange(event) {
     const { name, value, files, type } = event.target;
     if (type === 'file') {
-      const file = files?.[0];
-      setCustomerForm((current) => ({ ...current, [name]: file ? URL.createObjectURL(file) : '' }));
+      const file = files?.[0] || null;
+      setCustomerForm((current) => ({
+        ...current,
+        photo: file,
+        photoPreview: file ? URL.createObjectURL(file) : '',
+      }));
       return;
     }
     setCustomerForm((current) => ({ ...current, [name]: value }));
@@ -100,8 +272,12 @@ export default function Customers() {
   function handleWorkerChange(event) {
     const { name, value, files, type } = event.target;
     if (type === 'file') {
-      const file = files?.[0];
-      setWorkerForm((current) => ({ ...current, [name]: file ? URL.createObjectURL(file) : '' }));
+      const file = files?.[0] || null;
+      setWorkerForm((current) => ({
+        ...current,
+        photo: file,
+        photoPreview: file ? URL.createObjectURL(file) : '',
+      }));
       return;
     }
     setWorkerForm((current) => ({ ...current, [name]: value }));
@@ -111,6 +287,7 @@ export default function Customers() {
     setFormErrors([]);
     setCustomerForm(createCustomerForm());
     setSelectedCustomerId('');
+    setSelectedCustomer(null);
     setShowCustomerForm(true);
   }
 
@@ -124,6 +301,7 @@ export default function Customers() {
     setWorkerErrors([]);
     setWorkerForm(createWorkerForm());
     setSelectedWorkerId('');
+    setSelectedWorker(null);
     setShowWorkerForm(true);
   }
 
@@ -133,96 +311,124 @@ export default function Customers() {
     setShowWorkerForm(false);
   }
 
-  function handleAddCustomer(event) {
+  async function handleAddCustomer(event) {
     event.preventDefault();
-    const errors = [];
-
-    if (!customerForm.name.trim()) errors.push(t('customers.customerNameRequired'));
-    if (!customerForm.phone.trim()) errors.push(t('customers.phoneRequired'));
-    if (!customerForm.address.trim()) errors.push(t('customers.addressRequired'));
-
-    if (errors.length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-
-    const newCustomer = {
-      id: Date.now(),
-      name: customerForm.name,
-      phone: customerForm.phone,
-      address: customerForm.address,
-      customerType: customerForm.customerType,
-      photoUrl: customerForm.photoUrl,
-      cashAccount: Number(customerForm.cashAccount || 0),
-      commodityAccount: customerForm.commodityBalance || 'None',
-      commodityBalance: customerForm.commodityBalance || 'None',
-      debtBalance: Number(customerForm.cashAccount || 0),
-      paidAmount: 0,
-      remainingBalance: Number(customerForm.cashAccount || 0),
-      status: Number(customerForm.cashAccount || 0) > 0 ? 'Debtor' : 'Balanced',
-      lastTransactionDate: new Date().toISOString().slice(0, 10),
-      notes: customerForm.notes || t('warehouse.noNotes'),
-    };
-
-    setCustomerList((current) => [...current, newCustomer]);
-    setSelectedCustomerId('');
-    setCustomerForm(createCustomerForm());
     setFormErrors([]);
-    setShowCustomerForm(false);
+    setIsSavingCustomer(true);
+    try {
+      const payload = new FormData();
+      payload.append('name', customerForm.name);
+      payload.append('phone', customerForm.phone);
+      payload.append('secondary_phone', customerForm.secondaryPhone);
+      payload.append('address', customerForm.address);
+      payload.append('customer_type', customerForm.customerType);
+      payload.append('notes', customerForm.notes);
+      if (customerForm.photo) payload.append('photo', customerForm.photo);
+      if (customerForm.openingBalanceAmount) {
+        payload.append('opening_balance_amount', customerForm.openingBalanceAmount);
+        payload.append('opening_balance_type', customerForm.openingBalanceType);
+      }
+      const created = await createCustomer(payload);
+      closeCustomerForm();
+      await loadCustomers();
+      setSelectedCustomerId(created.id);
+    } catch (error) {
+      setFormErrors(formatApiError(error).split('\n'));
+    } finally {
+      setIsSavingCustomer(false);
+    }
   }
 
-  function handleAddWorker(event) {
+  async function handleAddWorker(event) {
     event.preventDefault();
-    const errors = [];
-
-    if (!workerForm.name.trim()) errors.push(t('customers.workerNameRequired'));
-    if (!workerForm.phone.trim()) errors.push(t('customers.phoneRequired'));
-    if (!workerForm.assignedWork.trim()) errors.push(t('customers.assignedWorkRequired'));
-
-    if (errors.length > 0) {
-      setWorkerErrors(errors);
-      return;
-    }
-
-    const newWorker = {
-      id: Date.now(),
-      name: workerForm.name,
-      phone: workerForm.phone,
-      workerType: workerForm.workerType,
-      assignedWork: workerForm.assignedWork,
-      status: 'Available',
-      photoUrl: workerForm.photoUrl,
-      notes: workerForm.notes || t('warehouse.noNotes'),
-      paymentHistory: [],
-    };
-
-    setWorkerList((current) => [...current, newWorker]);
-    setSelectedWorkerId('');
-    setWorkerForm(createWorkerForm());
     setWorkerErrors([]);
-    setShowWorkerForm(false);
+    setIsSavingWorker(true);
+    try {
+      const payload = new FormData();
+      payload.append('name', workerForm.name);
+      payload.append('phone', workerForm.phone);
+      payload.append('secondary_phone', workerForm.secondaryPhone);
+      payload.append('worker_type', workerForm.workerType);
+      payload.append('assigned_work', workerForm.assignedWork);
+      payload.append('status', workerForm.status);
+      payload.append('notes', workerForm.notes);
+      if (workerForm.defaultDailyWage) payload.append('default_daily_wage', workerForm.defaultDailyWage);
+      if (workerForm.defaultPricePerBag) payload.append('default_price_per_bag', workerForm.defaultPricePerBag);
+      if (workerForm.photo) payload.append('photo', workerForm.photo);
+      const created = await createWorker(payload);
+      closeWorkerForm();
+      await loadWorkers();
+      setSelectedWorkerId(created.id);
+    } catch (error) {
+      setWorkerErrors(formatApiError(error).split('\n'));
+    } finally {
+      setIsSavingWorker(false);
+    }
   }
 
   function handlePrintStatement() {
     window.print();
   }
 
-  function handleAddCashTransaction(transaction) {
-    setCashTransactions((current) => [transaction, ...current]);
+  async function handleAddCashTransaction(payload) {
+    if (!selectedCustomerId) return;
+    setIsSavingCash(true);
+    try {
+      await createCustomerCashTransaction(selectedCustomerId, payload);
+      await Promise.all([loadCustomers(), loadSelectedCustomer(selectedCustomerId)]);
+    } finally {
+      setIsSavingCash(false);
+    }
   }
 
-  function handleAddCommodityTransaction(transaction) {
-    setCommodityTransactions((current) => [transaction, ...current]);
+  async function handleAddCommodityTransaction(payload) {
+    if (!selectedCustomerId) return;
+    setIsSavingCommodity(true);
+    try {
+      await createCustomerCommodityTransaction(selectedCustomerId, payload);
+      await Promise.all([loadCustomers(), loadSelectedCustomer(selectedCustomerId)]);
+    } finally {
+      setIsSavingCommodity(false);
+    }
   }
 
-  function handleAddWorkerTransaction(workerId, transaction) {
-    setWorkerList((current) =>
-      current.map((worker) =>
-        String(worker.id) === String(workerId)
-          ? { ...worker, paymentHistory: [transaction, ...(worker.paymentHistory || [])] }
-          : worker
-      )
-    );
+  async function handleLoadStatement() {
+    if (!selectedCustomerId) return;
+    try {
+      setStatement(await getCustomerStatement(selectedCustomerId));
+    } catch (error) {
+      setApiError(formatApiError(error));
+    }
+  }
+
+  async function handleAddWorkerRecord(payload) {
+    if (!selectedWorkerId) return;
+    setIsSavingWorkRecord(true);
+    try {
+      await createWorkerWorkRecord(selectedWorkerId, payload);
+      await Promise.all([loadWorkers(), loadSelectedWorker(selectedWorkerId)]);
+    } finally {
+      setIsSavingWorkRecord(false);
+    }
+  }
+
+  async function handleMarkWorkerPaid(recordId, paymentMethod) {
+    setIsMarkingPaid(true);
+    try {
+      await markWorkerWorkRecordPaid(recordId, paymentMethod);
+      await Promise.all([loadWorkers(), loadSelectedWorker(selectedWorkerId)]);
+    } finally {
+      setIsMarkingPaid(false);
+    }
+  }
+
+  async function handleLoadWorkerStatement() {
+    if (!selectedWorkerId) return;
+    try {
+      setWorkerStatement(await getWorkerStatement(selectedWorkerId));
+    } catch (error) {
+      setApiError(formatApiError(error));
+    }
   }
 
   return (
@@ -251,32 +457,75 @@ export default function Customers() {
       {activeCustomerTab === 'business' && (
         <>
           <Card title={t('customers.listTitle')} subtitle={t('customers.listSubtitle')}>
-            <CustomerList customers={customerList} selectedCustomerId={selectedCustomerId} onSelect={setSelectedCustomerId} />
+            <div className="customer-toolbar">
+              <label className="customer-toolbar__search">
+                <span>{t('search')}</span>
+                <input name="search" value={filters.search} onChange={handleFilterChange} placeholder={t('customers.searchPlaceholder')} />
+              </label>
+              <label>
+                <span>{t('customers.customerType')}</span>
+                <select name="customer_type" value={filters.customer_type} onChange={handleFilterChange}>
+                  <option value="">{t('customers.allCustomerTypes')}</option>
+                  <option value="farmer">{t('customers.types.farmer')}</option>
+                  <option value="investor">{t('customers.types.investor')}</option>
+                  <option value="consumer">{t('customers.types.consumer')}</option>
+                  <option value="exporter">{t('customers.types.exporter')}</option>
+                  <option value="factory">{t('customers.types.factory')}</option>
+                  <option value="supplier">{t('customers.types.supplier')}</option>
+                </select>
+              </label>
+              <label>
+                <span>{t('customers.debtStatus')}</span>
+                <select name="cash_status" value={filters.cash_status} onChange={handleFilterChange}>
+                  <option value="">{t('customers.allAccountStatuses')}</option>
+                  <option value="debtor">{t('status.Debtor')}</option>
+                  <option value="creditor">{t('status.Creditor')}</option>
+                  <option value="balanced">{t('status.Balanced')}</option>
+                </select>
+              </label>
+              <div className="customer-toolbar__action">
+                <Button variant="secondary" onClick={openCustomerForm}>{t('customers.addNewCustomer')}</Button>
+              </div>
+            </div>
+            {apiError && (
+              <div className="form-error">
+                <p>{apiError}</p>
+                <Button type="button" variant="secondary" onClick={loadCustomers}>{t('retry')}</Button>
+              </div>
+            )}
+            {isLoadingCustomers ? (
+              <p className="muted-text">{t('customers.loadingCustomers')}</p>
+            ) : (
+              <CustomerList customers={customerList} selectedCustomerId={selectedCustomerId} onSelect={setSelectedCustomerId} emptyMessage={t('customers.noCustomersFound')} />
+            )}
           </Card>
 
           {selectedCustomer && (
             <CustomerProfile
               customer={selectedCustomer}
-              cashTransactions={selectedCashTransactions}
-              commodityTransactions={selectedCommodityTransactions}
-              orders={selectedOrders}
+              cashTransactions={cashTransactions}
+              commodityTransactions={commodityTransactions}
               payments={selectedPayments}
               products={products}
-              units={commodityUnits}
+              statement={statement}
+              isSavingCash={isSavingCash}
+              isSavingCommodity={isSavingCommodity}
+              isLoadingProfile={isLoadingProfile}
               onAddCashTransaction={handleAddCashTransaction}
               onAddCommodityTransaction={handleAddCommodityTransaction}
+              onLoadStatement={handleLoadStatement}
               onPrint={handlePrintStatement}
-              onClose={() => setSelectedCustomerId('')}
+              onClose={() => {
+                setSelectedCustomerId('');
+                setSelectedCustomer(null);
+              }}
+              adminName={adminName}
             />
           )}
 
-          <div className="customers-add-new-section">
-            {!showCustomerForm && <Button variant="secondary" onClick={openCustomerForm}>{t('customers.addNewCustomer')}</Button>}
-          </div>
-
           {showCustomerForm && (
             <Card title={t('customers.formTitle')} subtitle={t('customers.formSubtitle')}>
-              <CustomerForm form={customerForm} errors={formErrors} onChange={handleChange} onSubmit={handleAddCustomer} onCancel={closeCustomerForm} />
+              <CustomerForm form={customerForm} errors={formErrors} onChange={handleChange} onSubmit={handleAddCustomer} onCancel={closeCustomerForm} isSaving={isSavingCustomer} />
             </Card>
           )}
         </>
@@ -285,25 +534,69 @@ export default function Customers() {
       {activeCustomerTab === 'workers' && (
         <>
           <Card title={t('customers.workersListTitle')} subtitle={t('customers.workersListSubtitle')}>
-            <WorkerList workers={workerList} selectedWorkerId={selectedWorkerId} onSelect={setSelectedWorkerId} />
+            <div className="customer-toolbar">
+              <label className="customer-toolbar__search">
+                <span>{t('search')}</span>
+                <input name="search" value={workerFilters.search} onChange={handleWorkerFilterChange} placeholder={t('customers.workerSearchPlaceholder')} />
+              </label>
+              <label>
+                <span>{t('customers.workerType')}</span>
+                <select name="worker_type" value={workerFilters.worker_type} onChange={handleWorkerFilterChange}>
+                  <option value="">{t('customers.allWorkerTypes')}</option>
+                  <option value="general_worker">{t('customers.workerTypes.general_worker')}</option>
+                  <option value="bag_carrying_worker">{t('customers.workerTypes.bag_carrying_worker')}</option>
+                  <option value="weighing_worker">{t('customers.workerTypes.weighing_worker')}</option>
+                </select>
+              </label>
+              <label>
+                <span>{t('common.status')}</span>
+                <select name="status" value={workerFilters.status} onChange={handleWorkerFilterChange}>
+                  <option value="">{t('warehouse.allStatuses')}</option>
+                  <option value="available">{t('status.Available')}</option>
+                  <option value="working">{t('status.Working')}</option>
+                  <option value="inactive">{t('status.Inactive')}</option>
+                </select>
+              </label>
+              <div className="customer-toolbar__action">
+                <Button variant="secondary" onClick={openWorkerForm}>{t('customers.addNewWorker')}</Button>
+              </div>
+            </div>
+            {apiError && (
+              <div className="form-error">
+                <p>{apiError}</p>
+                <Button type="button" variant="secondary" onClick={loadWorkers}>{t('retry')}</Button>
+              </div>
+            )}
+            {isLoadingWorkers ? (
+              <p className="muted-text">{t('customers.loadingWorkers')}</p>
+            ) : (
+              <WorkerList workers={workerList} selectedWorkerId={selectedWorkerId} onSelect={setSelectedWorkerId} emptyMessage={t('customers.noWorkersFound')} />
+            )}
           </Card>
 
           {selectedWorker && (
             <WorkerProfile
               worker={selectedWorker}
-              warehouses={warehouses}
-              onAddTransaction={handleAddWorkerTransaction}
-              onClose={() => setSelectedWorkerId('')}
+              warehouses={warehouseList}
+              records={workerRecords}
+              statement={workerStatement}
+              isSavingRecord={isSavingWorkRecord}
+              isMarkingPaid={isMarkingPaid}
+              onAddRecord={handleAddWorkerRecord}
+              onMarkPaid={handleMarkWorkerPaid}
+              onLoadStatement={handleLoadWorkerStatement}
+              onPrint={handlePrintStatement}
+              onClose={() => {
+                setSelectedWorkerId('');
+                setSelectedWorker(null);
+              }}
+              adminName={adminName}
             />
           )}
 
-          <div className="customers-add-new-section">
-            {!showWorkerForm && <Button variant="secondary" onClick={openWorkerForm}>{t('customers.addNewWorker')}</Button>}
-          </div>
-
           {showWorkerForm && (
             <Card title={t('customers.addWorkerTitle')} subtitle={t('customers.addWorkerSubtitle')}>
-              <WorkerForm form={workerForm} errors={workerErrors} onChange={handleWorkerChange} onSubmit={handleAddWorker} onCancel={closeWorkerForm} />
+              <WorkerForm form={workerForm} errors={workerErrors} onChange={handleWorkerChange} onSubmit={handleAddWorker} onCancel={closeWorkerForm} isSaving={isSavingWorker} />
             </Card>
           )}
         </>

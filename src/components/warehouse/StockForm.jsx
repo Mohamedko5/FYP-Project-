@@ -4,7 +4,7 @@ import { commodityProductLabels, commodityUnits } from '../../data/dummyData.js'
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import { getProductCategory, getUnitOptions } from './warehouseUtils.js';
 
-export default function StockForm({ form, errors, warning, warehouses, products, unitRules, onChange, onSubmit, onCancel }) {
+export default function StockForm({ form, errors, warning, warehouses, products, unitRules, isSaving = false, onChange, onSubmit, onCancel }) {
   const { t, isArabic } = useLanguage();
   const unitOptions = useMemo(() => getUnitOptions(unitRules, form.product), [unitRules, form.product]);
 
@@ -58,7 +58,7 @@ export default function StockForm({ form, errors, warning, warehouses, products,
       </label>
       <label>
         {t('common.quantity')}
-        <input name="quantity" type="number" min="0" value={form.quantity} onChange={onChange} placeholder="0" />
+        <input name="quantity" type="number" min="0" step="0.001" value={form.quantity} onChange={onChange} placeholder="0" />
       </label>
       <label>
         {t('common.unit')}
@@ -66,13 +66,17 @@ export default function StockForm({ form, errors, warning, warehouses, products,
           {unitOptions.map((unit) => <option key={unit.value} value={unit.value}>{unitLabel(unit)}</option>)}
         </select>
       </label>
+      <label>
+        {t('warehouse.minimumThreshold')}
+        <input name="minimumThreshold" type="number" min="0" step="0.001" value={form.minimumThreshold || ''} onChange={onChange} placeholder="0" />
+      </label>
       <label className="form-grid__wide">
         {t('warehouse.notes')}
         <textarea name="notes" value={form.notes} onChange={onChange} placeholder={t('warehouse.stockNotesPlaceholder')} />
       </label>
       <div className="form-grid__actions form-grid__actions--split">
-        <Button type="submit">{t('warehouse.addStock')}</Button>
-        {onCancel && <Button type="button" variant="secondary" onClick={onCancel}>{t('cancel')}</Button>}
+        <Button type="submit" disabled={isSaving}>{isSaving ? t('journal.saving') : t('warehouse.addStock')}</Button>
+        {onCancel && <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>{t('cancel')}</Button>}
       </div>
     </form>
   );

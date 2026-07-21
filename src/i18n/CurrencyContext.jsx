@@ -3,8 +3,6 @@ import { formatMoney, getStoredCurrency, setStoredCurrency } from '../data/curre
 
 export const currencyOptions = [
   { code: 'SDG', labelKey: 'currency.sdg' },
-  { code: 'RM', labelKey: 'currency.myr' },
-  { code: 'USD', labelKey: 'currency.usd' },
 ];
 
 const CurrencyContext = createContext(null);
@@ -14,8 +12,8 @@ export function CurrencyProvider({ children }) {
 
   const value = useMemo(() => {
     function setCurrency(nextCurrency) {
-      setStoredCurrency(nextCurrency);
-      setCurrencyState(nextCurrency);
+      setStoredCurrency('SDG');
+      setCurrencyState('SDG');
     }
 
     function formatCurrency(valueToFormat) {

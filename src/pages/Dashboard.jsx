@@ -1,257 +1,381 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  EmptyState,
+  ErrorState,
+  FilterToolbar,
+  LoadingState,
+  ModulePageHeader,
+  StatGrid,
+  SummaryCard,
+} from '../components/ui/ModuleInterface.jsx';
 import Card from '../components/ui/Card.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
-import {
-  commodityProductLabels,
-  companyWorkers,
-  customers,
-  formatCurrency,
-  inventoryMovementHistory,
-  journalEntries,
-  products,
-  shipments,
-  warehouses,
-} from '../data/dummyData.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
+import { getDailyJournalSummary, listJournalTransactions } from '../services/dailyJournalApi.js';
+import { getInventoryMovements, getInventorySummary, getWarehouses } from '../services/inventoryApi.js';
+import { getInvoiceSummary, getInvoices } from '../services/invoicesApi.js';
+import { getOrderSummary, getOrders } from '../services/ordersApi.js';
+import { getShipmentSummary, getShipments } from '../services/shipmentsApi.js';
 
-function getLatestDate(records) {
-  return records
-    .map((record) => record.date)
-    .filter(Boolean)
-    .sort()
-    .at(-1);
+const copy = {
+  en: {
+    title: 'Dashboard',
+    description: 'Executive overview for cash, orders, invoices, shipments, inventory, and alerts.',
+    welcome: 'Welcome back. Values below come from live ERP modules where available.',
+    refresh: 'Refresh',
+    lastRefresh: 'Last refresh',
+    currentDate: 'Interface date',
+    cash: 'Current Cash Balance',
+    income: "Today's Income",
+    expenses: "Today's Expenses",
+    net: 'Net Movement',
+    activeOrders: 'Active Orders',
+    unpaidInvoices: 'Unpaid Invoices',
+    readyShipments: 'Ready for Shipment',
+    processingShipments: 'Processing Shipments',
+    activeWarehouses: 'Active Warehouses',
+    lowStock: 'Low Stock Items',
+    inventoryOverview: 'Inventory Overview',
+    warehouseAttention: 'Warehouses needing attention',
+    workflow: 'Order and Shipment Workflow',
+    recentActivity: 'Recent Activity',
+    alerts: 'Alerts and Attention',
+    noAlerts: 'No urgent alerts.',
+    noActivity: 'No recent activity found.',
+    partial: 'Some modules could not load. Available data is still shown.',
+    latest: 'Latest live records',
+    stockNote: 'Grouped by product and unit',
+  },
+  ar: {
+    title: 'لوحة التحكم',
+    description: 'نظرة تنفيذية على النقد والطلبات والفواتير والشحنات والمخزون والتنبيهات.',
+    welcome: 'مرحبا بك. القيم المعروضة تأتي من وحدات النظام الحقيقية عند توفرها.',
+    refresh: 'تحديث',
+    lastRefresh: 'آخر تحديث',
+    currentDate: 'تاريخ الواجهة',
+    cash: 'الرصيد النقدي الحالي',
+    income: 'دخل اليوم',
+    expenses: 'مصروفات اليوم',
+    net: 'صافي الحركة',
+    activeOrders: 'الطلبات النشطة',
+    unpaidInvoices: 'الفواتير غير المدفوعة',
+    readyShipments: 'جاهزة للشحن',
+    processingShipments: 'الشحن قيد التنفيذ',
+    activeWarehouses: 'المخازن النشطة',
+    lowStock: 'عناصر مخزون منخفض',
+    inventoryOverview: 'نظرة على المخزون',
+    warehouseAttention: 'مخازن تحتاج متابعة',
+    workflow: 'مسار الطلب والشحن',
+    recentActivity: 'آخر النشاطات',
+    alerts: 'التنبيهات والمتابعة',
+    noAlerts: 'لا توجد تنبيهات عاجلة.',
+    noActivity: 'لا توجد نشاطات حديثة.',
+    partial: 'بعض الوحدات لم يتم تحميلها، وتم عرض البيانات المتوفرة.',
+    latest: 'آخر السجلات الحية',
+    stockNote: 'مجمعة حسب المنتج والوحدة',
+  },
+};
+
+function unwrap(data) {
+  return Array.isArray(data) ? data : data?.results || [];
 }
 
-function calculateCashSummary(records) {
-  const incomeRecords = records.filter((entry) => entry.type === 'Income');
-  const openingEntry = incomeRecords[0];
-  const openingBalance = openingEntry?.amount || 0;
-  const incomeAfterOpening = incomeRecords
-    .filter((entry) => entry.id !== openingEntry?.id)
-    .reduce((total, entry) => total + entry.amount, 0);
-  const expenses = records
-    .filter((entry) => entry.type === 'Expense')
-    .reduce((total, entry) => total + entry.amount, 0);
+function money(value, currency = 'SDG') {
+  return `${currency} ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
-  return {
-    openingBalance,
-    incomeAfterOpening,
-    expenses,
-    closingBalance: openingBalance + incomeAfterOpening - expenses,
+function qty(value, unit = '') {
+  return `${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ''}`;
+}
+
+function statusText(value) {
+  const labels = {
+    income: 'Income',
+    expense: 'Expense',
+    pending: 'Pending',
+    received: 'Received',
+    invoiced: 'Invoiced',
+    ready_for_shipment: 'Ready for Shipment',
+    processing: 'Processing',
+    completed: 'Completed',
+    paid: 'Paid',
+    unpaid: 'Unpaid',
+    shipment_out: 'Withdraw Stock',
+    add_stock: 'Add Stock',
+    Low: 'Low Stock',
+    'Almost Full': 'Almost Full',
+    Full: 'Full',
   };
+  return labels[value] || value || '-';
 }
 
-function productLabel(productName, isArabic) {
-  return commodityProductLabels[productName]?.[isArabic ? 'ar' : 'en'] || productName;
-}
-
-function DashboardIcon({ name }) {
-  const paths = {
-    cash: ['M4 7h16v10H4z', 'M8 11h.01', 'M16 13a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
-    inventory: ['M4 7l8-4 8 4-8 4z', 'M4 7v9l8 4 8-4V7', 'M12 11v9'],
-    customers: ['M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M17 11a2.5 2.5 0 1 0 0-5', 'M4 20a5 5 0 0 1 10 0', 'M15 18a4 4 0 0 1 5 2'],
-    warehouse: ['M3 9l9-5 9 5', 'M5 10v10h14V10', 'M9 20v-6h6v6'],
-    product: ['M5 12c4-7 11-7 14-2-5 1-8 4-9 9-2-3-3-5-5-7z', 'M5 12c3 0 7 2 10 7'],
-    activity: ['M4 12h4l2-7 4 14 2-7h4'],
-    alert: ['M12 4l9 16H3z', 'M12 10v4', 'M12 17h.01'],
-  };
-
-  return (
-    <span className="dashboard-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none">
-        {paths[name].map((path) => (
-          <path key={path} d={path} />
-        ))}
-      </svg>
-    </span>
-  );
+function today() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export default function Dashboard() {
   const { t, isArabic } = useLanguage();
-  const businessDate = getLatestDate(journalEntries) || new Date().toISOString().slice(0, 10);
-  const todayJournalEntries = journalEntries.filter((entry) => entry.date === businessDate);
-  const cashSummary = calculateCashSummary(todayJournalEntries);
+  const label = copy[isArabic ? 'ar' : 'en'];
+  const [data, setData] = useState({
+    journalSummary: null,
+    orderSummary: null,
+    invoiceSummary: null,
+    shipmentSummary: null,
+    inventorySummary: null,
+    warehouses: [],
+    journalRows: [],
+    orders: [],
+    invoices: [],
+    shipments: [],
+    movements: [],
+  });
+  const [errors, setErrors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState('');
 
-  const totalInventory = warehouses.reduce((warehouseTotal, warehouse) =>
-    warehouseTotal + warehouse.storedProducts.reduce((productTotal, product) => productTotal + product.quantity, 0), 0);
-  const totalWarehouseCapacity = warehouses.reduce((total, warehouse) => total + warehouse.capacity, 0);
-  const usedWarehouseCapacity = warehouses.reduce((total, warehouse) => total + warehouse.currentStock, 0);
-  const lowStockProducts = warehouses.flatMap((warehouse) =>
-    warehouse.storedProducts.filter((product) => product.quantity <= product.minimumThreshold)
-  );
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    setErrors([]);
+    const requests = [
+      ['journalSummary', getDailyJournalSummary({ date: today() })],
+      ['orderSummary', getOrderSummary()],
+      ['invoiceSummary', getInvoiceSummary()],
+      ['shipmentSummary', getShipmentSummary()],
+      ['inventorySummary', getInventorySummary()],
+      ['warehouses', getWarehouses({ is_active: true, page_size: 100 })],
+      ['journalRows', listJournalTransactions({ ordering: '-created_at', page_size: 6 })],
+      ['orders', getOrders({ ordering: '-created_at', page_size: 4 })],
+      ['invoices', getInvoices({ ordering: '-issued_at', page_size: 4 })],
+      ['shipments', getShipments({ page_size: 4 })],
+      ['movements', getInventoryMovements({ ordering: '-created_at', page_size: 4 })],
+    ];
+    const results = await Promise.allSettled(requests.map(([, request]) => request));
+    const next = {};
+    const nextErrors = [];
+    results.forEach((result, index) => {
+      const key = requests[index][0];
+      if (result.status === 'fulfilled') {
+        next[key] = ['warehouses', 'journalRows', 'orders', 'invoices', 'shipments', 'movements'].includes(key)
+          ? unwrap(result.value)
+          : result.value;
+      } else {
+        nextErrors.push(`${key}: ${result.reason?.message || 'Unable to load data.'}`);
+      }
+    });
+    setData((current) => ({ ...current, ...next }));
+    setErrors(nextErrors);
+    setLastRefresh(new Date().toLocaleTimeString());
+    setLoading(false);
+  }, []);
 
-  const coreProducts = ['White Sesame', 'Red Sesame', 'Corn']
-    .map((name) => products.find((product) => product.name === name))
-    .filter(Boolean);
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
-  const secondaryMetrics = [
-    { icon: 'inventory', label: t('dashboard.totalInventory'), value: totalInventory.toLocaleString(), note: t('dashboard.inventoryAcrossWarehouses') },
-    { icon: 'customers', label: t('dashboard.totalCustomers'), value: (customers.length + companyWorkers.length).toLocaleString(), note: t('dashboard.customersAndWorkers') },
-    { icon: 'warehouse', label: t('dashboard.totalWarehouses'), value: warehouses.length.toLocaleString(), note: t('dashboard.storageLocations') },
-  ];
+  const activeOrders = (data.orderSummary?.pending_orders || 0) + (data.orderSummary?.received_orders || 0) + (data.orderSummary?.invoiced_orders || 0);
+  const readyShipments = data.shipmentSummary?.ready_count || 0;
+  const processingShipments = data.shipmentSummary?.processing_count || 0;
+  const cash = data.journalSummary?.cash || {};
 
-  const recentActivity = [
-    {
-      id: 'journal',
-      title: t('dashboard.latestJournalTransaction'),
-      main: todayJournalEntries[0]?.category || t('emptyMessage'),
-      detail: todayJournalEntries[0]
-        ? `${todayJournalEntries[0].party} - ${formatCurrency(todayJournalEntries[0].amount)}`
-        : t('dashboard.noRecentActivity'),
-      status: todayJournalEntries[0]?.type,
-    },
-    {
-      id: 'stock',
-      title: t('dashboard.latestStockMovement'),
-      main: inventoryMovementHistory[0]?.product || t('emptyMessage'),
-      detail: inventoryMovementHistory[0]
-        ? `${inventoryMovementHistory[0].type} - ${inventoryMovementHistory[0].quantity} ${inventoryMovementHistory[0].unit}`
-        : t('dashboard.noRecentActivity'),
-      status: inventoryMovementHistory[0]?.type,
-    },
-    {
-      id: 'customer',
-      title: t('dashboard.latestCustomerTransaction'),
-      main: customers[0]?.name || t('emptyMessage'),
-      detail: customers[0]?.lastTransactionDate || t('dashboard.noRecentActivity'),
-      status: customers[0]?.status,
-    },
-    {
-      id: 'shipment',
-      title: t('dashboard.latestShipment'),
-      main: shipments[0]?.batchNo || t('emptyMessage'),
-      detail: shipments[0] ? `${shipments[0].customer} - ${shipments[0].tracking}` : t('dashboard.noRecentActivity'),
-      status: shipments[0]?.status,
-    },
-  ];
-
-  const alerts = [
-    ...warehouses
-      .filter((warehouse) => warehouse.currentStock / warehouse.capacity >= 0.8)
-      .map((warehouse) => ({
-        id: `warehouse-${warehouse.id}`,
-        title: t('dashboard.warehouseCapacityAlert'),
-        detail: `${warehouse.warehouseName} - ${Math.round((warehouse.currentStock / warehouse.capacity) * 100)}%`,
-        status: warehouse.currentStock >= warehouse.capacity ? 'Full' : 'Almost Full',
-      })),
-    ...lowStockProducts.map((product) => ({
-      id: `product-${product.id}`,
-      title: t('dashboard.productLowStockAlert'),
-      detail: `${productLabel(product.productName, isArabic)} - ${product.quantity} ${product.unit}`,
-      status: 'Low Stock',
+  const recentActivity = useMemo(() => [
+    ...data.journalRows.map((row) => ({
+      id: `journal-${row.id}`,
+      type: 'Daily Journal',
+      title: row.source_reference || row.party,
+      description: `${row.description} / ${money(row.amount)}`,
+      date: `${row.date || ''} ${row.time || ''}`.trim(),
+      status: row.cash_type || row.journal_type,
+      path: '/daily-journal',
     })),
-    ...shipments
-      .filter((shipment) => shipment.status === 'Pending Approval')
-      .map((shipment) => ({
-        id: `shipment-${shipment.id}`,
-        title: t('dashboard.pendingShipmentAlert'),
-        detail: `${shipment.batchNo} - ${shipment.customer}`,
-        status: shipment.status,
-      })),
-  ].slice(0, 4);
+    ...data.orders.map((row) => ({
+      id: `order-${row.id}`,
+      type: 'Order',
+      title: row.order_number,
+      description: `${row.customer?.name || '-'} / ${row.product_summary || '-'}`,
+      date: `${row.created_date || ''} ${row.created_time || ''}`.trim(),
+      status: row.status,
+      path: '/orders',
+    })),
+    ...data.invoices.map((row) => ({
+      id: `invoice-${row.id}`,
+      type: 'Invoice',
+      title: row.invoice_number,
+      description: `${row.customer_name || '-'} / ${money(row.total_amount, row.currency)}`,
+      date: `${row.issued_date || ''} ${row.issued_time || ''}`.trim(),
+      status: row.payment_status,
+      path: '/invoices',
+    })),
+    ...data.shipments.map((row) => ({
+      id: `shipment-${row.id}`,
+      type: 'Shipment',
+      title: row.shipment_number,
+      description: `${row.customer_name || '-'} / ${row.product_summary || '-'}`,
+      date: `${row.created_date || ''} ${row.created_time || ''}`.trim(),
+      status: row.status,
+      path: '/weighing-shipment',
+    })),
+    ...data.movements.map((row) => ({
+      id: `movement-${row.id}`,
+      type: 'Inventory',
+      title: row.source_reference || row.product_name,
+      description: `${row.warehouse_name || '-'} / ${qty(row.quantity, row.unit)}`,
+      date: `${row.date || ''} ${row.time || ''}`.trim(),
+      status: row.movement_type,
+      path: '/warehouse-inventory',
+    })),
+  ].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 8), [data]);
+
+  const warehouseAlerts = data.warehouses.filter((warehouse) => ['Almost Full', 'Full'].includes(warehouse.status));
+  const alerts = [
+    ...warehouseAlerts.map((warehouse) => ({
+      id: `warehouse-${warehouse.id}`,
+      title: warehouse.warehouse_name,
+      description: `${warehouse.usage_percent}% capacity`,
+      status: warehouse.status,
+    })),
+    ...(Number(data.inventorySummary?.low_stock_items || 0) > 0 ? [{
+      id: 'low-stock',
+      title: label.lowStock,
+      description: `${data.inventorySummary.low_stock_items} items`,
+      status: 'Low Stock',
+    }] : []),
+    ...(Number(data.invoiceSummary?.unpaid_invoices || 0) > 0 ? [{
+      id: 'unpaid-invoices',
+      title: label.unpaidInvoices,
+      description: money(data.invoiceSummary.total_outstanding_value),
+      status: 'Unpaid',
+    }] : []),
+    ...(Number(data.orderSummary?.received_orders || 0) > 0 ? [{
+      id: 'orders-waiting',
+      title: 'Orders waiting for invoice',
+      description: `${data.orderSummary.received_orders} orders`,
+      status: 'Received',
+    }] : []),
+  ];
+
+  const workflow = [
+    ['Received Orders', data.orderSummary?.received_orders || 0],
+    ['Invoiced', data.orderSummary?.invoiced_orders || 0],
+    ['Ready for Shipment', readyShipments],
+    ['Processing', processingShipments],
+    ['Completed', data.orderSummary?.completed_orders || 0],
+  ];
+  const maxWorkflow = Math.max(...workflow.map(([, value]) => value), 1);
 
   return (
-    <div className="dashboard-page dashboard-page--calm">
-      <section className="dashboard-hero">
-        <Card className="dashboard-cash-card">
-          <div className="dashboard-card-heading">
-            <DashboardIcon name="cash" />
-            <div>
-              <p>{t('dashboard.currentCashBalance')}</p>
-            </div>
-          </div>
-          <strong>{formatCurrency(cashSummary.closingBalance)}</strong>
-          <div className="dashboard-cash-breakdown">
-            <span>{t('dashboard.todayIncome')}: {formatCurrency(cashSummary.incomeAfterOpening)}</span>
-            <span>{t('dashboard.todayExpenses')}: {formatCurrency(cashSummary.expenses)}</span>
-          </div>
-        </Card>
+    <div className="module-page dashboard-page">
+      <ModulePageHeader
+        title={label.title}
+        description={label.description}
+        meta={`${label.currentDate}: ${new Date().toLocaleDateString()}`}
+        actions={<Button variant="secondary" onClick={loadDashboard}>{label.refresh}</Button>}
+      />
 
-        <div className="dashboard-secondary-grid">
-          {secondaryMetrics.map((metric) => (
-            <Card key={metric.label} className="dashboard-secondary-card">
-              <div className="dashboard-card-heading">
-                <DashboardIcon name={metric.icon} />
-                <p>{metric.label}</p>
-              </div>
-              <strong>{metric.value}</strong>
-              <small>{metric.note}</small>
-            </Card>
-          ))}
+      <Card className="module-card-flat">
+        <FilterToolbar actions={lastRefresh && <span className="module-muted">{label.lastRefresh}: {lastRefresh}</span>}>
+          <p className="dashboard-welcome">{label.welcome}</p>
+        </FilterToolbar>
+        {loading && <LoadingState message={t('orders.loading')} />}
+        {errors.length > 0 && <ErrorState errors={[label.partial, ...errors.slice(0, 3)]} onRetry={loadDashboard} retryLabel={t('retry')} />}
+      </Card>
+
+      <section className="dashboard-financial-card">
+        <div>
+          <span>{label.cash}</span>
+          <strong>{money(cash.closing_balance)}</strong>
         </div>
+        <StatGrid>
+          <SummaryCard label={label.income} value={money(cash.total_income)} note={today()} tone="good" />
+          <SummaryCard label={label.expenses} value={money(cash.total_expenses)} note={today()} tone="warning" />
+          <SummaryCard label={label.net} value={money(cash.net)} note="Daily Journal" />
+        </StatGrid>
       </section>
 
-      <section className="dashboard-section dashboard-products-section">
-        <div className="dashboard-section__header">
-          <div>
-            <span>{t('dashboard.productOverview')}</span>
-            <h2>{t('dashboard.availableProducts')}</h2>
-          </div>
-          <DashboardIcon name="product" />
-        </div>
-        <div className="dashboard-product-grid">
-          {coreProducts.map((product) => (
-            <Card key={product.id} className="dashboard-product-card">
-              <div>
-                <p>{productLabel(product.name, isArabic)}</p>
-                <StatusBadge status={product.status} />
-              </div>
-              <strong>{product.stock.toLocaleString()}</strong>
-              <small>{product.unit}</small>
-            </Card>
-          ))}
-        </div>
-      </section>
+      <StatGrid>
+        <SummaryCard icon="O" label={label.activeOrders} value={activeOrders} note="Pending, received, invoiced" />
+        <SummaryCard icon="I" label={label.unpaidInvoices} value={data.invoiceSummary?.unpaid_invoices ?? 0} note={money(data.invoiceSummary?.total_outstanding_value)} tone="warning" />
+        <SummaryCard icon="S" label={label.readyShipments} value={readyShipments} note="Paid invoices ready" />
+        <SummaryCard icon="P" label={label.processingShipments} value={processingShipments} note="Inventory not deducted yet" />
+        <SummaryCard icon="W" label={label.activeWarehouses} value={data.inventorySummary?.active_warehouses ?? 0} note="Available storage" />
+        <SummaryCard icon="L" label={label.lowStock} value={data.inventorySummary?.low_stock_items ?? 0} note="Needs review" tone={data.inventorySummary?.low_stock_items ? 'warning' : 'good'} />
+      </StatGrid>
 
-      <section className="dashboard-panels">
-        <Card title={t('dashboard.recentActivity')} subtitle={t('dashboard.recentActivitySubtitle')} className="dashboard-panel-card">
-          <div className="dashboard-panel-title-icon">
-            <DashboardIcon name="activity" />
-          </div>
-          <div className="activity-list">
-            {recentActivity.map((activity) => (
-              <div className="activity-row dashboard-activity-row" key={activity.id}>
-                <div>
-                  <span>{activity.title}</span>
-                  <strong>{activity.main}</strong>
-                  <small>{activity.detail}</small>
-                </div>
-                {activity.status && <StatusBadge status={activity.status} />}
+      <div className="dashboard-grid-two">
+        <Card title={label.inventoryOverview} subtitle={label.stockNote}>
+          <div className="dashboard-inventory-list">
+            {(data.inventorySummary?.inventory_groups || []).length === 0 ? <EmptyState title={t('emptyMessage')} /> : data.inventorySummary.inventory_groups.map((group) => (
+              <div key={`${group.product_id}-${group.unit}`}>
+                <span>{group.product_name}</span>
+                <strong>{qty(group.quantity, group.unit)}</strong>
               </div>
             ))}
           </div>
         </Card>
 
-        <Card title={t('dashboard.alerts')} subtitle={t('dashboard.alertsSubtitle')} className="dashboard-panel-card">
-          <div className="dashboard-panel-title-icon">
-            <DashboardIcon name="alert" />
-          </div>
-          <div className="activity-list">
-            {alerts.length > 0 ? alerts.map((alert) => (
-              <div className="activity-row dashboard-activity-row" key={alert.id}>
+        <Card title={label.warehouseAttention} subtitle="Usage is shown per warehouse capacity">
+          <div className="dashboard-warehouse-list">
+            {data.warehouses.length === 0 ? <EmptyState title={t('emptyMessage')} /> : data.warehouses.slice(0, 6).map((warehouse) => (
+              <div key={warehouse.id} className="dashboard-warehouse-row">
                 <div>
-                  <span>{alert.title}</span>
-                  <strong>{alert.detail}</strong>
+                  <strong>{warehouse.warehouse_name}</strong>
+                  <span>{qty(warehouse.used_capacity, warehouse.capacity_unit)} / {qty(warehouse.capacity, warehouse.capacity_unit)}</span>
                 </div>
-                <StatusBadge status={alert.status} />
+                <div className="module-progress" aria-label={`${warehouse.usage_percent}%`}>
+                  <span style={{ width: `${Math.min(Number(warehouse.usage_percent || 0), 100)}%` }} />
+                </div>
+                <StatusBadge status={warehouse.status} />
               </div>
-            )) : (
-              <div className="dashboard-empty-alert">{t('dashboard.noAlerts')}</div>
-            )}
+            ))}
           </div>
         </Card>
-      </section>
+      </div>
 
-      <section className="dashboard-context-strip">
-        <div>
-          <span>{t('dashboard.usedCapacity')}</span>
-          <strong>{usedWarehouseCapacity.toLocaleString()} / {totalWarehouseCapacity.toLocaleString()}</strong>
+      <Card title={label.workflow} subtitle="Order Received -> Invoice Paid -> Shipment Completed">
+        <div className="dashboard-workflow">
+          {workflow.map(([name, value]) => (
+            <div key={name}>
+              <span>{name}</span>
+              <strong>{value}</strong>
+              <div className="module-progress"><span style={{ width: `${(value / maxWorkflow) * 100}%` }} /></div>
+            </div>
+          ))}
         </div>
-        <div>
-          <span>{t('dashboard.lowStockAlerts')}</span>
-          <strong>{lowStockProducts.length.toLocaleString()}</strong>
-        </div>
-      </section>
+      </Card>
+
+      <div className="dashboard-grid-two">
+        <Card title={label.recentActivity} subtitle={label.latest}>
+          <div className="module-activity-list">
+            {recentActivity.length === 0 ? <EmptyState title={label.noActivity} /> : recentActivity.map((activity) => (
+              <Link className="module-activity-row" key={activity.id} to={activity.path}>
+                <div>
+                  <span>{activity.type}</span>
+                  <strong>{activity.title}</strong>
+                  <small>{activity.description}</small>
+                </div>
+                <div>
+                  <small>{activity.date || '-'}</small>
+                  <StatusBadge status={statusText(activity.status)} />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
+
+        <Card title={label.alerts} subtitle="Important items first">
+          <div className="module-activity-list">
+            {alerts.length === 0 ? <EmptyState title={label.noAlerts} /> : alerts.map((alert) => (
+              <div className="module-activity-row" key={alert.id}>
+                <div>
+                  <span>{alert.title}</span>
+                  <strong>{alert.description}</strong>
+                </div>
+                <StatusBadge status={statusText(alert.status)} />
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

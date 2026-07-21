@@ -1,105 +1,107 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 import StatusBadge from '../ui/StatusBadge.jsx';
 import Table from '../ui/Table.jsx';
+import PrintableWorkerStatement from '../reports/PrintableWorkerStatement.jsx';
 import { formatCurrency } from '../../data/dummyData.js';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
-import { workerTypeLabel } from './workerHelpers.js';
+import { normalizeWorkerType, workerTypeLabel } from './workerHelpers.js';
 import WorkerTransactionForm from './WorkerTransactionForm.jsx';
 
-function getCurrentDateTime() {
-  const now = new Date();
-  return {
-    date: now.toISOString().slice(0, 10),
-    time: now.toTimeString().slice(0, 5),
-  };
+function statusDisplay(status) {
+  return { available: 'Available', working: 'Working', inactive: 'Inactive', unpaid: 'Unpaid', paid: 'Paid' }[status] || status;
 }
 
-function createTransactionForm(warehouses) {
+function createTransactionForm(worker, warehouses) {
+  const type = normalizeWorkerType(worker?.worker_type || worker?.workerType);
+  const calculationMethod = type === 'bag_carrying_worker' ? 'bag_based' : 'daily_wage';
   return {
-    warehouseName: warehouses[0]?.warehouseName || '',
-    paymentMode: 'bag',
+    warehouseId: warehouses[0]?.id || '',
+    calculationMethod,
     numberOfBags: '',
-    pricePerBag: '',
-    dailyWage: '',
+    pricePerBag: worker?.default_price_per_bag || '',
+    dailyWage: worker?.default_daily_wage || '',
     workDescription: '',
     notes: '',
   };
 }
 
-export default function WorkerProfile({ worker, warehouses = [], onClose, onAddTransaction }) {
+export default function WorkerProfile({
+  worker,
+  warehouses = [],
+  records = [],
+  statement,
+  isSavingRecord = false,
+  isMarkingPaid = false,
+  onClose,
+  onAddRecord,
+  onMarkPaid,
+  onLoadStatement,
+  onPrint,
+  adminName,
+}) {
   const { t, isArabic } = useLanguage();
-  const [showTransactionForm, setShowTransactionForm] = useState(false);
-  const [transactionForm, setTransactionForm] = useState(createTransactionForm(warehouses));
+  const [activeSection, setActiveSection] = useState('');
+  const [transactionForm, setTransactionForm] = useState(createTransactionForm(worker, warehouses));
   const [transactionErrors, setTransactionErrors] = useState([]);
+  const [paymentRecord, setPaymentRecord] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentErrors, setPaymentErrors] = useState([]);
+
+  useEffect(() => {
+    setTransactionForm(createTransactionForm(worker, warehouses));
+    setTransactionErrors([]);
+    setPaymentRecord(null);
+    setActiveSection('');
+  }, [worker?.id, warehouses]);
+
   if (!worker) return null;
 
-  const avatar = worker.photoUrl
-    ? <img src={worker.photoUrl} alt={worker.name} />
+  const avatar = worker.photo_url || worker.photoUrl
+    ? <img src={worker.photo_url || worker.photoUrl} alt={worker.name} />
     : <span>{worker.name.slice(0, 1).toUpperCase()}</span>;
 
-  const isGeneralWorker = worker.workerType === 'General Worker';
-  const isWeighingWorker = worker.workerType === 'Weighing Worker';
-
-  const generalWorkerColumns = [
+  const columns = [
     { key: 'date', label: t('common.date') },
     { key: 'time', label: t('common.time') },
-    { key: 'warehouseName', label: t('customers.assignedLocationWarehouse') },
-    { key: 'dailyWage', label: t('customers.dailyWage'), render: (row) => formatCurrency(row.dailyWage ?? row.totalWage ?? row.totalPayment ?? 0) },
-    { key: 'workDescription', label: t('customers.workDescription') },
-    { key: 'adminName', label: t('warehouse.admin') },
-    { key: 'notes', label: t('warehouse.notes') },
-  ];
-
-  const weighingWorkerColumns = [
-    { key: 'date', label: t('common.date') },
-    { key: 'time', label: t('common.time') },
-    { key: 'warehouseName', label: t('warehouse.warehouse') },
+    { key: 'code', label: t('customers.workRecordCode') },
+    { key: 'warehouse_name', label: t('warehouse.warehouse') },
+    { key: 'calculation_method', label: t('customers.calculationMethod'), render: (row) => row.calculation_method === 'daily_wage' ? t('customers.dailyWagePayment') : t('customers.bagBasedPayment') },
+    { key: 'daily_wage', label: t('customers.dailyWage'), render: (row) => row.daily_wage ? formatCurrency(row.daily_wage) : '-' },
+    { key: 'bags', label: t('customers.numberOfBags'), render: (row) => row.number_of_bags || '-' },
+    { key: 'price_per_bag', label: t('customers.pricePerBag'), render: (row) => row.price_per_bag ? formatCurrency(row.price_per_bag) : '-' },
+    { key: 'total_wage', label: t('customers.totalWage'), render: (row) => formatCurrency(row.total_wage) },
+    { key: 'payment_status', label: t('customers.paymentStatus'), render: (row) => <StatusBadge status={statusDisplay(row.payment_status)} /> },
+    { key: 'payment_method', label: t('customers.paymentMethod'), render: (row) => row.payment_method ? t(`customers.paymentMethods.${row.payment_method}`) : '-' },
+    { key: 'admin', label: t('warehouse.admin'), render: (row) => row.administrator_name },
     {
-      key: 'paymentMethod',
-      label: t('customers.paymentMethod'),
-      render: (row) => row.paymentMethod === 'Daily Wage' ? t('customers.dailyWagePayment') : t('customers.bagBasedPayment'),
+      key: 'actions',
+      label: t('common.action'),
+      render: (row) => row.payment_status === 'unpaid'
+        ? <Button variant="secondary" onClick={() => openPayment(row)}>{t('customers.markAsPaid')}</Button>
+        : <span className="muted-text">{row.paid_by_name || '-'}</span>,
     },
-    {
-      key: 'workDetails',
-      label: t('common.detail'),
-      render: (row) => row.paymentMethod === 'Daily Wage'
-        ? (row.workDescription || t('warehouse.noNotes'))
-        : `${Number(row.numberOfBags || 0).toLocaleString()} × ${formatCurrency(row.pricePerBag || 0)}`,
-    },
-    { key: 'totalWage', label: t('customers.totalWage'), render: (row) => formatCurrency(row.totalWage ?? row.totalPayment ?? row.dailyWage ?? 0) },
-    { key: 'adminName', label: t('warehouse.admin') },
-    { key: 'notes', label: t('warehouse.notes') },
   ];
 
-  const bagWorkerColumns = [
-    { key: 'date', label: t('common.date') },
-    { key: 'time', label: t('common.time') },
-    { key: 'warehouseName', label: t('warehouse.warehouse') },
-    { key: 'numberOfBags', label: t('customers.numberOfBags'), render: (row) => Number(row.numberOfBags || 0).toLocaleString() },
-    { key: 'pricePerBag', label: t('customers.pricePerBag'), render: (row) => formatCurrency(row.pricePerBag || 0) },
-    { key: 'totalWage', label: t('customers.totalWage'), render: (row) => formatCurrency(row.totalWage ?? row.totalPayment ?? 0) },
-    { key: 'adminName', label: t('warehouse.admin') },
-    { key: 'notes', label: t('warehouse.notes') },
-  ];
-
-  const transactionColumns = isGeneralWorker
-    ? generalWorkerColumns
-    : isWeighingWorker
-      ? weighingWorkerColumns
-      : bagWorkerColumns;
-
-  function openTransactionForm() {
-    setTransactionForm(createTransactionForm(warehouses));
+  function openRecordForm() {
+    setActiveSection('record');
+    setTransactionForm(createTransactionForm(worker, warehouses));
     setTransactionErrors([]);
-    setShowTransactionForm(true);
   }
 
-  function closeTransactionForm() {
-    setTransactionForm(createTransactionForm(warehouses));
+  function openPayment(record) {
+    setActiveSection('payment');
+    setPaymentRecord(record);
+    setPaymentMethod('cash');
+    setPaymentErrors([]);
+  }
+
+  function closeSection() {
+    setActiveSection('');
     setTransactionErrors([]);
-    setShowTransactionForm(false);
+    setPaymentErrors([]);
+    setPaymentRecord(null);
   }
 
   function handleTransactionChange(event) {
@@ -107,55 +109,34 @@ export default function WorkerProfile({ worker, warehouses = [], onClose, onAddT
     setTransactionForm((current) => ({ ...current, [name]: value }));
   }
 
-  function handleTransactionSubmit(event) {
+  async function handleTransactionSubmit(event) {
     event.preventDefault();
-    const errors = [];
-    const numberOfBags = Number(transactionForm.numberOfBags);
-    const pricePerBag = Number(transactionForm.pricePerBag);
-    const dailyWage = Number(transactionForm.dailyWage);
-    const usesDailyWage = isGeneralWorker || (isWeighingWorker && transactionForm.paymentMode === 'daily');
-
-    if (!transactionForm.warehouseName) {
-      errors.push(t('customers.workerTransactionRequiredError'));
+    setTransactionErrors([]);
+    try {
+      await onAddRecord({
+        warehouse_id: transactionForm.warehouseId,
+        calculation_method: transactionForm.calculationMethod,
+        daily_wage: transactionForm.calculationMethod === 'daily_wage' ? transactionForm.dailyWage : '',
+        number_of_bags: transactionForm.calculationMethod === 'bag_based' ? transactionForm.numberOfBags : '',
+        price_per_bag: transactionForm.calculationMethod === 'bag_based' ? transactionForm.pricePerBag : '',
+        work_description: transactionForm.workDescription,
+        notes: transactionForm.notes,
+      });
+      closeSection();
+    } catch (error) {
+      setTransactionErrors(String(error.message || error).split('\n'));
     }
+  }
 
-    if (usesDailyWage) {
-      if (!dailyWage || dailyWage <= 0) errors.push(t('customers.dailyWageRequired'));
-      if (!transactionForm.workDescription.trim()) errors.push(t('customers.workDescriptionRequired'));
-    } else {
-      if (!numberOfBags || numberOfBags <= 0) errors.push(t('customers.numberOfBagsRequired'));
-      if (!pricePerBag || pricePerBag <= 0) errors.push(t('customers.pricePerBagRequired'));
+  async function handleMarkPaid(event) {
+    event.preventDefault();
+    setPaymentErrors([]);
+    try {
+      await onMarkPaid(paymentRecord.id, paymentMethod);
+      closeSection();
+    } catch (error) {
+      setPaymentErrors(String(error.message || error).split('\n'));
     }
-
-    if (errors.length > 0) {
-      setTransactionErrors(errors);
-      return;
-    }
-
-    const totalWage = usesDailyWage ? dailyWage : numberOfBags * pricePerBag;
-    const timestamp = getCurrentDateTime();
-    const transaction = {
-      id: Date.now(),
-      date: timestamp.date,
-      time: timestamp.time,
-      warehouseName: transactionForm.warehouseName,
-      paymentMethod: usesDailyWage ? 'Daily Wage' : 'Bag Based',
-      totalWage,
-      totalPayment: totalWage,
-      adminName: t('admin'),
-      notes: transactionForm.notes || t('warehouse.noNotes'),
-    };
-
-    if (usesDailyWage) {
-      transaction.dailyWage = dailyWage;
-      transaction.workDescription = transactionForm.workDescription;
-    } else {
-      transaction.numberOfBags = numberOfBags;
-      transaction.pricePerBag = pricePerBag;
-    }
-
-    onAddTransaction(worker.id, transaction);
-    closeTransactionForm();
   }
 
   return (
@@ -165,54 +146,73 @@ export default function WorkerProfile({ worker, warehouses = [], onClose, onAddT
           <div className="customer-avatar customer-avatar--large">{avatar}</div>
           <div>
             <h3>{worker.name}</h3>
+            <p>{worker.code}</p>
             <p>{worker.phone}</p>
-            <p>{workerTypeLabel(worker.workerType, isArabic)}</p>
+            <p>{workerTypeLabel(worker.worker_type, isArabic)}</p>
           </div>
         </div>
         <div className="customer-profile-header__actions">
-          {worker.status && <StatusBadge status={worker.status} />}
+          <StatusBadge status={statusDisplay(worker.status)} />
           <Button variant="secondary" onClick={onClose}>{t('customers.closeProfile')}</Button>
         </div>
       </div>
 
       <div className="detail-panel customer-profile-summary">
-        <div>
-          <span>{t('customers.workerType')}</span>
-          <strong>{workerTypeLabel(worker.workerType, isArabic)}</strong>
-        </div>
-        <div>
-          <span>{t('customers.assignedWork')}</span>
-          <strong>{worker.assignedWork}</strong>
-        </div>
+        <div><span>{t('customers.paidWages')}</span><strong>{formatCurrency(worker.paid_wage_total || 0)}</strong></div>
+        <div><span>{t('customers.unpaidWages')}</span><strong>{formatCurrency(worker.unpaid_wage_total || 0)}</strong></div>
+        <div><span>{t('customers.totalWorkRecords')}</span><strong>{worker.total_work_records || 0}</strong></div>
+        <div><span>{t('customers.lastWorkDate')}</span><strong>{worker.last_work_at ? new Date(worker.last_work_at).toLocaleDateString() : '-'}</strong></div>
       </div>
 
-      <p className="customer-notes">{worker.notes}</p>
+      <p className="customer-notes">{worker.notes || t('warehouse.noNotes')}</p>
 
-      <div className="customer-section-header">
-        <div>
-          <h3>{t('customers.workerTransactionHistory')}</h3>
-          <p>{t('customers.workerTransactionSubtitle')}</p>
-        </div>
-        {!showTransactionForm && (
-          <Button onClick={openTransactionForm}>{t('customers.addNewWorkerTransaction')}</Button>
-        )}
+      <div className="customer-profile-tabs">
+        <button type="button" className={`customer-profile-tabs__button ${activeSection === 'record' ? 'is-active' : ''}`} onClick={openRecordForm}>{t('customers.addNewWorkerTransaction')}</button>
+        <button type="button" className={`customer-profile-tabs__button ${activeSection === 'history' ? 'is-active' : ''}`} onClick={() => setActiveSection('history')}>{t('customers.workerTransactionHistory')}</button>
+        <button type="button" className={`customer-profile-tabs__button ${activeSection === 'statement' ? 'is-active' : ''}`} onClick={() => { setActiveSection('statement'); onLoadStatement?.(); }}>{t('customers.printWorkerStatement')}</button>
       </div>
 
-      {showTransactionForm && (
+      {activeSection === 'record' && (
         <WorkerTransactionForm
           form={transactionForm}
           errors={transactionErrors}
           warehouses={warehouses}
-          workerType={worker.workerType}
+          workerType={worker.worker_type}
           onChange={handleTransactionChange}
           onSubmit={handleTransactionSubmit}
-          onCancel={closeTransactionForm}
+          onCancel={closeSection}
+          isSaving={isSavingRecord}
         />
       )}
 
-      <div className="customer-profile-history">
-        <Table columns={transactionColumns} rows={worker.paymentHistory || []} emptyMessage={t('customers.noPaymentHistory')} />
-      </div>
+      {activeSection === 'payment' && paymentRecord && (
+        <form className="form-grid" onSubmit={handleMarkPaid}>
+          {paymentErrors.length > 0 && <div className="form-error form-grid__wide">{paymentErrors.map((error) => <p key={error}>{error}</p>)}</div>}
+          <label>{t('customers.workerName')}<input value={worker.name} readOnly /></label>
+          <label>{t('customers.workRecordCode')}<input value={paymentRecord.code} readOnly /></label>
+          <label>{t('customers.totalWage')}<input value={formatCurrency(paymentRecord.total_wage)} readOnly /></label>
+          <label>{t('customers.paymentMethod')}<select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option value="cash">{t('customers.paymentMethods.cash')}</option><option value="online">{t('customers.paymentMethods.online')}</option></select></label>
+          <div className="form-grid__actions form-grid__actions--split">
+            <Button type="submit" disabled={isMarkingPaid}>{isMarkingPaid ? t('journal.saving') : t('customers.confirmPayment')}</Button>
+            <Button type="button" variant="secondary" onClick={closeSection} disabled={isMarkingPaid}>{t('cancel')}</Button>
+          </div>
+        </form>
+      )}
+
+      {(activeSection === 'history' || !activeSection) && (
+        <div className="customer-profile-history">
+          <Table columns={columns} rows={records} emptyMessage={t('customers.noWorkRecords')} />
+        </div>
+      )}
+
+      {activeSection === 'statement' && (
+        <div className="customer-section-header">
+          <Button onClick={onPrint}>{t('reports.printPdf')}</Button>
+          <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
+        </div>
+      )}
+
+      <PrintableWorkerStatement worker={worker} records={records} statement={statement} adminName={adminName} />
     </Card>
   );
 }

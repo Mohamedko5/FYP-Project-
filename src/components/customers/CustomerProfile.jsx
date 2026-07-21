@@ -6,88 +6,90 @@ import Table from '../ui/Table.jsx';
 import Tooltip from '../ui/Tooltip.jsx';
 import { formatCurrency } from '../../data/dummyData.js';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
+import { getOrders } from '../../services/ordersApi.js';
 import CashAccountTable from './CashAccountTable.jsx';
 import CommodityAccountTable from './CommodityAccountTable.jsx';
 import CustomerCashTransactionForm from './CustomerCashTransactionForm.jsx';
 import CustomerCommodityTransactionForm from './CustomerCommodityTransactionForm.jsx';
 import CustomerStatement from './CustomerStatement.jsx';
-import { customerTypeLabel } from './customerHelpers.js';
-
-function getCurrentDateTime() {
-  const now = new Date();
-  return {
-    date: now.toISOString().slice(0, 10),
-    time: now.toTimeString().slice(0, 5),
-  };
-}
+import { customerTypeLabel, productLabel, unitLabel } from './customerHelpers.js';
 
 function createCashForm(customerName = '') {
   return {
-    type: 'Payment Received',
+    type: 'payment_received',
+    paymentMethod: 'cash',
     customer: customerName,
     amount: '',
     description: '',
   };
 }
 
-function createCommodityForm(customerName = '', product = 'White Sesame') {
+function createCommodityForm(customerName = '', products = []) {
+  const firstProduct = products[0];
   return {
-    transactionType: 'Product Received',
-    product,
+    transactionType: 'product_received',
+    productId: firstProduct?.id || '',
     quantity: '',
-    unit: 'Qintar',
+    unit: firstProduct?.units?.[0]?.value || '',
     customer: customerName,
+    estimatedValue: '',
     description: '',
   };
+}
+
+function commoditySummary(customer, isArabic) {
+  const balances = customer.commodityBalances || customer.commodity_balances || [];
+  const positive = balances.filter((row) => Number(row.quantity) > 0);
+  if (positive.length === 0) return '-';
+  return positive.map((row) => `${productLabel(row.product_name, isArabic)} ${Number(row.quantity).toLocaleString()} ${unitLabel(row.unit, isArabic)}`).join(', ');
 }
 
 export default function CustomerProfile({
   customer,
   cashTransactions,
   commodityTransactions,
-  orders,
   payments,
   products,
-  units,
+  statement,
+  isSavingCash,
+  isSavingCommodity,
+  isLoadingProfile,
   onAddCashTransaction,
   onAddCommodityTransaction,
+  onLoadStatement,
   onPrint,
   onClose,
+  adminName,
 }) {
   const { t, isArabic } = useLanguage();
   const [activeSection, setActiveSection] = useState('');
   const [cashForm, setCashForm] = useState(createCashForm(customer?.name));
-  const [commodityForm, setCommodityForm] = useState(createCommodityForm(customer?.name, products?.[0]?.name));
+  const [commodityForm, setCommodityForm] = useState(createCommodityForm(customer?.name, products));
   const [cashErrors, setCashErrors] = useState([]);
   const [commodityErrors, setCommodityErrors] = useState([]);
+  const [orderRows, setOrderRows] = useState([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [orderError, setOrderError] = useState('');
 
   useEffect(() => {
     if (!customer) return;
     setActiveSection('');
     setCashForm(createCashForm(customer.name));
-    setCommodityForm(createCommodityForm(customer.name, products?.[0]?.name));
+    setCommodityForm(createCommodityForm(customer.name, products));
     setCashErrors([]);
     setCommodityErrors([]);
   }, [customer?.id, products]);
 
   if (!customer) return null;
 
-  const orderColumns = [
-    { key: 'orderNo', label: t('common.orderNo') },
-    { key: 'product', label: t('common.product') },
-    { key: 'quantity', label: t('common.quantity') },
-    { key: 'totalAmount', label: t('common.totalAmount'), render: (row) => formatCurrency(row.totalAmount) },
-    { key: 'status', label: t('common.status'), render: (row) => <StatusBadge status={row.status} /> },
-  ];
-
   const paymentColumns = [
     { key: 'date', label: t('common.date') },
     { key: 'amount', label: t('common.amount'), render: (row) => formatCurrency(row.amount) },
-    { key: 'method', label: t('common.method') },
-    { key: 'note', label: t('common.note') },
+    { key: 'payment_method', label: t('customers.paymentMethod'), render: (row) => row.payment_method ? t(`customers.paymentMethods.${row.payment_method}`) : '-' },
+    { key: 'description', label: t('common.description') },
   ];
-  const avatar = customer.photoUrl
-    ? <img src={customer.photoUrl} alt={customer.name} />
+  const avatar = customer.photoUrl || customer.photo_url
+    ? <img src={customer.photoUrl || customer.photo_url} alt={customer.name} />
     : <span>{customer.name.slice(0, 1).toUpperCase()}</span>;
   const profileSections = [
     { key: 'cash', label: t('customers.addCashTransaction'), tooltip: t('tooltips.addCashTransaction') },
@@ -102,7 +104,22 @@ export default function CustomerProfile({
     setCashErrors([]);
     setCommodityErrors([]);
     if (section === 'cash') setCashForm(createCashForm(customer.name));
-    if (section === 'commodity') setCommodityForm(createCommodityForm(customer.name, products?.[0]?.name));
+    if (section === 'commodity') setCommodityForm(createCommodityForm(customer.name, products));
+    if (section === 'orders') loadCustomerOrders();
+    if (section === 'statement') onLoadStatement?.();
+  }
+
+  async function loadCustomerOrders() {
+    setIsLoadingOrders(true);
+    setOrderError('');
+    try {
+      const response = await getOrders({ customer: customer.id, page_size: 100, ordering: '-created_at' });
+      setOrderRows(Array.isArray(response) ? response : response.results || []);
+    } catch (error) {
+      setOrderError(error.message || t('orders.apiError'));
+    } finally {
+      setIsLoadingOrders(false);
+    }
   }
 
   function closeSection() {
@@ -113,7 +130,12 @@ export default function CustomerProfile({
 
   function handleCashChange(event) {
     const { name, value } = event.target;
-    setCashForm((current) => ({ ...current, [name]: value }));
+    setCashForm((current) => {
+      const next = { ...current, [name]: value };
+      if (name === 'type' && value === 'payment_owed') next.paymentMethod = '';
+      if (name === 'type' && value !== 'payment_owed' && !next.paymentMethod) next.paymentMethod = 'cash';
+      return next;
+    });
   }
 
   function handleCommodityChange(event) {
@@ -121,78 +143,40 @@ export default function CustomerProfile({
     setCommodityForm((current) => ({ ...current, [name]: value }));
   }
 
-  function handleCashSubmit(event) {
+  async function handleCashSubmit(event) {
     event.preventDefault();
-    const errors = [];
-    const amount = Number(cashForm.amount);
-
-    if (!cashForm.type || !cashForm.customer || !cashForm.description.trim()) {
-      errors.push(t('customers.transactionRequiredFieldsError'));
+    setCashErrors([]);
+    try {
+      await onAddCashTransaction({
+        transaction_type: cashForm.type,
+        payment_method: cashForm.type === 'payment_owed' ? '' : cashForm.paymentMethod,
+        amount: cashForm.amount,
+        description: cashForm.description,
+      });
+      setCashForm(createCashForm(customer.name));
+      closeSection();
+    } catch (error) {
+      setCashErrors(String(error.message || error).split('\n'));
     }
-    if (!cashForm.amount || amount <= 0) errors.push(t('customers.amountPositiveError'));
-
-    if (errors.length > 0) {
-      setCashErrors(errors);
-      return;
-    }
-
-    const paidAmount = cashForm.type === 'Payment Received' ? amount : 0;
-    const timestamp = getCurrentDateTime();
-    onAddCashTransaction({
-      id: Date.now(),
-      customer: customer.name,
-      date: timestamp.date,
-      time: timestamp.time,
-      type: cashForm.type,
-      amount,
-      paidAmount,
-      remainingBalance: Math.max(amount - paidAmount, 0),
-      lahuWaAlayh: cashForm.type === 'Payment Owed' ? 'Lahu' : 'Balanced',
-      source: 'Customer Profile',
-      description: cashForm.description,
-    });
-    setCashForm(createCashForm(customer.name));
-    closeSection();
   }
 
-  function handleCommoditySubmit(event) {
+  async function handleCommoditySubmit(event) {
     event.preventDefault();
-    const errors = [];
-    const quantity = Number(commodityForm.quantity);
-
-    if (
-      !commodityForm.transactionType ||
-      !commodityForm.product ||
-      !commodityForm.unit ||
-      !commodityForm.customer ||
-      !commodityForm.description.trim()
-    ) {
-      errors.push(t('customers.transactionRequiredFieldsError'));
+    setCommodityErrors([]);
+    try {
+      await onAddCommodityTransaction({
+        transaction_type: commodityForm.transactionType,
+        product_id: commodityForm.productId,
+        quantity: commodityForm.quantity,
+        unit: commodityForm.unit,
+        estimated_value: commodityForm.estimatedValue || null,
+        description: commodityForm.description,
+      });
+      setCommodityForm(createCommodityForm(customer.name, products));
+      closeSection();
+    } catch (error) {
+      setCommodityErrors(String(error.message || error).split('\n'));
     }
-    if (!commodityForm.quantity || quantity <= 0) errors.push(t('journal.negativeQuantityError'));
-
-    if (errors.length > 0) {
-      setCommodityErrors(errors);
-      return;
-    }
-
-    const timestamp = getCurrentDateTime();
-    onAddCommodityTransaction({
-      id: Date.now(),
-      customer: customer.name,
-      date: timestamp.date,
-      time: timestamp.time,
-      transactionType: commodityForm.transactionType,
-      product: commodityForm.product,
-      quantity,
-      unit: commodityForm.unit,
-      warehouseName: '-',
-      lahuWaAlayh: 'Balanced',
-      source: 'Customer Profile',
-      description: commodityForm.description,
-    });
-    setCommodityForm(createCommodityForm(customer.name, products?.[0]?.name));
-    closeSection();
   }
 
   function renderActiveSection() {
@@ -209,8 +193,10 @@ export default function CustomerProfile({
             onChange={handleCashChange}
             onSubmit={handleCashSubmit}
             onCancel={closeSection}
+            isSaving={isSavingCash}
             t={t}
           />
+          <CashAccountTable transactions={cashTransactions} emptyMessage={t('customers.noCashTransactions')} />
         </Card>
       );
     }
@@ -226,13 +212,15 @@ export default function CustomerProfile({
             errors={commodityErrors}
             customerName={customer.name}
             products={products}
-            units={units}
+            units={[]}
             isArabic={isArabic}
             onChange={handleCommodityChange}
             onSubmit={handleCommoditySubmit}
             onCancel={closeSection}
+            isSaving={isSavingCommodity}
             t={t}
           />
+          <CommodityAccountTable transactions={commodityTransactions} emptyMessage={t('customers.noCommodityTransactions')} />
         </Card>
       );
     }
@@ -243,7 +231,28 @@ export default function CustomerProfile({
           <div className="customer-section-header">
             <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
           </div>
-          <Table columns={orderColumns} rows={orders} />
+          {orderError && (
+            <div className="form-error">
+              <p>{orderError}</p>
+              <Button variant="secondary" onClick={loadCustomerOrders}>{t('retry')}</Button>
+            </div>
+          )}
+          {isLoadingOrders ? (
+            <p className="muted-text">{t('orders.loading')}</p>
+          ) : (
+            <Table
+              columns={[
+                { key: 'order_number', label: t('orders.orderNumber') },
+                { key: 'product_summary', label: t('orders.productSummary') },
+                { key: 'item_count', label: t('orders.itemCount') },
+                { key: 'total_amount', label: t('common.totalAmount'), render: (row) => formatCurrency(row.total_amount) },
+                { key: 'created_date', label: t('common.date') },
+                { key: 'status', label: t('orders.orderStatus'), render: (row) => <StatusBadge status={t(`orders.statusLabels.${row.status}`)} /> },
+              ]}
+              rows={orderRows}
+              emptyMessage={t('orders.noOrders')}
+            />
+          )}
         </Card>
       );
     }
@@ -254,7 +263,7 @@ export default function CustomerProfile({
           <div className="customer-section-header">
             <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
           </div>
-          <Table columns={paymentColumns} rows={payments} />
+          <Table columns={paymentColumns} rows={payments} emptyMessage={t('customers.noPaymentHistory')} />
         </Card>
       );
     }
@@ -270,7 +279,9 @@ export default function CustomerProfile({
             customer={customer}
             cashTransactions={cashTransactions}
             commodityTransactions={commodityTransactions}
+            statement={statement}
             visible
+            adminName={adminName}
           />
         </Card>
       );
@@ -281,12 +292,13 @@ export default function CustomerProfile({
 
   return (
     <>
-      <Card title={t('customers.profileTitle')} subtitle={t('customers.profileSubtitle')}>
+      <Card title={t('customers.profileTitle')} subtitle={isLoadingProfile ? t('customers.loadingProfile') : t('customers.profileSubtitle')}>
         <div className="customer-profile-header">
           <div className="customer-profile-identity">
             <div className="customer-avatar customer-avatar--large">{avatar}</div>
             <div>
               <h3>{customer.name}</h3>
+              <p>{customer.code}</p>
               <p>{customer.phone}</p>
               <p>{customer.address}</p>
             </div>
@@ -299,31 +311,31 @@ export default function CustomerProfile({
         <div className="detail-panel customer-profile-summary">
           <div>
             <span>{t('customers.customerType')}</span>
-            <strong>{customerTypeLabel(customer.customerType, isArabic)}</strong>
+            <strong>{customerTypeLabel(customer.customer_type || customer.customerType, isArabic)}</strong>
           </div>
           <div>
             <span>{t('customers.cashBalance')}</span>
-            <strong>{formatCurrency(Math.abs(customer.cashAccount))}</strong>
+            <strong>{formatCurrency(Math.abs(Number(customer.cash_balance || 0)))}</strong>
+          </div>
+          <div>
+            <span>{t('customers.debtStatus')}</span>
+            <StatusBadge status={customer.cash_status || 'Balanced'} />
           </div>
           <div>
             <span>{t('customers.commodityBalance')}</span>
-            <strong>{customer.commodityBalance}</strong>
+            <strong>{commoditySummary(customer, isArabic)}</strong>
           </div>
           <div>
-            <span>{t('customers.debtBalance')}</span>
-            <strong>{formatCurrency(customer.debtBalance)}</strong>
+            <span>{t('customers.totalDebits')}</span>
+            <strong>{formatCurrency(customer.total_debits || 0)}</strong>
           </div>
           <div>
-            <span>{t('common.paidAmount')}</span>
-            <strong>{formatCurrency(customer.paidAmount)}</strong>
-          </div>
-          <div>
-            <span>{t('common.remainingBalance')}</span>
-            <strong>{formatCurrency(customer.remainingBalance)}</strong>
+            <span>{t('customers.totalCredits')}</span>
+            <strong>{formatCurrency(customer.total_credits || 0)}</strong>
           </div>
         </div>
 
-        <p className="customer-notes">{customer.notes}</p>
+        <p className="customer-notes">{customer.notes || t('warehouse.noNotes')}</p>
 
         <div className="note-grid customer-profile-history">
           <div>
@@ -332,7 +344,7 @@ export default function CustomerProfile({
           </div>
           <div>
             <strong>{t('customers.orderHistory')}</strong>
-            <p>{orders.length > 0 ? `${orders.length} ${t('customers.orderRecords')}` : t('customers.noOrderHistory')}</p>
+            <p>{orderRows.length > 0 ? `${orderRows.length} ${t('orders.totalOrders')}` : t('orders.noOrders')}</p>
           </div>
         </div>
 
@@ -357,6 +369,8 @@ export default function CustomerProfile({
         customer={customer}
         cashTransactions={cashTransactions}
         commodityTransactions={commodityTransactions}
+        statement={statement}
+        adminName={adminName}
       />
     </>
   );

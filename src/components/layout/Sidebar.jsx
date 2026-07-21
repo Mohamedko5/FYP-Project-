@@ -8,8 +8,8 @@ const navigationItems = [
   { path: '/customers', labelKey: 'routes.customers' },
   { path: '/products', labelKey: 'routes.products' },
   { path: '/orders', labelKey: 'routes.orders' },
-  { path: '/weighing-shipment', labelKey: 'routes.weighingShipment' },
   { path: '/invoices', labelKey: 'routes.invoices' },
+  { path: '/weighing-shipment', labelKey: 'routes.weighingShipment' },
   { path: '/reports', labelKey: 'routes.reports' },
 ];
 

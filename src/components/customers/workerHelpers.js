@@ -1,14 +1,33 @@
 export const workerTypes = [
-  'General Worker',
-  'Bag Carrying Workers',
-  'Weighing Worker',
+  'general_worker',
+  'bag_carrying_worker',
+  'weighing_worker',
 ];
 
+export function normalizeWorkerType(type) {
+  return {
+    'General Worker': 'general_worker',
+    'Bag Carrying Workers': 'bag_carrying_worker',
+    'Bag Carrying Worker': 'bag_carrying_worker',
+    'Weighing Worker': 'weighing_worker',
+  }[type] || type;
+}
+
 export function workerTypeLabel(type, isArabic) {
+  const normalized = normalizeWorkerType(type);
   const labels = {
-    'General Worker': 'عامل عام',
-    'Bag Carrying Workers': 'عمال عتالة',
-    'Weighing Worker': 'عامل وزن',
+    general_worker: { en: 'General Worker', ar: 'General Worker' },
+    bag_carrying_worker: { en: 'Bag Carrying Worker', ar: 'Bag Carrying Worker' },
+    weighing_worker: { en: 'Weighing Worker', ar: 'Weighing Worker' },
   };
-  return isArabic ? (labels[type] || type) : type;
+  return labels[normalized]?.[isArabic ? 'ar' : 'en'] || type;
+}
+
+export function workerStatusLabel(status, t) {
+  const key = {
+    available: 'Available',
+    working: 'Working',
+    inactive: 'Inactive',
+  }[status] || status;
+  return t(`status.${key}`);
 }
