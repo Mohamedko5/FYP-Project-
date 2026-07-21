@@ -26,6 +26,149 @@ const stockStatusOptions = [
   { value: 'Not Stocked', label: 'Not Stocked' },
 ];
 
+const copy = {
+  en: {
+    title: 'Product Management',
+    subtitle: 'Central products, allowed units, prices, and read-only stock position',
+    totalProducts: 'Total Products',
+    active: 'Active',
+    lowStock: 'Low Stock',
+    outOfStock: 'Out of Stock',
+    search: 'Search code, product, Arabic name, notes',
+    allCategories: 'All Categories',
+    allUnits: 'All Units',
+    allStockStatuses: 'All Stock Statuses',
+    addProduct: '+ Add New Product',
+    print: 'Print',
+    editProduct: 'Edit Product',
+    addProductTitle: 'Add Product',
+    formSubtitle: 'Stock and warehouse status are calculated from inventory records.',
+    productName: 'Product Name',
+    arabicName: 'Arabic Name',
+    category: 'Category',
+    description: 'Description',
+    notes: 'Notes',
+    productDescription: 'Product description',
+    internalNotes: 'Internal notes',
+    productUnits: 'Product Units',
+    unitSubtitle: 'Choose one active default unit. Prices are SDG only.',
+    addUnit: '+ Add Unit',
+    selectUnit: 'Select Unit',
+    purchasePrice: 'Purchase price',
+    sellingPrice: 'Selling price',
+    minimumPrice: 'Minimum price',
+    default: 'Default',
+    remove: 'Remove',
+    saving: 'Saving...',
+    updateProduct: 'Update Product',
+    saveProduct: 'Save Product',
+    loading: 'Loading products...',
+    noProducts: 'No products found.',
+    code: 'Code',
+    product: 'Product',
+    units: 'Units',
+    currentStock: 'Current Stock',
+    status: 'Status',
+    action: 'Action',
+    view: 'View',
+    archive: 'Archive',
+    edit: 'Edit',
+    stockPosition: 'Stock Position',
+    unitsAndPrices: 'Units and Prices',
+    detailsSubtitle: 'Read-only stock and pricing details',
+    warehouseStockNote: 'warehouses with stock',
+    lowStockRecords: 'low-stock records',
+    sell: 'Sell',
+    warehouse: 'Warehouse',
+    quantity: 'Quantity',
+    minimumThreshold: 'Minimum Threshold',
+    noWarehouseStock: 'No warehouse stock records.',
+    commodity: 'Commodity',
+    supply: 'Supply',
+    viewTooltip: 'View stock and unit details',
+    editTooltip: 'Edit product details and units',
+    archiveTooltip: 'Archive this product',
+    archiveConfirm: 'Archive this product? Products with positive inventory cannot be archived.',
+    required: 'English name, Arabic name, and category are required.',
+    unitRequired: 'At least one complete unit is required.',
+    duplicateUnits: 'Duplicate units are not allowed.',
+    defaultUnit: 'Select exactly one active default unit.',
+    saveError: 'Unable to save product.',
+    archiveError: 'Unable to archive product.',
+    loadError: 'Unable to load products.',
+  },
+  ar: {
+    title: 'إدارة المنتجات',
+    subtitle: 'المنتجات والوحدات والأسعار وحالة المخزون للقراءة فقط',
+    totalProducts: 'إجمالي المنتجات',
+    active: 'نشطة',
+    lowStock: 'مخزون منخفض',
+    outOfStock: 'نفد المخزون',
+    search: 'بحث بالرمز أو المنتج أو الاسم العربي أو الملاحظات',
+    allCategories: 'كل التصنيفات',
+    allUnits: 'كل الوحدات',
+    allStockStatuses: 'كل حالات المخزون',
+    addProduct: '+ إضافة منتج جديد',
+    print: 'طباعة',
+    editProduct: 'تعديل المنتج',
+    addProductTitle: 'إضافة منتج',
+    formSubtitle: 'المخزون وحالة المخزن يتم حسابهما من سجلات المخزون.',
+    productName: 'اسم المنتج',
+    arabicName: 'الاسم العربي',
+    category: 'التصنيف',
+    description: 'الوصف',
+    notes: 'الملاحظات',
+    productDescription: 'وصف المنتج',
+    internalNotes: 'ملاحظات داخلية',
+    productUnits: 'وحدات المنتج',
+    unitSubtitle: 'اختر وحدة افتراضية نشطة واحدة. الأسعار بالجنيه السوداني فقط.',
+    addUnit: '+ إضافة وحدة',
+    selectUnit: 'اختر الوحدة',
+    purchasePrice: 'سعر الشراء',
+    sellingPrice: 'سعر البيع',
+    minimumPrice: 'أقل سعر',
+    default: 'افتراضية',
+    remove: 'إزالة',
+    saving: 'جارٍ الحفظ...',
+    updateProduct: 'تحديث المنتج',
+    saveProduct: 'حفظ المنتج',
+    loading: 'جارٍ تحميل المنتجات...',
+    noProducts: 'لا توجد منتجات.',
+    code: 'الرمز',
+    product: 'المنتج',
+    units: 'الوحدات',
+    currentStock: 'المخزون الحالي',
+    status: 'الحالة',
+    action: 'الإجراء',
+    view: 'عرض',
+    archive: 'أرشفة',
+    edit: 'تعديل',
+    stockPosition: 'حالة المخزون',
+    unitsAndPrices: 'الوحدات والأسعار',
+    detailsSubtitle: 'تفاصيل المخزون والأسعار للقراءة فقط',
+    warehouseStockNote: 'مخازن بها مخزون',
+    lowStockRecords: 'سجلات منخفضة المخزون',
+    sell: 'بيع',
+    warehouse: 'المخزن',
+    quantity: 'الكمية',
+    minimumThreshold: 'الحد الأدنى',
+    noWarehouseStock: 'لا توجد سجلات مخزون في المخازن.',
+    commodity: 'سلعة',
+    supply: 'مستلزم',
+    viewTooltip: 'عرض تفاصيل المخزون والوحدات',
+    editTooltip: 'تعديل بيانات المنتج والوحدات',
+    archiveTooltip: 'أرشفة هذا المنتج',
+    archiveConfirm: 'هل تريد أرشفة هذا المنتج؟ لا يمكن أرشفة المنتجات التي لها مخزون موجب.',
+    required: 'اسم المنتج بالإنجليزية والاسم العربي والتصنيف مطلوبة.',
+    unitRequired: 'يجب إدخال وحدة كاملة واحدة على الأقل.',
+    duplicateUnits: 'لا يسمح بتكرار الوحدات.',
+    defaultUnit: 'اختر وحدة افتراضية نشطة واحدة فقط.',
+    saveError: 'تعذر حفظ المنتج.',
+    archiveError: 'تعذر أرشفة المنتج.',
+    loadError: 'تعذر تحميل المنتجات.',
+  },
+};
+
 function emptyUnit(isDefault = false) {
   return {
     unit: '',
@@ -85,6 +228,7 @@ function formatPrice(value) {
 
 export default function Products() {
   const { isArabic } = useLanguage();
+  const label = copy[isArabic ? 'ar' : 'en'];
   const [productRows, setProductRows] = useState([]);
   const [summary, setSummary] = useState(null);
   const [filters, setFilters] = useState({ search: '', category: '', unit: '', stock_status: '' });
@@ -119,7 +263,7 @@ export default function Products() {
       setSummary(summaryData);
       setSelectedProductId((current) => (rows.some((row) => row.id === current) ? current : rows[0]?.id || null));
     } catch (error) {
-      setErrors([error.message || 'Unable to load products.']);
+      setErrors([error.message || label.loadError]);
     } finally {
       setLoading(false);
     }
@@ -199,10 +343,10 @@ export default function Products() {
 
   function validateForm() {
     const nextErrors = [];
-    if (!form.name_en.trim() || !form.name_ar.trim() || !form.category) nextErrors.push('English name, Arabic name, and category are required.');
-    if (!form.units.length || form.units.some((unit) => !unit.unit)) nextErrors.push('At least one complete unit is required.');
-    if (new Set(form.units.map((unit) => unit.unit)).size !== form.units.length) nextErrors.push('Duplicate units are not allowed.');
-    if (form.units.filter((unit) => unit.is_default && unit.is_active).length !== 1) nextErrors.push('Select exactly one active default unit.');
+    if (!form.name_en.trim() || !form.name_ar.trim() || !form.category) nextErrors.push(label.required);
+    if (!form.units.length || form.units.some((unit) => !unit.unit)) nextErrors.push(label.unitRequired);
+    if (new Set(form.units.map((unit) => unit.unit)).size !== form.units.length) nextErrors.push(label.duplicateUnits);
+    if (form.units.filter((unit) => unit.is_default && unit.is_active).length !== 1) nextErrors.push(label.defaultUnit);
     setErrors(nextErrors);
     return nextErrors.length === 0;
   }
@@ -228,21 +372,21 @@ export default function Products() {
       closeForm();
       await loadProducts();
     } catch (error) {
-      setErrors([error.message || 'Unable to save product.']);
+      setErrors([error.message || label.saveError]);
     } finally {
       setSaving(false);
     }
   }
 
   async function archiveProduct(productId) {
-    if (!window.confirm('Archive this product? Products with positive inventory cannot be archived.')) return;
+    if (!window.confirm(label.archiveConfirm)) return;
     setErrors([]);
     try {
       await archiveManagedProduct(productId);
       if (editingProductId === productId) closeForm();
       await loadProducts();
     } catch (error) {
-      setErrors([error.message || 'Unable to archive product.']);
+      setErrors([error.message || label.archiveError]);
     }
   }
 
@@ -255,27 +399,27 @@ export default function Products() {
   }
 
   const columns = [
-    { key: 'code', label: 'Code' },
-    { key: 'name_en', label: 'Product', render: (row) => <button className="link-button" type="button" onClick={() => setSelectedProductId(row.id)}>{productDisplayName(row)}</button> },
-    { key: 'category', label: 'Category', render: (row) => row.category === 'commodity' ? 'Commodity' : 'Supply' },
-    { key: 'units', label: 'Units', render: (row) => row.units.map((unit) => unit.unit).join(', ') },
-    { key: 'stock', label: 'Current Stock', render: totalStock },
-    { key: 'status', label: 'Status', render: (row) => <StatusBadge status={row.stock_status} /> },
+    { key: 'code', label: label.code },
+    { key: 'name_en', label: label.product, render: (row) => <button className="link-button" type="button" onClick={() => setSelectedProductId(row.id)}>{productDisplayName(row)}</button> },
+    { key: 'category', label: label.category, render: (row) => row.category === 'commodity' ? label.commodity : label.supply },
+    { key: 'units', label: label.units, render: (row) => row.units.map((unit) => unit.unit).join(', ') },
+    { key: 'stock', label: label.currentStock, render: totalStock },
+    { key: 'status', label: label.status, render: (row) => <StatusBadge status={row.stock_status} /> },
     {
       key: 'actions',
-      label: 'Action',
+      label: label.action,
       render: (row) => (
         <div className="table-action-group product-action-group">
-          <Tooltip content="View stock and unit details">
-            <button className="product-action-button" type="button" onClick={() => setSelectedProductId(row.id)}>View</button>
+          <Tooltip content={label.viewTooltip}>
+            <button className="product-action-button" type="button" onClick={() => setSelectedProductId(row.id)}>{label.view}</button>
           </Tooltip>
           {canManage && (
             <>
-              <Tooltip content="Edit product details and units">
-                <button className="product-action-button product-action-button--edit" type="button" onClick={() => openEditForm(row)}>Edit</button>
+              <Tooltip content={label.editTooltip}>
+                <button className="product-action-button product-action-button--edit" type="button" onClick={() => openEditForm(row)}>{label.edit}</button>
               </Tooltip>
-              <Tooltip content="Archive this product">
-                <button className="product-action-button product-action-button--delete" type="button" onClick={() => archiveProduct(row.id)}>Archive</button>
+              <Tooltip content={label.archiveTooltip}>
+                <button className="product-action-button product-action-button--delete" type="button" onClick={() => archiveProduct(row.id)}>{label.archive}</button>
               </Tooltip>
             </>
           )}
@@ -287,30 +431,30 @@ export default function Products() {
   return (
     <div className="page-grid products-management-page">
       <PrintableProductsReport products={productRows} summary={summary} generatedAt={generatedAt} />
-      <Card title="Product Management" subtitle="Central products, allowed units, prices, and read-only stock position">
+      <Card title={label.title} subtitle={label.subtitle}>
         <div className="product-summary-grid">
-          <div><span>Total Products</span><strong>{summary?.total_products ?? 0}</strong></div>
-          <div><span>Active</span><strong>{summary?.active_products ?? 0}</strong></div>
-          <div><span>Low Stock</span><strong>{summary?.low_stock_products ?? 0}</strong></div>
-          <div><span>Out of Stock</span><strong>{summary?.out_of_stock_products ?? 0}</strong></div>
+          <div><span>{label.totalProducts}</span><strong>{summary?.total_products ?? 0}</strong></div>
+          <div><span>{label.active}</span><strong>{summary?.active_products ?? 0}</strong></div>
+          <div><span>{label.lowStock}</span><strong>{summary?.low_stock_products ?? 0}</strong></div>
+          <div><span>{label.outOfStock}</span><strong>{summary?.out_of_stock_products ?? 0}</strong></div>
         </div>
 
         <div className="workflow-toolbar product-toolbar">
-          <input name="search" value={filters.search} onChange={updateFilter} placeholder="Search code, product, Arabic name, notes" />
+          <input name="search" value={filters.search} onChange={updateFilter} placeholder={label.search} />
           <select name="category" value={filters.category} onChange={updateFilter}>
-            <option value="">All Categories</option>
-            {categoryOptions.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
+            <option value="">{label.allCategories}</option>
+            {categoryOptions.map((category) => <option key={category.value} value={category.value}>{category.value === 'commodity' ? label.commodity : label.supply}</option>)}
           </select>
           <select name="unit" value={filters.unit} onChange={updateFilter}>
-            <option value="">All Units</option>
+            <option value="">{label.allUnits}</option>
             {unitOptions.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
           </select>
           <select name="stock_status" value={filters.stock_status} onChange={updateFilter}>
-            <option value="">All Stock Statuses</option>
-            {stockStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            <option value="">{label.allStockStatuses}</option>
+            {stockStatusOptions.map((option) => <option key={option.value} value={option.value}>{isArabic && option.value === 'Available' ? 'متاح' : isArabic && option.value === 'Low Stock' ? label.lowStock : isArabic && option.value === 'Out of Stock' ? label.outOfStock : isArabic && option.value === 'Not Stocked' ? 'غير مخزن' : option.label}</option>)}
           </select>
-          {canManage && <Button onClick={openAddForm}>+ Add New Product</Button>}
-          <Button variant="secondary" onClick={printReport}>Print</Button>
+          {canManage && <Button onClick={openAddForm}>{label.addProduct}</Button>}
+          <Button variant="secondary" onClick={printReport}>{label.print}</Button>
         </div>
 
         {errors.length > 0 && (
@@ -323,95 +467,95 @@ export default function Products() {
           <form className="section-panel product-form" onSubmit={saveProduct}>
             <div className="section-panel__header">
               <div>
-                <h3>{editingProductId ? 'Edit Product' : 'Add Product'}</h3>
-                <p>Stock and warehouse status are calculated from inventory records.</p>
+                <h3>{editingProductId ? label.editProduct : label.addProductTitle}</h3>
+                <p>{label.formSubtitle}</p>
               </div>
             </div>
 
             <div className="form-grid">
               <label>
-                Product Name
+                {label.productName}
                 <input name="name_en" value={form.name_en} onChange={updateForm} placeholder="White Sesame" />
               </label>
               <label>
-                Arabic Name
-                <input name="name_ar" value={form.name_ar} onChange={updateForm} placeholder="Arabic product name" />
+                {label.arabicName}
+                <input name="name_ar" value={form.name_ar} onChange={updateForm} placeholder={label.arabicName} />
               </label>
               <label>
-                Category
+                {label.category}
                 <select name="category" value={form.category} onChange={updateForm}>
-                  {categoryOptions.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
+                  {categoryOptions.map((category) => <option key={category.value} value={category.value}>{category.value === 'commodity' ? label.commodity : label.supply}</option>)}
                 </select>
               </label>
               <label className="toggle-label">
                 <input name="is_active" type="checkbox" checked={form.is_active} onChange={updateForm} />
-                Active
+                {label.active}
               </label>
               <label className="form-grid--wide">
-                Description
-                <textarea name="description" value={form.description} onChange={updateForm} placeholder="Product description" />
+                {label.description}
+                <textarea name="description" value={form.description} onChange={updateForm} placeholder={label.productDescription} />
               </label>
               <label className="form-grid--wide">
-                Notes
-                <textarea name="notes" value={form.notes} onChange={updateForm} placeholder="Internal notes" />
+                {label.notes}
+                <textarea name="notes" value={form.notes} onChange={updateForm} placeholder={label.internalNotes} />
               </label>
             </div>
 
             <div className="product-unit-editor">
               <div className="section-panel__header">
                 <div>
-                  <h3>Product Units</h3>
-                  <p>Choose one active default unit. Prices are SDG only.</p>
+                  <h3>{label.productUnits}</h3>
+                  <p>{label.unitSubtitle}</p>
                 </div>
-                <Button variant="secondary" onClick={addUnit}>+ Add Unit</Button>
+                <Button variant="secondary" onClick={addUnit}>{label.addUnit}</Button>
               </div>
               {form.units.map((unit, index) => (
                 <div className="product-unit-row" key={`${unit.id || 'new'}-${index}`}>
                   <select value={unit.unit} onChange={(event) => updateUnit(index, 'unit', event.target.value)}>
-                    <option value="">Select Unit</option>
+                    <option value="">{label.selectUnit}</option>
                     {unitOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
-                  <input type="number" min="0" step="0.01" value={unit.purchase_price} onChange={(event) => updateUnit(index, 'purchase_price', event.target.value)} placeholder="Purchase price" />
-                  <input type="number" min="0" step="0.01" value={unit.selling_price} onChange={(event) => updateUnit(index, 'selling_price', event.target.value)} placeholder="Selling price" />
-                  <input type="number" min="0" step="0.01" value={unit.minimum_selling_price || ''} onChange={(event) => updateUnit(index, 'minimum_selling_price', event.target.value)} placeholder="Minimum price" />
+                  <input type="number" min="0" step="0.01" value={unit.purchase_price} onChange={(event) => updateUnit(index, 'purchase_price', event.target.value)} placeholder={label.purchasePrice} />
+                  <input type="number" min="0" step="0.01" value={unit.selling_price} onChange={(event) => updateUnit(index, 'selling_price', event.target.value)} placeholder={label.sellingPrice} />
+                  <input type="number" min="0" step="0.01" value={unit.minimum_selling_price || ''} onChange={(event) => updateUnit(index, 'minimum_selling_price', event.target.value)} placeholder={label.minimumPrice} />
                   <label className="inline-control">
                     <input type="radio" checked={unit.is_default} onChange={() => updateUnit(index, 'is_default', true)} />
-                    Default
+                    {label.default}
                   </label>
                   <label className="inline-control">
                     <input type="checkbox" checked={unit.is_active} onChange={(event) => updateUnit(index, 'is_active', event.target.checked)} />
-                    Active
+                    {label.active}
                   </label>
-                  <button className="product-action-button product-action-button--delete" type="button" onClick={() => removeUnit(index)}>Remove</button>
+                  <button className="product-action-button product-action-button--delete" type="button" onClick={() => removeUnit(index)}>{label.remove}</button>
                 </div>
               ))}
             </div>
 
             <div className="workflow-actions">
-              <Button type="submit" disabled={saving}>{saving ? 'Saving...' : editingProductId ? 'Update Product' : 'Save Product'}</Button>
+              <Button type="submit" disabled={saving}>{saving ? label.saving : editingProductId ? label.updateProduct : label.saveProduct}</Button>
               <Button variant="secondary" onClick={closeForm}>Cancel</Button>
             </div>
           </form>
         )}
 
-        {loading ? <p className="loading-text">Loading products...</p> : <Table columns={columns} rows={productRows} emptyMessage="No products found." />}
+        {loading ? <p className="loading-text">{label.loading}</p> : <Table columns={columns} rows={productRows} emptyMessage={label.noProducts} />}
       </Card>
 
       {selectedProduct && (
-        <Card title={`${selectedProduct.code} - ${productDisplayName(selectedProduct)}`} subtitle="Read-only stock and pricing details">
+        <Card title={`${selectedProduct.code} - ${productDisplayName(selectedProduct)}`} subtitle={label.detailsSubtitle}>
           <div className="product-details-grid">
             <div>
-              <h3>Stock Position</h3>
+              <h3>{label.stockPosition}</h3>
               <StatusBadge status={selectedProduct.stock_status} />
               <p>{totalStock(selectedProduct)}</p>
-              <small>{selectedProduct.total_warehouses} warehouses with stock, {selectedProduct.low_stock_warehouse_count} low-stock records</small>
+              <small>{selectedProduct.total_warehouses} {label.warehouseStockNote}, {selectedProduct.low_stock_warehouse_count} {label.lowStockRecords}</small>
             </div>
             <div>
-              <h3>Units and Prices</h3>
+              <h3>{label.unitsAndPrices}</h3>
               <div className="product-chip-list">
                 {selectedProduct.units.map((unit) => (
                   <span key={unit.id}>
-                    {unit.unit} - Sell {formatPrice(unit.selling_price)}
+                    {unit.unit} - {label.sell} {formatPrice(unit.selling_price)}
                   </span>
                 ))}
               </div>
@@ -419,14 +563,14 @@ export default function Products() {
           </div>
           <Table
             columns={[
-              { key: 'warehouse_name', label: 'Warehouse' },
+              { key: 'warehouse_name', label: label.warehouse },
               { key: 'unit', label: 'Unit' },
-              { key: 'quantity', label: 'Quantity' },
-              { key: 'minimum_threshold', label: 'Minimum Threshold' },
-              { key: 'stock_status', label: 'Status', render: (row) => <StatusBadge status={row.stock_status} /> },
+              { key: 'quantity', label: label.quantity },
+              { key: 'minimum_threshold', label: label.minimumThreshold },
+              { key: 'stock_status', label: label.status, render: (row) => <StatusBadge status={row.stock_status} /> },
             ]}
             rows={(selectedProduct.warehouse_stock || []).map((row) => ({ ...row, id: `${row.warehouse_id}-${row.unit}` }))}
-            emptyMessage="No warehouse stock records."
+            emptyMessage={label.noWarehouseStock}
           />
         </Card>
       )}

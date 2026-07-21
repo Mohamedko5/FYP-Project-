@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Button from './Button.jsx';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
 export function ModulePageHeader({ title, description, meta, actions }) {
   return (
@@ -53,20 +54,23 @@ export function LoadingState({ message = 'Loading records...' }) {
 }
 
 export function EmptyState({ title = 'No records found.', description }) {
+  const { t } = useLanguage();
+  const safeTitle = title === 'No records found.' ? t('emptyMessage') : title;
   return (
     <div className="module-state module-state--empty">
-      <strong>{title}</strong>
+      <strong>{safeTitle}</strong>
       {description && <p>{description}</p>}
     </div>
   );
 }
 
 export function ErrorState({ errors, onRetry, retryLabel = 'Retry' }) {
+  const { isArabic } = useLanguage();
   if (!errors?.length) return null;
   return (
     <div className="module-state module-state--error" role="alert">
       <div>
-        <strong>Something needs attention</strong>
+        <strong>{isArabic ? 'يوجد أمر يحتاج إلى مراجعة' : 'Something needs attention'}</strong>
         {errors.map((error) => <p key={error}>{error}</p>)}
       </div>
       {onRetry && <Button variant="secondary" onClick={onRetry}>{retryLabel}</Button>}
@@ -86,10 +90,11 @@ export function DetailSection({ title, children, actions }) {
   );
 }
 
-export function RecordMeta({ items }) {
+export function RecordMeta({ items = [] }) {
+  const safeItems = Array.isArray(items) ? items : [];
   return (
     <div className="module-record-meta">
-      {items.filter(Boolean).map((item) => (
+      {safeItems.filter(Boolean).map((item) => (
         <div key={item.label}>
           <span>{item.label}</span>
           <strong>{item.value ?? '-'}</strong>
@@ -99,9 +104,10 @@ export function RecordMeta({ items }) {
   );
 }
 
-export function ResponsiveDataList({ rows, renderCard, emptyTitle }) {
-  if (!rows.length) return <EmptyState title={emptyTitle} />;
-  return <div className="module-responsive-list">{rows.map(renderCard)}</div>;
+export function ResponsiveDataList({ rows = [], renderCard, emptyTitle }) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  if (!safeRows.length) return <EmptyState title={emptyTitle} />;
+  return <div className="module-responsive-list">{safeRows.map(renderCard)}</div>;
 }
 
 export function ConfirmationDialog({
@@ -116,6 +122,7 @@ export function ConfirmationDialog({
   variant = 'standard',
 }) {
   const dialogRef = useRef(null);
+  const { isArabic } = useLanguage();
 
   useEffect(() => {
     const firstField = dialogRef.current?.querySelector('input, select, textarea, button');
@@ -143,7 +150,7 @@ export function ConfirmationDialog({
         <div className="module-dialog__body">{children}</div>
         <footer>
           <Button variant="secondary" onClick={onCancel} disabled={saving}>{cancelLabel}</Button>
-          <Button onClick={onConfirm} disabled={saving}>{saving ? 'Saving...' : confirmLabel}</Button>
+          <Button onClick={onConfirm} disabled={saving}>{saving ? (isArabic ? 'جارٍ الحفظ...' : 'Saving...') : confirmLabel}</Button>
         </footer>
       </section>
     </div>

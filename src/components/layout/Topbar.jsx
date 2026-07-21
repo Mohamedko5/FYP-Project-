@@ -14,7 +14,7 @@ const pageTitles = {
   '/reports': 'routes.reports',
 };
 
-export default function Topbar({ headerAddon = null }) {
+export default function Topbar({ headerAddon = null, onMenuClick }) {
   const location = useLocation();
   const { t, toggleLanguage } = useLanguage();
   const pageTitle = t(pageTitles[location.pathname] || 'routes.dashboard');
@@ -22,6 +22,11 @@ export default function Topbar({ headerAddon = null }) {
   return (
     <header className="topbar">
       <div className="topbar__title-area">
+        <button className="topbar__menu-button" type="button" onClick={onMenuClick} aria-label="Open menu">
+          <span />
+          <span />
+          <span />
+        </button>
         <p className="topbar__company">{t('companyName')}</p>
         <h1>{pageTitle}</h1>
       </div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
+import { resetPassword } from '../services/authApi.js';
 
 export default function ResetPassword() {
   const { t, direction, language } = useLanguage();
@@ -22,6 +23,7 @@ export default function ResetPassword() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (isLoading) return;
     setMessage({ type: '', text: '' });
 
     if (!resetData.uid || !resetData.token) {
@@ -41,23 +43,17 @@ export default function ResetPassword() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/auth/reset-password/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uid: resetData.uid,
-          token: resetData.token,
-          password: form.password,
-          confirm_password: form.confirmPassword,
-        }),
+      await resetPassword({
+        uid: resetData.uid,
+        token: resetData.token,
+        password: form.password,
+        confirm_password: form.confirmPassword,
       });
-
-      if (!response.ok) throw new Error('Reset failed');
 
       setMessage({ type: 'success', text: t('login.resetSuccess') });
       window.setTimeout(() => navigate('/login'), 900);
-    } catch {
-      setMessage({ type: 'error', text: t('login.resetError') });
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || t('login.resetError') });
     } finally {
       setIsLoading(false);
     }

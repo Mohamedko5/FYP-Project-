@@ -9,6 +9,7 @@ import {
   StatGrid,
   SummaryCard,
 } from '../components/ui/ModuleInterface.jsx';
+import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
@@ -46,6 +47,26 @@ const copy = {
     partial: 'Some modules could not load. Available data is still shown.',
     latest: 'Latest live records',
     stockNote: 'Grouped by product and unit',
+    dailyJournal: 'Daily Journal',
+    order: 'Order',
+    invoice: 'Invoice',
+    shipment: 'Shipment',
+    inventory: 'Inventory',
+    pendingReceivedInvoiced: 'Pending, received, invoiced',
+    paidInvoicesReady: 'Paid invoices ready',
+    inventoryNotDeducted: 'Inventory not deducted yet',
+    availableStorage: 'Available storage',
+    needsReview: 'Needs review',
+    dailyJournalNote: 'Daily Journal',
+    usageCapacity: 'Usage is shown per warehouse capacity',
+    workflowSubtitle: 'Order Received -> Invoice Paid -> Shipment Completed',
+    importantFirst: 'Important items first',
+    receivedOrders: 'Received Orders',
+    invoiced: 'Invoiced',
+    processing: 'Processing',
+    completed: 'Completed',
+    ordersWaitingInvoice: 'Orders waiting for invoice',
+    items: 'items',
   },
   ar: {
     title: 'لوحة التحكم',
@@ -74,6 +95,26 @@ const copy = {
     partial: 'بعض الوحدات لم يتم تحميلها، وتم عرض البيانات المتوفرة.',
     latest: 'آخر السجلات الحية',
     stockNote: 'مجمعة حسب المنتج والوحدة',
+    dailyJournal: 'اليومية',
+    order: 'طلب',
+    invoice: 'فاتورة',
+    shipment: 'شحنة',
+    inventory: 'المخزون',
+    pendingReceivedInvoiced: 'معلقة، مستلمة، مفوترة',
+    paidInvoicesReady: 'فواتير مدفوعة جاهزة',
+    inventoryNotDeducted: 'لم يتم خصم المخزون بعد',
+    availableStorage: 'مساحة تخزين متاحة',
+    needsReview: 'تحتاج إلى مراجعة',
+    dailyJournalNote: 'اليومية',
+    usageCapacity: 'الاستخدام حسب سعة المخزن',
+    workflowSubtitle: 'استلام الطلب ← الفاتورة مدفوعة ← الشحنة مكتملة',
+    importantFirst: 'الأهم أولاً',
+    receivedOrders: 'طلبات مستلمة',
+    invoiced: 'مفوتر',
+    processing: 'قيد التنفيذ',
+    completed: 'مكتمل',
+    ordersWaitingInvoice: 'طلبات تنتظر الفاتورة',
+    items: 'عنصر',
   },
 };
 
@@ -89,25 +130,48 @@ function qty(value, unit = '') {
   return `${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ''}`;
 }
 
-function statusText(value) {
+function statusText(value, isArabic = false) {
   const labels = {
-    income: 'Income',
-    expense: 'Expense',
-    pending: 'Pending',
-    received: 'Received',
-    invoiced: 'Invoiced',
-    ready_for_shipment: 'Ready for Shipment',
-    processing: 'Processing',
-    completed: 'Completed',
-    paid: 'Paid',
-    unpaid: 'Unpaid',
-    shipment_out: 'Withdraw Stock',
-    add_stock: 'Add Stock',
-    Low: 'Low Stock',
-    'Almost Full': 'Almost Full',
-    Full: 'Full',
+    en: {
+      income: 'Income',
+      expense: 'Expense',
+      pending: 'Pending',
+      received: 'Received',
+      invoiced: 'Invoiced',
+      ready_for_shipment: 'Ready for Shipment',
+      processing: 'Processing',
+      completed: 'Completed',
+      paid: 'Paid',
+      unpaid: 'Unpaid',
+      shipment_out: 'Withdraw Stock',
+      add_stock: 'Add Stock',
+      Low: 'Low Stock',
+      'Almost Full': 'Almost Full',
+      Full: 'Full',
+      Unpaid: 'Unpaid',
+      Received: 'Received',
+    },
+    ar: {
+      income: 'إيراد',
+      expense: 'مصروف',
+      pending: 'معلق',
+      received: 'مستلم',
+      invoiced: 'مفوتر',
+      ready_for_shipment: 'جاهز للشحن',
+      processing: 'قيد التنفيذ',
+      completed: 'مكتمل',
+      paid: 'مدفوع',
+      unpaid: 'غير مدفوع',
+      shipment_out: 'سحب للشحن',
+      add_stock: 'إضافة مخزون',
+      Low: 'منخفض المخزون',
+      'Almost Full': 'شبه ممتلئ',
+      Full: 'ممتلئ',
+      Unpaid: 'غير مدفوع',
+      Received: 'مستلم',
+    },
   };
-  return labels[value] || value || '-';
+  return labels[isArabic ? 'ar' : 'en'][value] || value || '-';
 }
 
 function today() {
@@ -181,7 +245,7 @@ export default function Dashboard() {
   const recentActivity = useMemo(() => [
     ...data.journalRows.map((row) => ({
       id: `journal-${row.id}`,
-      type: 'Daily Journal',
+      type: label.dailyJournal,
       title: row.source_reference || row.party,
       description: `${row.description} / ${money(row.amount)}`,
       date: `${row.date || ''} ${row.time || ''}`.trim(),
@@ -190,7 +254,7 @@ export default function Dashboard() {
     })),
     ...data.orders.map((row) => ({
       id: `order-${row.id}`,
-      type: 'Order',
+      type: label.order,
       title: row.order_number,
       description: `${row.customer?.name || '-'} / ${row.product_summary || '-'}`,
       date: `${row.created_date || ''} ${row.created_time || ''}`.trim(),
@@ -199,7 +263,7 @@ export default function Dashboard() {
     })),
     ...data.invoices.map((row) => ({
       id: `invoice-${row.id}`,
-      type: 'Invoice',
+      type: label.invoice,
       title: row.invoice_number,
       description: `${row.customer_name || '-'} / ${money(row.total_amount, row.currency)}`,
       date: `${row.issued_date || ''} ${row.issued_time || ''}`.trim(),
@@ -208,7 +272,7 @@ export default function Dashboard() {
     })),
     ...data.shipments.map((row) => ({
       id: `shipment-${row.id}`,
-      type: 'Shipment',
+      type: label.shipment,
       title: row.shipment_number,
       description: `${row.customer_name || '-'} / ${row.product_summary || '-'}`,
       date: `${row.created_date || ''} ${row.created_time || ''}`.trim(),
@@ -217,14 +281,14 @@ export default function Dashboard() {
     })),
     ...data.movements.map((row) => ({
       id: `movement-${row.id}`,
-      type: 'Inventory',
+      type: label.inventory,
       title: row.source_reference || row.product_name,
       description: `${row.warehouse_name || '-'} / ${qty(row.quantity, row.unit)}`,
       date: `${row.date || ''} ${row.time || ''}`.trim(),
       status: row.movement_type,
       path: '/warehouse-inventory',
     })),
-  ].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 8), [data]);
+  ].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 8), [data, label]);
 
   const warehouseAlerts = data.warehouses.filter((warehouse) => ['Almost Full', 'Full'].includes(warehouse.status));
   const alerts = [
@@ -237,7 +301,7 @@ export default function Dashboard() {
     ...(Number(data.inventorySummary?.low_stock_items || 0) > 0 ? [{
       id: 'low-stock',
       title: label.lowStock,
-      description: `${data.inventorySummary.low_stock_items} items`,
+      description: `${data.inventorySummary.low_stock_items} ${label.items}`,
       status: 'Low Stock',
     }] : []),
     ...(Number(data.invoiceSummary?.unpaid_invoices || 0) > 0 ? [{
@@ -248,18 +312,18 @@ export default function Dashboard() {
     }] : []),
     ...(Number(data.orderSummary?.received_orders || 0) > 0 ? [{
       id: 'orders-waiting',
-      title: 'Orders waiting for invoice',
-      description: `${data.orderSummary.received_orders} orders`,
+      title: label.ordersWaitingInvoice,
+      description: `${data.orderSummary.received_orders} ${label.order}`,
       status: 'Received',
     }] : []),
   ];
 
   const workflow = [
-    ['Received Orders', data.orderSummary?.received_orders || 0],
-    ['Invoiced', data.orderSummary?.invoiced_orders || 0],
-    ['Ready for Shipment', readyShipments],
-    ['Processing', processingShipments],
-    ['Completed', data.orderSummary?.completed_orders || 0],
+    [label.receivedOrders, data.orderSummary?.received_orders || 0],
+    [label.invoiced, data.orderSummary?.invoiced_orders || 0],
+    [label.readyShipments, readyShipments],
+    [label.processing, processingShipments],
+    [label.completed, data.orderSummary?.completed_orders || 0],
   ];
   const maxWorkflow = Math.max(...workflow.map(([, value]) => value), 1);
 
@@ -288,17 +352,17 @@ export default function Dashboard() {
         <StatGrid>
           <SummaryCard label={label.income} value={money(cash.total_income)} note={today()} tone="good" />
           <SummaryCard label={label.expenses} value={money(cash.total_expenses)} note={today()} tone="warning" />
-          <SummaryCard label={label.net} value={money(cash.net)} note="Daily Journal" />
+          <SummaryCard label={label.net} value={money(cash.net)} note={label.dailyJournalNote} />
         </StatGrid>
       </section>
 
       <StatGrid>
-        <SummaryCard icon="O" label={label.activeOrders} value={activeOrders} note="Pending, received, invoiced" />
+        <SummaryCard icon="O" label={label.activeOrders} value={activeOrders} note={label.pendingReceivedInvoiced} />
         <SummaryCard icon="I" label={label.unpaidInvoices} value={data.invoiceSummary?.unpaid_invoices ?? 0} note={money(data.invoiceSummary?.total_outstanding_value)} tone="warning" />
-        <SummaryCard icon="S" label={label.readyShipments} value={readyShipments} note="Paid invoices ready" />
-        <SummaryCard icon="P" label={label.processingShipments} value={processingShipments} note="Inventory not deducted yet" />
-        <SummaryCard icon="W" label={label.activeWarehouses} value={data.inventorySummary?.active_warehouses ?? 0} note="Available storage" />
-        <SummaryCard icon="L" label={label.lowStock} value={data.inventorySummary?.low_stock_items ?? 0} note="Needs review" tone={data.inventorySummary?.low_stock_items ? 'warning' : 'good'} />
+        <SummaryCard icon="S" label={label.readyShipments} value={readyShipments} note={label.paidInvoicesReady} />
+        <SummaryCard icon="P" label={label.processingShipments} value={processingShipments} note={label.inventoryNotDeducted} />
+        <SummaryCard icon="W" label={label.activeWarehouses} value={data.inventorySummary?.active_warehouses ?? 0} note={label.availableStorage} />
+        <SummaryCard icon="L" label={label.lowStock} value={data.inventorySummary?.low_stock_items ?? 0} note={label.needsReview} tone={data.inventorySummary?.low_stock_items ? 'warning' : 'good'} />
       </StatGrid>
 
       <div className="dashboard-grid-two">
@@ -313,7 +377,7 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        <Card title={label.warehouseAttention} subtitle="Usage is shown per warehouse capacity">
+        <Card title={label.warehouseAttention} subtitle={label.usageCapacity}>
           <div className="dashboard-warehouse-list">
             {data.warehouses.length === 0 ? <EmptyState title={t('emptyMessage')} /> : data.warehouses.slice(0, 6).map((warehouse) => (
               <div key={warehouse.id} className="dashboard-warehouse-row">
@@ -331,7 +395,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <Card title={label.workflow} subtitle="Order Received -> Invoice Paid -> Shipment Completed">
+      <Card title={label.workflow} subtitle={label.workflowSubtitle}>
         <div className="dashboard-workflow">
           {workflow.map(([name, value]) => (
             <div key={name}>
@@ -355,14 +419,14 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <small>{activity.date || '-'}</small>
-                  <StatusBadge status={statusText(activity.status)} />
+                  <StatusBadge status={statusText(activity.status, isArabic)} />
                 </div>
               </Link>
             ))}
           </div>
         </Card>
 
-        <Card title={label.alerts} subtitle="Important items first">
+        <Card title={label.alerts} subtitle={label.importantFirst}>
           <div className="module-activity-list">
             {alerts.length === 0 ? <EmptyState title={label.noAlerts} /> : alerts.map((alert) => (
               <div className="module-activity-row" key={alert.id}>
@@ -370,7 +434,7 @@ export default function Dashboard() {
                   <span>{alert.title}</span>
                   <strong>{alert.description}</strong>
                 </div>
-                <StatusBadge status={statusText(alert.status)} />
+                <StatusBadge status={statusText(alert.status, isArabic)} />
               </div>
             ))}
           </div>

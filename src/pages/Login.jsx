@@ -2,23 +2,19 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Tooltip from '../components/ui/Tooltip.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
+import { loginUser, requestPasswordReset } from '../services/authApi.js';
 
 export default function Login({ onLogin }) {
   const navigate = useNavigate();
   const { t, isArabic, direction, language, toggleLanguage } = useLanguage();
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ username: '', password: '', remember: false });
-  const [registerForm, setRegisterForm] = useState({
-    fullName: '',
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
   const [forgotEmail, setForgotEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [isCapsLockOn, setIsCapsLockOn] = useState(false);
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -31,40 +27,47 @@ export default function Login({ onLogin }) {
     setForm((current) => ({ ...current, [name]: type === 'checkbox' ? checked : value }));
   }
 
-  function handleRegisterChange(event) {
-    const { name, value } = event.target;
-    setRegisterForm((current) => ({ ...current, [name]: value }));
-  }
-
   function switchMode(nextMode) {
     setMode(nextMode);
     setMessage({ type: '', text: '' });
+    setFieldErrors({});
     setShowPassword(false);
+  }
+
+  function readableLoginError(error) {
+    if (!navigator.onLine) return t('login.serverError');
+    const text = String(error?.message || '');
+    if (/inactive/i.test(text)) return t('login.inactiveAccount');
+    if (/failed to fetch|network/i.test(text)) return t('login.serverError');
+    if (/token|session/i.test(text)) return t('login.sessionExpired');
+    return text || t('login.invalidCredentials');
+  }
+
+  function validateLogin() {
+    const nextErrors = {};
+    if (!form.username.trim()) nextErrors.username = t('login.emailRequiredError');
+    if (!form.password.trim()) nextErrors.password = t('login.passwordRequiredError') || t('login.requiredError');
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (isLoading) return;
     setMessage({ type: '', text: '' });
+    setFieldErrors({});
 
-    if (!form.username.trim() || !form.password.trim()) {
-      setMessage({ type: 'error', text: t('login.requiredError') });
-      return;
-    }
+    if (!validateLogin()) return;
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/auth/login/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: form.username.trim(),
-          password: form.password,
-        }),
+      const data = await loginUser({
+        email: form.username.trim(),
+        password: form.password,
       });
-      const data = await response.json().catch(() => ({}));
 
-      if (!response.ok || !data.access) {
-        throw new Error('Invalid credentials');
+      if (!data.access || !data.refresh) {
+        throw new Error(t('login.invalidCredentials'));
       }
 
       setIsLoading(false);
@@ -73,87 +76,26 @@ export default function Login({ onLogin }) {
         onLogin(data);
         navigate('/dashboard');
       }, 700);
-    } catch {
-      setIsLoading(false);
-      setMessage({ type: 'error', text: t('login.invalidCredentials') });
-    }
-  }
-
-  async function handleRegisterSubmit(event) {
-    event.preventDefault();
-    setMessage({ type: '', text: '' });
-
-    if (
-      !registerForm.fullName.trim()
-      || !registerForm.username.trim()
-      || !registerForm.email.trim()
-      || !registerForm.password
-      || !registerForm.confirmPassword
-    ) {
-      setMessage({ type: 'error', text: t('login.registerRequiredError') });
-      return;
-    }
-
-    if (registerForm.password.length < 8) {
-      setMessage({ type: 'error', text: t('login.passwordLengthError') });
-      return;
-    }
-
-    if (registerForm.password !== registerForm.confirmPassword) {
-      setMessage({ type: 'error', text: t('login.passwordMismatchError') });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await fetch('http://127.0.0.1:8000/api/auth/register/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: registerForm.fullName.trim(),
-          username: registerForm.username.trim(),
-          email: registerForm.email.trim(),
-          password: registerForm.password,
-          confirm_password: registerForm.confirmPassword,
-          role: 'admin',
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(data.email?.[0] || data.username?.[0] || data.detail || 'Registration failed');
-      }
-
-      setRegisterForm({ fullName: '', username: '', email: '', password: '', confirmPassword: '' });
-      setMode('login');
-      setMessage({ type: 'success', text: t('login.registerSuccess') });
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || t('login.registerError') });
-    } finally {
       setIsLoading(false);
+      setMessage({ type: 'error', text: readableLoginError(error) });
     }
   }
 
   async function handleForgotSubmit(event) {
     event.preventDefault();
+    if (isLoading) return;
     setMessage({ type: '', text: '' });
+    setFieldErrors({});
 
     if (!forgotEmail.trim()) {
-      setMessage({ type: 'error', text: t('login.emailRequiredError') });
+      setFieldErrors({ forgotEmail: t('login.emailRequiredError') });
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/auth/forgot-password/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: forgotEmail.trim() }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Forgot password failed');
-      }
+      await requestPasswordReset(forgotEmail.trim());
 
       setForgotEmail('');
       setMode('login');
@@ -249,7 +191,7 @@ export default function Login({ onLogin }) {
       <section className="login-panel">
         <form
           className="login-card"
-          onSubmit={mode === 'register' ? handleRegisterSubmit : mode === 'forgot' ? handleForgotSubmit : handleSubmit}
+          onSubmit={mode === 'forgot' ? handleForgotSubmit : handleSubmit}
         >
           <div className="login-card__brand">
             <div className="login-logo">{isArabic ? 'ب' : 'B'}</div>
@@ -260,8 +202,8 @@ export default function Login({ onLogin }) {
           </div>
 
           <div className="login-card__heading">
-            <h3>{mode === 'register' ? t('login.createAccount') : mode === 'forgot' ? t('login.forgotTitle') : t('login.title')}</h3>
-            <p>{mode === 'register' ? t('login.registerSubtitle') : mode === 'forgot' ? t('login.forgotSubtitle') : t('login.subtitle')}</p>
+            <h3>{mode === 'forgot' ? t('login.forgotTitle') : t('login.title')}</h3>
+            <p>{mode === 'forgot' ? t('login.forgotSubtitle') : t('login.subtitle')}</p>
           </div>
 
           {message.text && (
@@ -281,7 +223,10 @@ export default function Login({ onLogin }) {
                   onChange={handleChange}
                   placeholder={t('login.usernamePlaceholder')}
                   autoComplete="username"
+                  aria-invalid={Boolean(fieldErrors.username)}
+                  aria-describedby={fieldErrors.username ? 'login-username-error' : undefined}
                 />
+                {fieldErrors.username && <span id="login-username-error" className="field-error">{fieldErrors.username}</span>}
               </label>
 
               <label>
@@ -294,6 +239,10 @@ export default function Login({ onLogin }) {
                     onChange={handleChange}
                     placeholder={t('login.passwordPlaceholder')}
                     autoComplete="current-password"
+                    aria-invalid={Boolean(fieldErrors.password)}
+                    aria-describedby={fieldErrors.password || isCapsLockOn ? 'login-password-help' : undefined}
+                    onKeyUp={(event) => setIsCapsLockOn(Boolean(event.getModifierState?.('CapsLock')))}
+                    onBlur={() => setIsCapsLockOn(false)}
                   />
                   <Tooltip content={showPassword ? t('tooltips.hidePassword') : t('tooltips.showPassword')}>
                     <button type="button" onClick={() => setShowPassword((current) => !current)}>
@@ -301,6 +250,11 @@ export default function Login({ onLogin }) {
                     </button>
                   </Tooltip>
                 </div>
+                {(fieldErrors.password || isCapsLockOn) && (
+                  <span id="login-password-help" className="field-error">
+                    {fieldErrors.password || t('login.capsLockWarning')}
+                  </span>
+                )}
               </label>
 
               <div className="login-options">
@@ -315,21 +269,6 @@ export default function Login({ onLogin }) {
             </>
           )}
 
-          {mode === 'register' && (
-            <>
-              <label>{t('login.fullName')}<input name="fullName" value={registerForm.fullName} onChange={handleRegisterChange} placeholder={t('login.fullNamePlaceholder')} /></label>
-              <label>{t('login.usernameOnly')}<input name="username" value={registerForm.username} onChange={handleRegisterChange} placeholder={t('login.usernameOnlyPlaceholder')} autoComplete="username" /></label>
-              <label>{t('login.email')}<input name="email" type="email" value={registerForm.email} onChange={handleRegisterChange} placeholder={t('login.emailPlaceholder')} autoComplete="email" /></label>
-              <label>{t('login.password')}
-                <div className="password-field">
-                  <input name="password" type={showPassword ? 'text' : 'password'} value={registerForm.password} onChange={handleRegisterChange} placeholder={t('login.passwordPlaceholder')} autoComplete="new-password" />
-                  <button type="button" onClick={() => setShowPassword((current) => !current)}>{showPassword ? t('login.hidePassword') : t('login.showPassword')}</button>
-                </div>
-              </label>
-              <label>{t('login.confirmPassword')}<input name="confirmPassword" type={showPassword ? 'text' : 'password'} value={registerForm.confirmPassword} onChange={handleRegisterChange} placeholder={t('login.confirmPasswordPlaceholder')} autoComplete="new-password" /></label>
-            </>
-          )}
-
           {mode === 'forgot' && (
             <label>
               {t('login.email')}
@@ -340,7 +279,10 @@ export default function Login({ onLogin }) {
                 onChange={(event) => setForgotEmail(event.target.value)}
                 placeholder={t('login.emailPlaceholder')}
                 autoComplete="email"
+                aria-invalid={Boolean(fieldErrors.forgotEmail)}
+                aria-describedby={fieldErrors.forgotEmail ? 'login-forgot-email-error' : undefined}
               />
+              {fieldErrors.forgotEmail && <span id="login-forgot-email-error" className="field-error">{fieldErrors.forgotEmail}</span>}
             </label>
           )}
 
@@ -348,18 +290,14 @@ export default function Login({ onLogin }) {
             <button className="button button--primary login-submit" type="submit" disabled={isLoading}>
               {isLoading
                 ? t('login.loading')
-                : mode === 'register'
-                  ? t('login.createAccount')
-                  : mode === 'forgot'
+                : mode === 'forgot'
                     ? t('login.sendResetLink')
                     : t('login.loginButton')}
             </button>
           </Tooltip>
 
           <div className="login-options login-options--center">
-            {mode === 'login' ? (
-              <button type="button" className="link-button" onClick={() => switchMode('register')}>{t('login.createAccount')}</button>
-            ) : (
+            {mode !== 'login' && (
               <button type="button" className="link-button" onClick={() => switchMode('login')}>{t('login.backToLogin')}</button>
             )}
           </div>

@@ -1,29 +1,32 @@
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 
-export default function Table({ columns, rows, emptyMessage = 'No records found.' }) {
+export default function Table({ columns = [], rows = [], emptyMessage = 'No records found.', caption }) {
   const { t } = useLanguage();
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const safeColumns = Array.isArray(columns) ? columns : [];
 
   return (
     <div className="table-wrap">
       <table className="data-table">
+        {caption && <caption>{caption}</caption>}
         <thead>
           <tr>
-            {columns.map((column) => (
+            {safeColumns.map((column) => (
               <th key={column.key}>{column.label}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {rows.length === 0 ? (
+          {safeRows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="table-empty">
+              <td colSpan={safeColumns.length || 1} className="table-empty">
                 {emptyMessage === 'No records found.' ? t('emptyMessage') : emptyMessage}
               </td>
             </tr>
           ) : (
-            rows.map((row) => (
-              <tr key={row.id}>
-                {columns.map((column) => (
+            safeRows.map((row, rowIndex) => (
+              <tr key={row.id ?? row.code ?? row.number ?? rowIndex}>
+                {safeColumns.map((column) => (
                   <td key={column.key}>{column.render ? column.render(row) : row[column.key]}</td>
                 ))}
               </tr>

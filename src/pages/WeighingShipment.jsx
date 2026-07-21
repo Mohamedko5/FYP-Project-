@@ -56,6 +56,23 @@ const copy = {
     cancelShipment: 'Cancel Shipment',
     reason: 'Cancellation reason',
     noShipments: 'No shipments found.',
+    paidInvoices: 'Paid invoices',
+    completedShipments: 'Completed shipments',
+    inventoryStockRecords: 'From inventory stock records',
+    allCustomers: 'All customers',
+    allWarehouses: 'All warehouses',
+    allProducts: 'All products',
+    tabStatus: 'Tab status',
+    cancelled: 'Cancelled',
+    saving: 'Saving...',
+    vehicle: 'Vehicle',
+    startedAt: 'Started At',
+    completedAt: 'Completed At',
+    availableStock: 'Available Stock',
+    stockStatus: 'Stock Status',
+    sufficient: 'Sufficient',
+    shortageStatus: 'Shortage',
+    selectWarehouse: 'Select warehouse',
   },
   ar: {
     title: 'الوزن والشحن',
@@ -83,6 +100,23 @@ const copy = {
     cancelShipment: 'إلغاء الشحنة',
     reason: 'سبب الإلغاء',
     noShipments: 'لا توجد شحنات.',
+    paidInvoices: 'فواتير مدفوعة',
+    completedShipments: 'شحنات مكتملة',
+    inventoryStockRecords: 'من سجلات مخزون المستودعات',
+    allCustomers: 'كل العملاء',
+    allWarehouses: 'كل المخازن',
+    allProducts: 'كل المنتجات',
+    tabStatus: 'حالة التبويب',
+    cancelled: 'ملغاة',
+    saving: 'جارٍ الحفظ...',
+    vehicle: 'المركبة',
+    startedAt: 'بدأت في',
+    completedAt: 'اكتملت في',
+    availableStock: 'المخزون المتاح',
+    stockStatus: 'حالة المخزون',
+    sufficient: 'كافٍ',
+    shortageStatus: 'نقص',
+    selectWarehouse: 'اختر المخزن',
   },
 };
 
@@ -90,9 +124,12 @@ function unwrap(data) {
   return Array.isArray(data) ? data : data?.results || [];
 }
 
-function statusText(value) {
-  const labels = { ready_for_shipment: 'Ready for Shipment', processing: 'Processing', completed: 'Completed', cancelled: 'Cancelled' };
-  return labels[value] || value || '-';
+function statusText(value, isArabic = false) {
+  const labels = {
+    en: { ready_for_shipment: 'Ready for Shipment', processing: 'Processing', completed: 'Completed', cancelled: 'Cancelled' },
+    ar: { ready_for_shipment: 'جاهزة للشحن', processing: 'قيد التنفيذ', completed: 'مكتملة', cancelled: 'ملغاة' },
+  };
+  return labels[isArabic ? 'ar' : 'en'][value] || value || '-';
 }
 
 function qty(value, unit = '') {
@@ -277,7 +314,7 @@ export default function WeighingShipment() {
     { key: 'product_summary', label: t('common.product') },
     { key: 'item_count', label: 'Items', render: (row) => row.items?.length || 0 },
     { key: 'driver_name', label: t('warehouse.driverName'), render: (row) => row.driver_name || '-' },
-    { key: 'status', label: t('shipments.shipmentStatus'), render: (row) => <StatusBadge status={statusText(row.status)} /> },
+    { key: 'status', label: t('shipments.shipmentStatus'), render: (row) => <StatusBadge status={statusText(row.status, isArabic)} /> },
     { key: 'created_date', label: t('common.date') },
     {
       key: 'action',
@@ -304,10 +341,10 @@ export default function WeighingShipment() {
       />
 
       <StatGrid>
-        <SummaryCard label={label.ready} value={summary?.ready_count ?? 0} note="Paid invoices" />
+        <SummaryCard label={label.ready} value={summary?.ready_count ?? 0} note={label.paidInvoices} />
         <SummaryCard label={label.processing} value={summary?.processing_count ?? 0} note={label.noDeduct} tone="warning" />
-        <SummaryCard label={label.completedToday} value={summary?.completed_count ?? 0} note="Completed shipments" tone="good" />
-        <SummaryCard label={label.shortage} value={stockShortages} note="From inventory stock records" tone={stockShortages ? 'warning' : 'good'} />
+        <SummaryCard label={label.completedToday} value={summary?.completed_count ?? 0} note={label.completedShipments} tone="good" />
+        <SummaryCard label={label.shortage} value={stockShortages} note={label.inventoryStockRecords} tone={stockShortages ? 'warning' : 'good'} />
       </StatGrid>
 
       <Card className="module-card-flat">
@@ -316,20 +353,20 @@ export default function WeighingShipment() {
         </div>
         <FilterToolbar actions={<Button variant="secondary" onClick={clearFilters}>{label.clear}</Button>}>
           <label><span>{t('common.description')}</span><input name="search" value={filters.search} onChange={updateFilter} placeholder={label.search} /></label>
-          <label><span>{t('common.customer')}</span><select name="customer" value={filters.customer} onChange={updateFilter}><option value="">All customers</option>{options.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
-          <label><span>{t('warehouse.warehouse')}</span><select name="warehouse" value={filters.warehouse} onChange={updateFilter}><option value="">All warehouses</option>{options.warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.warehouse_name}</option>)}</select></label>
-          <label><span>{t('common.product')}</span><select name="product" value={filters.product} onChange={updateFilter}><option value="">All products</option>{options.products.map((product) => <option key={product.id} value={product.id}>{isArabic ? product.name_ar : product.name_en}</option>)}</select></label>
-          <label><span>{t('common.status')}</span><select name="status" value={filters.status} onChange={updateFilter}><option value="">Tab status</option><option value="ready_for_shipment">{label.ready}</option><option value="processing">{label.processing}</option><option value="completed">{label.completed}</option><option value="cancelled">Cancelled</option></select></label>
+          <label><span>{t('common.customer')}</span><select name="customer" value={filters.customer} onChange={updateFilter}><option value="">{label.allCustomers}</option>{options.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
+          <label><span>{t('warehouse.warehouse')}</span><select name="warehouse" value={filters.warehouse} onChange={updateFilter}><option value="">{label.allWarehouses}</option>{options.warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.warehouse_name}</option>)}</select></label>
+          <label><span>{t('common.product')}</span><select name="product" value={filters.product} onChange={updateFilter}><option value="">{label.allProducts}</option>{options.products.map((product) => <option key={product.id} value={product.id}>{isArabic ? product.name_ar : product.name_en}</option>)}</select></label>
+          <label><span>{t('common.status')}</span><select name="status" value={filters.status} onChange={updateFilter}><option value="">{label.tabStatus}</option><option value="ready_for_shipment">{label.ready}</option><option value="processing">{label.processing}</option><option value="completed">{label.completed}</option><option value="cancelled">{label.cancelled}</option></select></label>
           <label><span>{t('common.date')}</span><input name="date" type="date" value={filters.date} onChange={updateFilter} /></label>
         </FilterToolbar>
         <ErrorState errors={errors} onRetry={() => loadShipments()} retryLabel={t('retry')} />
-        {saving && <LoadingState message="Saving..." />}
+        {saving && <LoadingState message={label.saving} />}
         {loading ? <LoadingState message={t('orders.loading')} /> : (
           <>
             <div className="module-desktop-table"><Table columns={columns} rows={visibleRows} emptyMessage={label.noShipments} /></div>
             <ResponsiveDataList rows={visibleRows} emptyTitle={label.noShipments} renderCard={(row) => (
               <article className="module-record-card" key={row.id}>
-                <div><strong>{row.shipment_number}</strong><StatusBadge status={statusText(row.status)} /></div>
+                <div><strong>{row.shipment_number}</strong><StatusBadge status={statusText(row.status, isArabic)} /></div>
                 <p>{row.customer_name}</p>
                 <span>{row.product_summary || '-'} / {row.created_date}</span>
                 <Button variant="secondary" onClick={() => setSelectedShipment(row)}>{t('view')}</Button>
@@ -351,16 +388,16 @@ export default function WeighingShipment() {
           </DetailSection>
           <DetailSection title={label.workflow}>
             <div className={`shipment-stepper shipment-stepper--${selectedShipment.status}`}>
-              {['ready_for_shipment', 'processing', 'completed'].map((step) => <span key={step} className={selectedShipment.status === step || (step === 'ready_for_shipment' && selectedShipment.status !== 'cancelled') ? 'is-active' : ''}>{statusText(step)}</span>)}
-              {selectedShipment.status === 'cancelled' && <StatusBadge status="Cancelled" />}
+              {['ready_for_shipment', 'processing', 'completed'].map((step) => <span key={step} className={selectedShipment.status === step || (step === 'ready_for_shipment' && selectedShipment.status !== 'cancelled') ? 'is-active' : ''}>{statusText(step, isArabic)}</span>)}
+              {selectedShipment.status === 'cancelled' && <StatusBadge status={label.cancelled} />}
             </div>
           </DetailSection>
           <DetailSection title={label.transport}>
             <RecordMeta items={[
               { label: t('warehouse.driverName'), value: selectedShipment.driver_name || '-' },
-              { label: 'Vehicle', value: selectedShipment.vehicle_number || '-' },
-              { label: 'Started At', value: selectedShipment.started_at ? new Date(selectedShipment.started_at).toLocaleString() : '-' },
-              { label: 'Completed At', value: selectedShipment.completed_at ? new Date(selectedShipment.completed_at).toLocaleString() : '-' },
+              { label: label.vehicle, value: selectedShipment.vehicle_number || '-' },
+              { label: label.startedAt, value: selectedShipment.started_at ? new Date(selectedShipment.started_at).toLocaleString() : '-' },
+              { label: label.completedAt, value: selectedShipment.completed_at ? new Date(selectedShipment.completed_at).toLocaleString() : '-' },
             ]} />
           </DetailSection>
           <DetailSection title={label.items}>
@@ -374,7 +411,7 @@ export default function WeighingShipment() {
                     <RecordMeta items={[
                       { label: t('shipments.requestedQuantity'), value: qty(item.requested_quantity, item.unit_snapshot) },
                       { label: t('warehouse.warehouse'), value: item.warehouse_name || '-' },
-                      { label: 'Available Stock', value: stock ? qty(stock.quantity, stock.unit) : '-' },
+                      { label: label.availableStock, value: stock ? qty(stock.quantity, stock.unit) : '-' },
                       { label: t('shipments.actualQuantity'), value: item.actual_quantity ? qty(item.actual_quantity, item.unit_snapshot) : '-' },
                       { label: t('shipments.numberOfBags'), value: item.number_of_bags || '-' },
                       { label: t('shipments.totalWeight'), value: item.total_weight_kg ? qty(item.total_weight_kg, 'kg') : '-' },
@@ -394,7 +431,7 @@ export default function WeighingShipment() {
             <DetailSection title={label.stepTransport}>
               <div className="form-grid">
                 <label>{t('warehouse.driverName')}<input name="driver_name" value={form.driver_name} onChange={updateHeader} required /></label>
-                <label>Vehicle<input name="vehicle_number" value={form.vehicle_number} onChange={updateHeader} /></label>
+                <label>{label.vehicle}<input name="vehicle_number" value={form.vehicle_number} onChange={updateHeader} /></label>
                 <label className="form-grid__wide">{t('warehouse.notes')}<textarea name="notes" value={form.notes} onChange={updateHeader} /></label>
               </div>
             </DetailSection>
@@ -412,13 +449,13 @@ export default function WeighingShipment() {
                       <div><strong>{isArabic ? source.product_name_ar_snapshot : source.product_name_en_snapshot}</strong><span>{qty(source.requested_quantity, source.unit_snapshot)}</span></div>
                       <div className="form-grid">
                         <label>{t('warehouse.warehouse')}<select value={item.warehouse_id} onChange={(event) => updateItem(index, 'warehouse_id', event.target.value)} required><option value="">{t('warehouse.selectWarehousePlaceholder')}</option>{options.warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.warehouse_name}</option>)}</select></label>
-                        <label>Available Stock<input value={selectedStock ? qty(selectedStock.quantity, selectedStock.unit) : '-'} readOnly /></label>
+                        <label>{label.availableStock}<input value={selectedStock ? qty(selectedStock.quantity, selectedStock.unit) : '-'} readOnly /></label>
                         <label>{t('shipments.actualQuantity')}<input type="number" min="0.001" step="0.001" value={item.actual_quantity} onChange={(event) => updateItem(index, 'actual_quantity', event.target.value)} required /></label>
                         <label>{t('common.unit')}<input value={source.unit_snapshot} readOnly /></label>
                         <label>{t('shipments.numberOfBags')}<input type="number" min="1" step="1" value={item.number_of_bags} onChange={(event) => updateItem(index, 'number_of_bags', event.target.value)} /></label>
                         <label>{t('shipments.totalWeight')}<input type="number" min="0.001" step="0.001" value={item.total_weight_kg} onChange={(event) => updateItem(index, 'total_weight_kg', event.target.value)} /></label>
                         <label>{t('shipments.averageBagWeight')}<input value={average} readOnly /></label>
-                        <label>Stock Status<input value={selectedStock ? (sufficient ? 'Sufficient' : 'Shortage') : 'Select warehouse'} readOnly /></label>
+                        <label>{label.stockStatus}<input value={selectedStock ? (sufficient ? label.sufficient : label.shortageStatus) : label.selectWarehouse} readOnly /></label>
                         <label className="form-grid__wide">{t('warehouse.notes')}<input value={item.notes} onChange={(event) => updateItem(index, 'notes', event.target.value)} /></label>
                       </div>
                     </article>

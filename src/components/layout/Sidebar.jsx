@@ -13,11 +13,11 @@ const navigationItems = [
   { path: '/reports', labelKey: 'routes.reports' },
 ];
 
-export default function Sidebar({ onLogout, onModuleNavigate }) {
+export default function Sidebar({ onLogout, onModuleNavigate, isOpen = false }) {
   const { t } = useLanguage();
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? 'is-open' : ''}`} aria-label={t('mainNavigation')}>
       <div className="sidebar__brand">
         <span className="sidebar__mark">B</span>
         <div>

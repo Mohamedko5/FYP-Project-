@@ -61,6 +61,16 @@ const copy = {
     cancelWarning: 'A financial audit reversal will be created. This action requires a reason.',
     reason: 'Cancellation reason',
     noInvoices: 'No invoices found.',
+    history: 'History',
+    allStatuses: 'All statuses',
+    cash: 'Cash',
+    online: 'Online',
+    saving: 'Saving...',
+    code: 'Code',
+    reference: 'Reference',
+    receivedAt: 'Received At',
+    receivedBy: 'Received By',
+    paymentReference: 'Payment Reference',
   },
   ar: {
     title: 'الفواتير',
@@ -89,6 +99,16 @@ const copy = {
     cancelWarning: 'سيتم إنشاء قيد تدقيق مالي عكسي، ويجب إدخال سبب الإلغاء.',
     reason: 'سبب الإلغاء',
     noInvoices: 'لا توجد فواتير.',
+    history: 'السجل',
+    allStatuses: 'كل الحالات',
+    cash: 'نقداً',
+    online: 'إلكتروني',
+    saving: 'جارٍ الحفظ...',
+    code: 'الرمز',
+    reference: 'المرجع',
+    receivedAt: 'تاريخ الاستلام',
+    receivedBy: 'استلم بواسطة',
+    paymentReference: 'مرجع الدفع',
   },
 };
 
@@ -100,9 +120,12 @@ function money(value, currency = 'SDG') {
   return `${currency} ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function statusText(value) {
-  const labels = { issued: 'Issued', paid: 'Paid', cancelled: 'Cancelled', unpaid: 'Unpaid', cash: 'Cash', online: 'Online' };
-  return labels[value] || value || '-';
+function statusText(value, isArabic = false) {
+  const labels = {
+    en: { issued: 'Issued', paid: 'Paid', cancelled: 'Cancelled', unpaid: 'Unpaid', cash: 'Cash', online: 'Online' },
+    ar: { issued: 'صادرة', paid: 'مدفوعة', cancelled: 'ملغاة', unpaid: 'غير مدفوعة', cash: 'نقداً', online: 'إلكتروني' },
+  };
+  return labels[isArabic ? 'ar' : 'en'][value] || value || '-';
 }
 
 function readRole() {
@@ -245,8 +268,8 @@ export default function Invoices() {
     { key: 'customer_name', label: t('common.customerName') },
     { key: 'product_summary', label: t('common.product') },
     { key: 'total_amount', label: t('common.totalAmount'), render: (row) => money(row.total_amount, row.currency) },
-    { key: 'payment_status', label: t('orders.paymentStatus'), render: (row) => <StatusBadge status={statusText(row.payment_status)} /> },
-    { key: 'payment_method', label: t('common.method'), render: (row) => statusText(row.payment?.payment_method) },
+    { key: 'payment_status', label: t('orders.paymentStatus'), render: (row) => <StatusBadge status={statusText(row.payment_status, isArabic)} /> },
+    { key: 'payment_method', label: t('common.method'), render: (row) => statusText(row.payment?.payment_method, isArabic) },
     { key: 'issued_date', label: t('common.date') },
     {
       key: 'action',
@@ -265,7 +288,7 @@ export default function Invoices() {
   const tabs = [
     ['unpaid', `${label.unpaid} (${summary?.unpaid_invoices ?? 0})`],
     ['paid', `${label.paid} (${summary?.paid_invoices ?? 0})`],
-    ['history', `History (${summary?.total_invoices ?? 0})`],
+    ['history', `${label.history} (${summary?.total_invoices ?? 0})`],
   ];
 
   const paymentInfo = selectedInvoice?.payment;
@@ -281,7 +304,7 @@ export default function Invoices() {
       />
 
       <StatGrid>
-        <SummaryCard label={label.total} value={summary?.total_invoices ?? 0} note="All statuses" />
+        <SummaryCard label={label.total} value={summary?.total_invoices ?? 0} note={label.allStatuses} />
         <SummaryCard label={label.unpaid} value={summary?.unpaid_invoices ?? 0} note={money(summary?.total_outstanding_value)} tone="warning" />
         <SummaryCard label={label.paid} value={summary?.paid_invoices ?? 0} note={money(summary?.total_paid_value)} tone="good" />
         <SummaryCard label={label.outstanding} value={money(summary?.total_outstanding_value)} note={label.paymentBreakdown} />
@@ -289,8 +312,8 @@ export default function Invoices() {
 
       <Card title={label.paymentBreakdown} subtitle={`${label.paidValue}: ${money(summary?.total_paid_value)}`}>
         <div className="module-mini-breakdown">
-          <span>Cash: <strong>{money(summary?.cash_payments)}</strong></span>
-          <span>Online: <strong>{money(summary?.online_payments)}</strong></span>
+          <span>{label.cash}: <strong>{money(summary?.cash_payments)}</strong></span>
+          <span>{label.online}: <strong>{money(summary?.online_payments)}</strong></span>
         </div>
       </Card>
 
@@ -312,12 +335,12 @@ export default function Invoices() {
         >
           <label><span>{t('common.description')}</span><input name="search" value={filters.search} onChange={updateFilter} placeholder={label.search} /></label>
           <label><span>{t('common.customer')}</span><select name="customer" value={filters.customer} onChange={updateFilter}><option value="">{label.allCustomers}</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
-          <label><span>{t('common.method')}</span><select name="payment_method" value={filters.payment_method} onChange={updateFilter}><option value="">{label.allMethods}</option><option value="cash">Cash</option><option value="online">Online</option></select></label>
+          <label><span>{t('common.method')}</span><select name="payment_method" value={filters.payment_method} onChange={updateFilter}><option value="">{label.allMethods}</option><option value="cash">{label.cash}</option><option value="online">{label.online}</option></select></label>
           <label><span>{t('reports.fromDate')}</span><input name="date_from" type="date" value={filters.date_from} onChange={updateFilter} /></label>
           <label><span>{t('reports.toDate')}</span><input name="date_to" type="date" value={filters.date_to} onChange={updateFilter} /></label>
         </FilterToolbar>
         <ErrorState errors={errors} onRetry={() => loadInvoices()} retryLabel={t('retry')} />
-        {saving && <LoadingState message="Saving..." />}
+        {saving && <LoadingState message={label.saving} />}
         {loading ? <LoadingState message={t('orders.loading')} /> : (
           <>
             <div className="module-desktop-table"><Table columns={columns} rows={rows} emptyMessage={label.noInvoices} /></div>
@@ -326,7 +349,7 @@ export default function Invoices() {
               emptyTitle={label.noInvoices}
               renderCard={(row) => (
                 <article className="module-record-card" key={row.id}>
-                  <div><strong>{row.invoice_number}</strong><StatusBadge status={statusText(row.payment_status)} /></div>
+                  <div><strong>{row.invoice_number}</strong><StatusBadge status={statusText(row.payment_status, isArabic)} /></div>
                   <p>{row.customer_name}</p>
                   <span>{money(row.total_amount, row.currency)} / {row.issued_date}</span>
                   <Button variant="secondary" onClick={() => setSelectedInvoice(row)}>{t('view')}</Button>
@@ -345,12 +368,12 @@ export default function Invoices() {
               { label: t('common.orderNumber'), value: selectedInvoice.order_number },
               { label: t('common.date'), value: `${selectedInvoice.issued_date} ${selectedInvoice.issued_time}` },
               { label: t('invoices.adminName'), value: selectedInvoice.issued_by_name || '-' },
-              { label: t('common.status'), value: <StatusBadge status={statusText(selectedInvoice.status)} /> },
+              { label: t('common.status'), value: <StatusBadge status={statusText(selectedInvoice.status, isArabic)} /> },
             ]} />
           </DetailSection>
           <DetailSection title={label.customer}>
             <RecordMeta items={[
-              { label: 'Code', value: selectedInvoice.customer_code },
+              { label: label.code, value: selectedInvoice.customer_code },
               { label: t('common.customerName'), value: selectedInvoice.customer_name },
               { label: t('common.phone'), value: selectedInvoice.customer_phone || '-' },
               { label: t('common.location'), value: '-' },
@@ -378,10 +401,10 @@ export default function Invoices() {
           <DetailSection title={label.payment}>
             <RecordMeta items={selectedInvoice.payment_status === 'paid' ? [
               { label: t('orders.paymentStatus'), value: <StatusBadge status="Paid" /> },
-              { label: t('common.method'), value: statusText(paymentInfo?.payment_method) },
-              { label: 'Reference', value: paymentInfo?.payment_reference || '-' },
-              { label: 'Received At', value: paymentInfo?.received_at ? new Date(paymentInfo.received_at).toLocaleString() : '-' },
-              { label: 'Received By', value: paymentInfo?.received_by_name || '-' },
+              { label: t('common.method'), value: statusText(paymentInfo?.payment_method, isArabic) },
+              { label: label.reference, value: paymentInfo?.payment_reference || '-' },
+              { label: label.receivedAt, value: paymentInfo?.received_at ? new Date(paymentInfo.received_at).toLocaleString() : '-' },
+              { label: label.receivedBy, value: paymentInfo?.received_by_name || '-' },
             ] : [
               { label: t('orders.paymentStatus'), value: <StatusBadge status="Unpaid" /> },
               { label: label.outstanding, value: money(selectedInvoice.outstanding_amount, selectedInvoice.currency) },
@@ -400,8 +423,8 @@ export default function Invoices() {
             { label: t('common.totalAmount'), value: money(paymentDialog.total_amount, paymentDialog.currency) },
           ]} />
           <div className="form-grid">
-            <label>{t('common.method')}<select value={paymentForm.payment_method} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_method: event.target.value }))}><option value="cash">Cash</option><option value="online">Online</option></select></label>
-            <label>Payment Reference<input value={paymentForm.payment_reference} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_reference: event.target.value }))} /></label>
+            <label>{t('common.method')}<select value={paymentForm.payment_method} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_method: event.target.value }))}><option value="cash">{label.cash}</option><option value="online">{label.online}</option></select></label>
+            <label>{label.paymentReference}<input value={paymentForm.payment_reference} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_reference: event.target.value }))} /></label>
           </div>
           <ErrorState errors={dialogErrors} />
         </ConfirmationDialog>
@@ -429,7 +452,7 @@ export default function Invoices() {
               <div><span>{t('common.orderNumber')}</span><strong>{selectedInvoice.order_number}</strong></div>
               <div><span>{t('common.date')}</span><strong>{selectedInvoice.issued_date}</strong></div>
               <div><span>{t('common.time')}</span><strong>{selectedInvoice.issued_time}</strong></div>
-              <div><span>{t('common.status')}</span><strong>{statusText(selectedInvoice.payment_status)}</strong></div>
+              <div><span>{t('common.status')}</span><strong>{statusText(selectedInvoice.payment_status, isArabic)}</strong></div>
               <div><span>{t('common.totalAmount')}</span><strong>{money(selectedInvoice.total_amount, selectedInvoice.currency)}</strong></div>
             </section>
             <section className="invoice-document__section">

@@ -1547,6 +1547,7 @@ textarea {
 }
 
 .password-field input {
+  min-width: 0;
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -1631,6 +1632,17 @@ textarea {
   border: 1px solid #d8b7ae;
   background: #efe1dd;
   color: var(--danger);
+}
+
+.field-error {
+  display: block;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.login-card input[aria-invalid="true"] {
+  border-color: var(--danger);
 }
 
 .login-footer {
@@ -3471,9 +3483,31 @@ textarea {
 }
 
 @media (max-width: 560px) {
-  .login-panel,
   .login-card {
+    width: min(100%, calc(100vw - 32px));
     padding: 1.25rem;
+    border-radius: 16px;
+  }
+
+  .login-panel {
+    width: 100%;
+    padding: 20px 16px;
+  }
+
+  .login-card__brand > div,
+  .login-card__heading {
+    min-width: 0;
+  }
+
+  .login-card__brand h2,
+  .login-card__heading p,
+  .login-footer span {
+    overflow-wrap: anywhere;
+  }
+
+  .password-field button {
+    min-width: 58px;
+    padding-inline: 8px;
   }
 
   .login-visual__top,
@@ -3769,7 +3803,8 @@ textarea {
 }
 
 .dashboard-page--calm {
-  max-width: 1280px;
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
 }
 
@@ -4049,6 +4084,32 @@ textarea {
 }
 
 @media (max-width: 560px) {
+  .login-page {
+    min-height: 100vh;
+  }
+
+  .login-visual {
+    min-height: auto;
+    padding: 18px;
+  }
+
+  .login-brand-panel {
+    gap: 10px;
+  }
+
+  .login-welcome h1 {
+    font-size: 1.55rem;
+  }
+
+  .login-welcome span {
+    display: none;
+  }
+
+  .login-trade-visual,
+  .login-feature-grid {
+    display: none;
+  }
+
   .topbar__addon,
   .journal-type-floating {
     width: 100%;
@@ -4157,5 +4218,206 @@ textarea {
     color: #000;
     padding: 18px;
     font-size: 12px;
+  }
+}
+
+/* Runtime safety and mobile shell refinements */
+.error-boundary-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.error-boundary-card {
+  display: grid;
+  gap: 14px;
+  width: min(560px, 100%);
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.error-boundary-card h1,
+.error-boundary-card p {
+  margin: 0;
+}
+
+.error-boundary-card p {
+  color: var(--muted);
+}
+
+.error-boundary-card__mark {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  justify-self: center;
+  border-radius: 10px;
+  background: var(--green);
+  color: #fff;
+  font-weight: 900;
+}
+
+.error-boundary-card__actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.topbar__menu-button {
+  display: none;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  gap: 4px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.topbar__menu-button span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+/* Zoom-resilient layout: keep ERP modules fitted at browser zoom levels. */
+.app-shell__main {
+  width: 100%;
+  min-width: 0;
+}
+
+.content {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: clamp(16px, 2vw, 32px);
+}
+
+.module-page,
+.page-grid {
+  width: 100%;
+  max-width: none;
+}
+
+.card,
+.module-summary-card,
+.dashboard-financial-card,
+.module-record-card {
+  min-width: 0;
+}
+
+.module-stat-grid,
+.summary-grid,
+.summary-grid--three,
+.summary-grid--four,
+.product-summary-grid,
+.order-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
+}
+
+.dashboard-financial-card {
+  grid-template-columns: minmax(min(360px, 100%), 1fr) minmax(min(520px, 100%), 2fr);
+}
+
+.dashboard-grid-two,
+.dashboard-panels,
+.two-column {
+  grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
+}
+
+.dashboard-workflow {
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+}
+
+.module-filter-toolbar__fields > *,
+.workflow-toolbar > *,
+.customer-toolbar > *,
+.product-toolbar > *,
+.orders-toolbar > * {
+  min-width: 0;
+}
+
+.table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.data-table {
+  min-width: min(760px, 100%);
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    display: block;
+  }
+
+  .topbar__title-area {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .topbar__menu-button {
+    display: grid;
+    grid-row: span 2;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 70;
+    width: min(300px, 86vw);
+    height: 100vh;
+    transform: translateX(-105%);
+    transition: transform 180ms ease;
+  }
+
+  [dir="rtl"] .sidebar {
+    transform: translateX(105%);
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .sidebar__nav {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: block;
+    border: 0;
+    background: rgba(47, 47, 43, 0.42);
+  }
+
+  .content {
+    max-width: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .error-boundary-card__actions,
+  .error-boundary-card__actions .tooltip,
+  .error-boundary-card__actions .button {
+    width: 100%;
   }
 }

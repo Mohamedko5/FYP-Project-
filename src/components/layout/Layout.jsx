@@ -9,17 +9,25 @@ export default function Layout({ onLogout }) {
   const location = useLocation();
   const [headerAddon, setHeaderAddon] = useState(null);
   const [routeRefreshVersion, setRouteRefreshVersion] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   function refreshCurrentModule() {
     setHeaderAddon(null);
     setRouteRefreshVersion((current) => current + 1);
+    setIsSidebarOpen(false);
+  }
+
+  function handleLogout() {
+    setIsSidebarOpen(false);
+    onLogout();
   }
 
   return (
-    <div className="app-shell" dir={direction} lang={language}>
-      <Sidebar onLogout={onLogout} onModuleNavigate={refreshCurrentModule} />
+    <div className={`app-shell ${isSidebarOpen ? 'app-shell--sidebar-open' : ''}`} dir={direction} lang={language}>
+      <Sidebar onLogout={handleLogout} onModuleNavigate={refreshCurrentModule} isOpen={isSidebarOpen} />
+      {isSidebarOpen && <button className="sidebar-backdrop" type="button" aria-label="Close menu" onClick={() => setIsSidebarOpen(false)} />}
       <div className="app-shell__main">
-        <Topbar headerAddon={headerAddon} />
+        <Topbar headerAddon={headerAddon} onMenuClick={() => setIsSidebarOpen(true)} />
         <main className="content">
           <Outlet key={`${location.pathname}-${routeRefreshVersion}`} context={{ setHeaderAddon }} />
         </main>
