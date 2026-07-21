@@ -844,6 +844,19 @@ textarea {
   gap: 1rem;
 }
 
+.login-options--center {
+  justify-content: center;
+}
+
+.login-page--reset {
+  grid-template-columns: 1fr;
+}
+
+.login-panel--full {
+  min-height: 100vh;
+  width: 100%;
+}
+
 .remember-option {
   display: flex !important;
   grid-template-columns: auto 1fr;

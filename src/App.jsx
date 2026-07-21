@@ -11,26 +11,24 @@ import WeighingShipment from './pages/WeighingShipment.jsx';
 import Invoices from './pages/Invoices.jsx';
 import Reports from './pages/Reports.jsx';
 import Login from './pages/Login.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => (
-    sessionStorage.getItem('bayadAuthSession') === 'true' || localStorage.getItem('bayadAuthRemembered') === 'true'
+    Boolean(localStorage.getItem('bayadAccessToken'))
   ));
 
-  function handleLogin(remember = false) {
-    sessionStorage.setItem('bayadAuthSession', 'true');
-    if (remember) {
-      localStorage.setItem('bayadAuthRemembered', 'true');
-    } else {
-      localStorage.removeItem('bayadAuthRemembered');
-    }
+  function handleLogin(authData) {
+    localStorage.setItem('bayadAccessToken', authData.access);
+    localStorage.setItem('bayadRefreshToken', authData.refresh);
+    localStorage.setItem('bayadUser', JSON.stringify(authData.user));
     setIsAuthenticated(true);
   }
 
   function handleLogout() {
-    localStorage.removeItem('bayadAuth');
-    localStorage.removeItem('bayadAuthRemembered');
-    sessionStorage.removeItem('bayadAuthSession');
+    localStorage.removeItem('bayadAccessToken');
+    localStorage.removeItem('bayadRefreshToken');
+    localStorage.removeItem('bayadUser');
     setIsAuthenticated(false);
   }
 
@@ -40,11 +38,13 @@ export default function App() {
         path="/login"
         element={isAuthenticated ? <Navigate to="/" replace /> : <Login onLogin={handleLogin} />}
       />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         path="/"
         element={isAuthenticated ? <Layout onLogout={handleLogout} /> : <Navigate to="/login" replace />}
       >
         <Route index element={<Dashboard />} />
+        <Route path="dashboard" element={<Dashboard />} />
         <Route path="daily-journal" element={<DailyJournal />} />
         <Route path="warehouse-inventory" element={<WarehouseInventory />} />
         <Route path="customers" element={<Customers />} />
