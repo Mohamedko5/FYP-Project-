@@ -27,7 +27,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get loginTitle => 'دخول العملاء';
 
   @override
-  String get loginSubtitle => 'سجّل الدخول للوصول إلى حسابك في بياض.';
+  String get loginSubtitle => 'سجل الدخول للوصول إلى حسابك في بياض.';
 
   @override
   String get emailAddress => 'البريد الإلكتروني';
@@ -51,7 +51,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get login => 'دخول';
 
   @override
-  String get signingIn => 'جارٍ تسجيل الدخول...';
+  String get signingIn => 'جاري تسجيل الدخول...';
 
   @override
   String get logout => 'تسجيل الخروج';

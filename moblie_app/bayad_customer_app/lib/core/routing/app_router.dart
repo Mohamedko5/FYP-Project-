@@ -7,6 +7,8 @@ import '../../features/auth/domain/auth_state.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
+import '../../features/cart/presentation/cart_screen.dart';
+import '../../features/cart/presentation/checkout_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/invoices/presentation/invoices_screen.dart';
 import '../../features/orders/presentation/orders_screen.dart';
@@ -40,9 +42,36 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/home', name: RouteNames.home, builder: (context, state) => const HomeScreen()),
       GoRoute(path: '/profile', name: RouteNames.profile, builder: (context, state) => const ProfileScreen()),
       GoRoute(path: '/products', name: RouteNames.products, builder: (context, state) => const ProductsScreen()),
+      GoRoute(
+        path: '/products/:id',
+        name: RouteNames.productDetail,
+        builder: (context, state) => ProductDetailScreen(productId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+      ),
+      GoRoute(path: '/cart', name: RouteNames.cart, builder: (context, state) => const CartScreen()),
+      GoRoute(path: '/checkout', name: RouteNames.checkout, builder: (context, state) => const CheckoutScreen()),
+      GoRoute(
+        path: '/orders/:id/success',
+        name: RouteNames.orderSuccess,
+        builder: (context, state) => OrderSuccessScreen(orderId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+      ),
       GoRoute(path: '/orders', name: RouteNames.orders, builder: (context, state) => const OrdersScreen()),
+      GoRoute(
+        path: '/orders/:id',
+        name: RouteNames.orderDetail,
+        builder: (context, state) => OrderDetailScreen(orderId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+      ),
       GoRoute(path: '/invoices', name: RouteNames.invoices, builder: (context, state) => const InvoicesScreen()),
+      GoRoute(
+        path: '/invoices/:id',
+        name: RouteNames.invoiceDetail,
+        builder: (context, state) => InvoiceDetailScreen(invoiceId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+      ),
       GoRoute(path: '/shipments', name: RouteNames.shipments, builder: (context, state) => const ShipmentsScreen()),
+      GoRoute(
+        path: '/shipments/:id',
+        name: RouteNames.shipmentDetail,
+        builder: (context, state) => ShipmentDetailScreen(shipmentId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+      ),
     ],
   );
 });

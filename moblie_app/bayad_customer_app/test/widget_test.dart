@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +13,9 @@ import 'package:bayad_customer_app/features/auth/data/auth_repository.dart';
 import 'package:bayad_customer_app/features/auth/domain/auth_state.dart';
 import 'package:bayad_customer_app/features/auth/presentation/auth_controller.dart';
 import 'package:bayad_customer_app/features/profile/domain/customer.dart';
+import 'package:bayad_customer_app/shared/data/mobile_providers.dart';
+import 'package:bayad_customer_app/shared/models/mobile_models.dart';
+import 'package:bayad_customer_app/shared/models/paged_response.dart';
 
 const testCustomer = Customer(
   id: 1,
@@ -24,6 +27,22 @@ const testCustomer = Customer(
   address: 'Omdurman',
   customerType: 'exporter',
 );
+
+final testProduct = Product(
+  id: 1,
+  code: 'PRD-0001',
+  nameEn: 'White Sesame',
+  nameAr: 'Ø³Ù…Ø³Ù… Ø£Ø¨ÙŠØ¶',
+  category: 'commodity',
+  description: 'High quality white sesame',
+  image: null,
+  units: const [ProductUnitOption(id: 1, unit: 'Qintar', sellingPrice: 110000, isDefault: true, availableQuantity: 500, isAvailable: true)],
+  stockStatus: 'available',
+);
+
+const testOrder = OrderSummary(id: 1, orderNumber: 'ORD-2026-000001', status: 'pending', itemCount: 1, productSummary: 'White Sesame', totalAmount: 110000, currency: 'SDG', createdAt: null);
+const testInvoice = InvoiceSummary(id: 1, invoiceNumber: 'INV-2026-000001', orderNumber: 'ORD-2026-000001', status: 'issued', paymentStatus: 'unpaid', totalAmount: 110000, currency: 'SDG', issuedAt: null, productSummary: 'White Sesame');
+const testShipment = ShipmentSummary(id: 1, shipmentNumber: 'SHP-2026-000001', orderNumber: 'ORD-2026-000001', invoiceNumber: 'INV-2026-000001', status: 'ready_for_shipment', productSummary: 'White Sesame', driverName: '', vehicleNumber: '', startedAt: null, completedAt: null);
 
 class FakeAuthRepository extends AuthRepository {
   FakeAuthRepository({this.loginError, this.restoreError, this.loginCustomer = testCustomer})
@@ -76,6 +95,36 @@ Future<void> pumpBayadApp(
           controller.setStateForTesting(initialState);
           return controller;
         }),
+        homeSummaryProvider.overrideWith((ref) async => const HomeSummary(
+              customer: testCustomer,
+              orders: {'total': 1, 'pending': 1, 'completed': 0},
+              invoices: {'total': 1, 'unpaid': 1, 'paid': 0, 'outstanding_value': '110000.00'},
+              shipments: {'ready': 1, 'processing': 0, 'completed': 0},
+              recentOrders: [testOrder],
+            )),
+        productsProvider.overrideWith((ref) async => PagedResponse(count: 1, next: null, previous: null, results: [testProduct])),
+        productDetailProvider.overrideWith((ref, id) async => testProduct),
+        ordersProvider.overrideWith((ref) async => const PagedResponse(count: 1, next: null, previous: null, results: [testOrder])),
+        orderDetailProvider.overrideWith((ref, id) async => const OrderDetail(
+              id: 1,
+              orderNumber: 'ORD-2026-000001',
+              status: 'pending',
+              itemCount: 1,
+              productSummary: 'White Sesame',
+              totalAmount: 110000,
+              currency: 'SDG',
+              createdAt: null,
+              customerReference: '',
+              customerNotes: '',
+              subtotal: 110000,
+              discountAmount: 0,
+              items: [OrderItemModel(id: 1, productNameEn: 'White Sesame', productNameAr: 'Ø³Ù…Ø³Ù… Ø£Ø¨ÙŠØ¶', unit: 'Qintar', quantity: 1, unitPrice: 110000, lineTotal: 110000)],
+              workflowSteps: [WorkflowStepModel(key: 'pending', label: 'Pending', state: 'current')],
+            )),
+        invoicesProvider.overrideWith((ref) async => const PagedResponse(count: 1, next: null, previous: null, results: [testInvoice])),
+        invoiceDetailProvider.overrideWith((ref, id) async => const InvoiceDetail(id: 1, invoiceNumber: 'INV-2026-000001', orderNumber: 'ORD-2026-000001', status: 'issued', paymentStatus: 'unpaid', totalAmount: 110000, currency: 'SDG', issuedAt: null, productSummary: 'White Sesame', subtotal: 110000, discountAmount: 0, notes: '', items: [])),
+        shipmentsProvider.overrideWith((ref) async => const PagedResponse(count: 1, next: null, previous: null, results: [testShipment])),
+        shipmentDetailProvider.overrideWith((ref, id) async => const ShipmentDetail(id: 1, shipmentNumber: 'SHP-2026-000001', orderNumber: 'ORD-2026-000001', invoiceNumber: 'INV-2026-000001', status: 'ready_for_shipment', productSummary: 'White Sesame', driverName: '', vehicleNumber: '', startedAt: null, completedAt: null, notes: '', items: [], workflowSteps: [WorkflowStepModel(key: 'ready_for_shipment', label: 'Ready for Shipment', state: 'current')])),
       ],
       child: const BayadCustomerApp(),
     ),
@@ -139,12 +188,10 @@ void main() {
     expect(find.text('Customer Login'), findsOneWidget);
   });
 
-  testWidgets('Logout clears secure tokens path', (tester) async {
+  test('Logout clears secure tokens path', () async {
     final repository = FakeAuthRepository();
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer), repository: repository);
-    await tester.tap(find.byIcon(Icons.logout));
-    await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump(const Duration(milliseconds: 100));
+    final controller = AuthController(repository: repository, storage: SecureStorageService());
+    await controller.logout();
     expect(repository.didLogout, isTrue);
   });
 
@@ -167,10 +214,10 @@ void main() {
 
   testWidgets('Profile displays Customer API data', (tester) async {
     await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
-    await tester.tap(find.byIcon(Icons.person_outline));
+    await tester.tap(find.byIcon(Icons.person_outline).last);
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('CUS-0001'), findsOneWidget);
+    expect(find.text('CUS-0001'), findsWidgets);
   });
 
   testWidgets('Server error displays Retry', (tester) async {

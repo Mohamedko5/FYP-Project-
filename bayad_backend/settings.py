@@ -7,7 +7,7 @@ SECRET_KEY = 'django-insecure-bayad-dev-secret-key-change-before-production'
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2']
 
 
 INSTALLED_APPS = [

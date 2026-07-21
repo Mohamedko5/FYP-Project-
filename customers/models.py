@@ -185,6 +185,28 @@ class CustomerAccount(models.Model):
         return f'{self.user.email} -> {self.customer.code}'
 
 
+class MobileIdempotencyKey(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='mobile_idempotency_keys')
+    operation = models.CharField(max_length=60)
+    key = models.CharField(max_length=120)
+    request_hash = models.CharField(max_length=64)
+    response_data = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['customer', 'operation', 'key'], name='unique_mobile_customer_idempotency_key'),
+        ]
+        indexes = [
+            models.Index(fields=['customer', 'operation', 'key']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.customer.code} {self.operation} {self.key}'
+
+
 class CustomerCashTransaction(models.Model):
     OPENING_DEBT = 'opening_debt'
     OPENING_CREDIT = 'opening_credit'

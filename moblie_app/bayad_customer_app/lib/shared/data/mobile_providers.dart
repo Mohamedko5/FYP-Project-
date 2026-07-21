@@ -1,0 +1,22 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../models/mobile_models.dart';
+import '../models/paged_response.dart';
+import 'mobile_repository.dart';
+
+final homeSummaryProvider = FutureProvider.autoDispose<HomeSummary>((ref) => ref.watch(mobileRepositoryProvider).homeSummary());
+final productSearchProvider = StateProvider.autoDispose<String>((ref) => '');
+final productsProvider = FutureProvider.autoDispose<PagedResponse<Product>>((ref) {
+  final search = ref.watch(productSearchProvider);
+  return ref.watch(mobileRepositoryProvider).products(search: search);
+});
+final productDetailProvider = FutureProvider.autoDispose.family<Product, int>((ref, id) => ref.watch(mobileRepositoryProvider).product(id));
+final orderFilterProvider = StateProvider.autoDispose<String?>((ref) => null);
+final ordersProvider = FutureProvider.autoDispose<PagedResponse<OrderSummary>>((ref) => ref.watch(mobileRepositoryProvider).orders(status: ref.watch(orderFilterProvider)));
+final orderDetailProvider = FutureProvider.autoDispose.family<OrderDetail, int>((ref, id) => ref.watch(mobileRepositoryProvider).order(id));
+final invoiceFilterProvider = StateProvider.autoDispose<String?>((ref) => null);
+final invoicesProvider = FutureProvider.autoDispose<PagedResponse<InvoiceSummary>>((ref) => ref.watch(mobileRepositoryProvider).invoices(status: ref.watch(invoiceFilterProvider)));
+final invoiceDetailProvider = FutureProvider.autoDispose.family<InvoiceDetail, int>((ref, id) => ref.watch(mobileRepositoryProvider).invoice(id));
+final shipmentFilterProvider = StateProvider.autoDispose<String?>((ref) => null);
+final shipmentsProvider = FutureProvider.autoDispose<PagedResponse<ShipmentSummary>>((ref) => ref.watch(mobileRepositoryProvider).shipments(status: ref.watch(shipmentFilterProvider)));
+final shipmentDetailProvider = FutureProvider.autoDispose.family<ShipmentDetail, int>((ref, id) => ref.watch(mobileRepositoryProvider).shipment(id));
