@@ -9,6 +9,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('accounts.urls')),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/mobile/', include('customers.mobile_urls')),
     path('api/journal/', include('daily_journal.urls')),
     path('api/products/', include('inventory.product_urls')),
     path('api/inventory/', include('inventory.urls')),

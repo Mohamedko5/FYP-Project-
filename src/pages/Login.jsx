@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Tooltip from '../components/ui/Tooltip.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
@@ -8,23 +8,19 @@ export default function Login({ onLogin }) {
   const navigate = useNavigate();
   const { t, isArabic, direction, language, toggleLanguage } = useLanguage();
   const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ username: '', password: '', remember: false });
+  const [form, setForm] = useState({ email: '', password: '' });
   const [forgotEmail, setForgotEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [fieldErrors, setFieldErrors] = useState({});
   const [isCapsLockOn, setIsCapsLockOn] = useState(false);
-  const [now, setNow] = useState(new Date());
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
+  const currentYear = new Date().getFullYear();
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   function handleChange(event) {
-    const { name, value, checked, type } = event.target;
-    setForm((current) => ({ ...current, [name]: type === 'checkbox' ? checked : value }));
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
   }
 
   function switchMode(nextMode) {
@@ -45,10 +41,30 @@ export default function Login({ onLogin }) {
 
   function validateLogin() {
     const nextErrors = {};
-    if (!form.username.trim()) nextErrors.username = t('login.emailRequiredError');
-    if (!form.password.trim()) nextErrors.password = t('login.passwordRequiredError') || t('login.requiredError');
+    const email = form.email.trim();
+    if (!email) {
+      nextErrors.email = t('login.emailRequiredError');
+    } else if (!emailPattern.test(email)) {
+      nextErrors.email = t('login.emailFormatError');
+    }
+    if (!form.password.trim()) {
+      nextErrors.password = t('login.passwordRequiredError') || t('login.requiredError');
+    }
     setFieldErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
+  }
+
+  function validateForgotPassword() {
+    const email = forgotEmail.trim();
+    if (!email) {
+      setFieldErrors({ forgotEmail: t('login.emailRequiredError') });
+      return false;
+    }
+    if (!emailPattern.test(email)) {
+      setFieldErrors({ forgotEmail: t('login.emailFormatError') });
+      return false;
+    }
+    return true;
   }
 
   async function handleSubmit(event) {
@@ -62,7 +78,7 @@ export default function Login({ onLogin }) {
     setIsLoading(true);
     try {
       const data = await loginUser({
-        email: form.username.trim(),
+        email: form.email.trim(),
         password: form.password,
       });
 
@@ -88,10 +104,7 @@ export default function Login({ onLogin }) {
     setMessage({ type: '', text: '' });
     setFieldErrors({});
 
-    if (!forgotEmail.trim()) {
-      setFieldErrors({ forgotEmail: t('login.emailRequiredError') });
-      return;
-    }
+    if (!validateForgotPassword()) return;
 
     setIsLoading(true);
     try {
@@ -107,80 +120,70 @@ export default function Login({ onLogin }) {
     }
   }
 
-  const dateTime = now.toLocaleString(language === 'ar' ? 'ar' : 'en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-
   return (
-    <main className="login-page" dir={direction} lang={language}>
-      <section className="login-visual" aria-label={t('login.welcomeTitle')}>
-        <div className="login-visual__top">
+    <main className="login-page login-page--premium" dir={direction} lang={language}>
+      <section className="login-brand-side" aria-label={t('login.welcomeTitle')}>
+        <header className="login-brand-side__top">
+          <div className="login-brand-lockup">
+            <span className="login-brand-lockup__mark" aria-hidden="true">{isArabic ? 'ب' : 'B'}</span>
+            <div>
+              <strong>{t('companyName')}</strong>
+              <span>{t('login.secureAccess')}</span>
+            </div>
+          </div>
           <Tooltip content={t('tooltips.switchLanguage')}>
-            <button className="login-language-toggle" type="button" onClick={toggleLanguage}>
+            <button className="login-language-toggle login-language-toggle--brand" type="button" onClick={toggleLanguage}>
               {isArabic ? 'English' : 'العربية'}
             </button>
           </Tooltip>
-          <time dateTime={now.toISOString()}>{dateTime}</time>
-        </div>
+        </header>
 
-        <div className="login-brand-panel">
-          <div className="login-welcome">
-            <p>{t('companyName')}</p>
+        <div className="login-brand-side__content">
+          <div className="login-brand-copy">
+            <p>{t('login.portalEyebrow')}</p>
             <h1>{t('login.welcomeTitle')}</h1>
             <span>{t('login.welcomeSubtitle')}</span>
           </div>
 
-          <div className="login-trade-visual" aria-hidden="true">
-            <div className="login-trade-visual__warehouse">
+          <div className="login-business-board" aria-hidden="true">
+            <div className="login-business-board__bar">
               <span />
               <span />
               <span />
             </div>
-            <div className="login-trade-visual__grain">
-              <span />
-              <span />
-              <span />
-            </div>
-            <div className="login-trade-visual__truck">
-              <span />
+            <div className="login-business-board__scene">
+              <div className="login-board-warehouse">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="login-board-ledger">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="login-board-scale">
+                <span />
+              </div>
+              <div className="login-board-truck">
+                <span />
+              </div>
             </div>
           </div>
 
-          <div className="login-feature-grid">
-            <article className="login-feature-card">
-              <span className="login-feature-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M4 9.5L12 5l8 4.5v9L12 23l-8-4.5z" />
-                  <path d="M12 14v9M4.5 10L12 14l7.5-4" />
-                </svg>
-              </span>
+          <div className="login-highlight-grid">
+            <article>
+              <span>01</span>
               <strong>{t('login.features.inventoryTitle')}</strong>
               <p>{t('login.features.inventoryText')}</p>
             </article>
-            <article className="login-feature-card">
-              <span className="login-feature-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M5 19V5M5 19h16" />
-                  <path d="M9 16v-5M13 16V8M17 16v-8" />
-                </svg>
-              </span>
+            <article>
+              <span>02</span>
               <strong>{t('login.features.financeTitle')}</strong>
               <p>{t('login.features.financeText')}</p>
             </article>
-            <article className="login-feature-card">
-              <span className="login-feature-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M3 17h13V7H3z" />
-                  <path d="M16 11h3l2 3v3h-5z" />
-                  <path d="M6 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM18 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
-                </svg>
-              </span>
+            <article>
+              <span>03</span>
               <strong>{t('login.features.shipmentTitle')}</strong>
               <p>{t('login.features.shipmentText')}</p>
             </article>
@@ -188,13 +191,14 @@ export default function Login({ onLogin }) {
         </div>
       </section>
 
-      <section className="login-panel">
+      <section className="login-access-side" aria-label={t('login.title')}>
         <form
-          className="login-card"
+          className="login-card login-card--premium"
           onSubmit={mode === 'forgot' ? handleForgotSubmit : handleSubmit}
+          noValidate
         >
           <div className="login-card__brand">
-            <div className="login-logo">{isArabic ? 'ب' : 'B'}</div>
+            <div className="login-logo" aria-hidden="true">{isArabic ? 'ب' : 'B'}</div>
             <div>
               <h2>{t('companyName')}</h2>
               <p>{t('login.systemName')}</p>
@@ -202,51 +206,81 @@ export default function Login({ onLogin }) {
           </div>
 
           <div className="login-card__heading">
+            <p className="login-access-label">{t('login.secureAccess')}</p>
             <h3>{mode === 'forgot' ? t('login.forgotTitle') : t('login.title')}</h3>
             <p>{mode === 'forgot' ? t('login.forgotSubtitle') : t('login.subtitle')}</p>
           </div>
 
           {message.text && (
-            <div className={`login-message login-message--${message.type}`} role="status">
+            <div
+              className={`login-message login-message--${message.type}`}
+              role={message.type === 'error' ? 'alert' : 'status'}
+            >
               <p>{message.text}</p>
             </div>
           )}
 
           {mode === 'login' && (
             <>
-              <label>
-                {t('login.username')}
+              <label htmlFor="login-email">
+                {t('login.emailAddress')}
                 <input
-                  name="username"
-                  type="text"
-                  value={form.username}
+                  id="login-email"
+                  name="email"
+                  type="email"
+                  value={form.email}
                   onChange={handleChange}
-                  placeholder={t('login.usernamePlaceholder')}
-                  autoComplete="username"
-                  aria-invalid={Boolean(fieldErrors.username)}
-                  aria-describedby={fieldErrors.username ? 'login-username-error' : undefined}
+                  placeholder={t('login.emailPlaceholder')}
+                  autoComplete="email"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  spellCheck="false"
+                  disabled={isLoading}
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  aria-describedby={fieldErrors.email ? 'login-email-error' : undefined}
                 />
-                {fieldErrors.username && <span id="login-username-error" className="field-error">{fieldErrors.username}</span>}
+                {fieldErrors.email && <span id="login-email-error" className="field-error">{fieldErrors.email}</span>}
               </label>
 
-              <label>
+              <label htmlFor="login-password">
                 {t('login.password')}
                 <div className="password-field">
                   <input
+                    id="login-password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
                     value={form.password}
                     onChange={handleChange}
                     placeholder={t('login.passwordPlaceholder')}
                     autoComplete="current-password"
+                    disabled={isLoading}
                     aria-invalid={Boolean(fieldErrors.password)}
                     aria-describedby={fieldErrors.password || isCapsLockOn ? 'login-password-help' : undefined}
                     onKeyUp={(event) => setIsCapsLockOn(Boolean(event.getModifierState?.('CapsLock')))}
                     onBlur={() => setIsCapsLockOn(false)}
                   />
                   <Tooltip content={showPassword ? t('tooltips.hidePassword') : t('tooltips.showPassword')}>
-                    <button type="button" onClick={() => setShowPassword((current) => !current)}>
-                      {showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() => setShowPassword((current) => !current)}
+                      aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                      disabled={isLoading}
+                    >
+                      {showPassword ? (
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M3 3l18 18" />
+                          <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+                          <path d="M9.1 5.4A9.8 9.8 0 0 1 12 5c5 0 8.7 4.1 10 7a13.6 13.6 0 0 1-3.1 4.4" />
+                          <path d="M6.6 6.6A13.4 13.4 0 0 0 2 12c1.3 2.9 5 7 10 7 1.5 0 2.9-.4 4.1-1" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                      <span className="sr-only">{showPassword ? t('login.hidePassword') : t('login.showPassword')}</span>
                     </button>
                   </Tooltip>
                 </div>
@@ -258,10 +292,6 @@ export default function Login({ onLogin }) {
               </label>
 
               <div className="login-options">
-                <label className="remember-option">
-                  <input name="remember" type="checkbox" checked={form.remember} onChange={handleChange} />
-                  <span>{t('login.rememberMe')}</span>
-                </label>
                 <Tooltip content={t('tooltips.forgotPassword')}>
                   <button type="button" className="link-button" onClick={() => switchMode('forgot')}>{t('login.forgotPassword')}</button>
                 </Tooltip>
@@ -270,15 +300,20 @@ export default function Login({ onLogin }) {
           )}
 
           {mode === 'forgot' && (
-            <label>
-              {t('login.email')}
+            <label htmlFor="login-forgot-email">
+              {t('login.emailAddress')}
               <input
+                id="login-forgot-email"
                 name="forgotEmail"
                 type="email"
                 value={forgotEmail}
                 onChange={(event) => setForgotEmail(event.target.value)}
                 placeholder={t('login.emailPlaceholder')}
                 autoComplete="email"
+                inputMode="email"
+                autoCapitalize="none"
+                spellCheck="false"
+                disabled={isLoading}
                 aria-invalid={Boolean(fieldErrors.forgotEmail)}
                 aria-describedby={fieldErrors.forgotEmail ? 'login-forgot-email-error' : undefined}
               />
@@ -289,7 +324,7 @@ export default function Login({ onLogin }) {
           <Tooltip content={t('tooltips.login')}>
             <button className="button button--primary login-submit" type="submit" disabled={isLoading}>
               {isLoading
-                ? t('login.loading')
+                ? (mode === 'forgot' ? t('login.loading') : t('login.signingIn'))
                 : mode === 'forgot'
                     ? t('login.sendResetLink')
                     : t('login.loginButton')}
@@ -304,7 +339,7 @@ export default function Login({ onLogin }) {
 
           <footer className="login-footer">
             <span>{t('companyName')}</span>
-            <span>© {now.getFullYear()}</span>
+            <span>© {currentYear}</span>
           </footer>
         </form>
       </section>

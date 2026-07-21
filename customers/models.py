@@ -168,6 +168,23 @@ class Customer(models.Model):
         return f'{self.code} - {self.name}'
 
 
+class CustomerAccount(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='customer_account')
+    customer = models.OneToOneField(Customer, on_delete=models.PROTECT, related_name='mobile_account')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['customer__name']
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['customer']),
+        ]
+
+    def __str__(self):
+        return f'{self.user.email} -> {self.customer.code}'
+
+
 class CustomerCashTransaction(models.Model):
     OPENING_DEBT = 'opening_debt'
     OPENING_CREDIT = 'opening_credit'
