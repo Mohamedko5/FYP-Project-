@@ -1,5 +1,5 @@
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from accounts.models import UserProfile
@@ -28,6 +28,9 @@ def invoice_charge_reference(invoice):
 @transaction.atomic
 def create_invoice_from_order(order, user, notes=''):
     order = Order.objects.select_for_update().prefetch_related('items').get(id=order.id)
+    existing_invoice = Invoice.objects.filter(order=order).exclude(status=Invoice.STATUS_CANCELLED).first()
+    if existing_invoice:
+        raise ValidationError({'order': 'This order already has an active invoice.'})
     if order.status != Order.STATUS_RECEIVED:
         raise ValidationError({'order': 'Only received orders can be invoiced.'})
     if order.customer.is_deleted or not order.customer.is_active:
@@ -35,19 +38,22 @@ def create_invoice_from_order(order, user, notes=''):
     items = list(order.items.select_related('product', 'product_unit'))
     if not items:
         raise ValidationError({'items': 'Order must contain at least one item.'})
-    if Invoice.objects.filter(order=order).exclude(status=Invoice.STATUS_CANCELLED).exists():
-        raise ValidationError({'order': 'This order already has an active invoice.'})
-
-    invoice = Invoice.objects.create(
-        order=order,
-        customer=order.customer,
-        subtotal=order.subtotal,
-        discount_amount=order.discount_amount,
-        total_amount=order.total_amount,
-        currency=order.currency,
-        notes=(notes or '').strip(),
-        issued_by=user,
-    )
+    try:
+        invoice = Invoice.objects.create(
+            order=order,
+            customer=order.customer,
+            subtotal=order.subtotal,
+            discount_amount=order.discount_amount,
+            total_amount=order.total_amount,
+            currency=order.currency,
+            notes=(notes or '').strip(),
+            issued_by=user,
+        )
+    except IntegrityError:
+        existing_invoice = Invoice.objects.filter(order=order).exclude(status=Invoice.STATUS_CANCELLED).first()
+        if existing_invoice:
+            raise ValidationError({'order': 'This order already has an active invoice.'})
+        raise
     InvoiceItem.objects.bulk_create([
         InvoiceItem(
             invoice=invoice,
@@ -82,7 +88,16 @@ def create_invoice_from_order(order, user, notes=''):
 
 
 @transaction.atomic
-def mark_invoice_paid(invoice, user, payment_method, payment_reference=''):
+def mark_invoice_paid(
+    invoice,
+    user,
+    payment_method,
+    payment_reference='',
+    customer_payment_purpose='',
+    customer_payment_description='',
+    idempotency_key='',
+    idempotency_hash='',
+):
     invoice = Invoice.objects.select_for_update().select_related('order', 'customer').get(id=invoice.id)
     order = Order.objects.select_for_update().get(id=invoice.order_id)
     if invoice.status != Invoice.STATUS_ISSUED or invoice.payment_status != Invoice.PAYMENT_UNPAID:
@@ -101,9 +116,13 @@ def mark_invoice_paid(invoice, user, payment_method, payment_reference=''):
         source_reference=invoice.invoice_number,
         defaults={
             'payment_method': payment_method,
+            'payment_purpose': customer_payment_purpose or CustomerCashTransaction.PURPOSE_INVOICE_PAYMENT,
+            'invoice': invoice,
             'amount': invoice.total_amount,
-            'description': f'Payment received for {invoice.invoice_number}',
+            'description': (customer_payment_description or '').strip() or f'Payment received for {invoice.invoice_number}',
             'is_system_generated': True,
+            'idempotency_key': (idempotency_key or '').strip(),
+            'idempotency_hash': idempotency_hash,
             'created_by': user,
         },
     )
@@ -119,6 +138,8 @@ def mark_invoice_paid(invoice, user, payment_method, payment_reference=''):
         is_system_generated=True,
         created_by=user,
     )
+    customer_payment.linked_journal_transaction = journal
+    customer_payment.save(update_fields=['linked_journal_transaction'])
     payment = InvoicePayment.objects.create(
         invoice=invoice,
         amount=invoice.total_amount,

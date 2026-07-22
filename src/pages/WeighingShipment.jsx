@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ConfirmationDialog,
   DetailSection,
@@ -14,6 +14,7 @@ import {
 } from '../components/ui/ModuleInterface.jsx';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
+import AppWindow from '../components/ui/AppWindow.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 import Table from '../components/ui/Table.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
@@ -175,6 +176,11 @@ export default function WeighingShipment() {
   const [dialogErrors, setDialogErrors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const processingButtonRef = useRef(null);
+  const completeButtonRef = useRef(null);
+  const cancelButtonRef = useRef(null);
+  const processingDirty = Boolean(form) && selectedShipment && JSON.stringify(form) !== JSON.stringify(emptyShipmentForm(selectedShipment));
+  const cancelDirty = Boolean(cancelDialog) && Boolean(cancelReason.trim());
 
   const loadShipments = useCallback(async (nextFilters = filters, tab = activeTab) => {
     setLoading(true);
@@ -322,10 +328,10 @@ export default function WeighingShipment() {
       render: (row) => (
         <div className="table-action-group">
           <Button variant="secondary" onClick={() => setSelectedShipment(row)}>{t('view')}</Button>
-          {row.status === 'ready_for_shipment' && <Button variant="secondary" onClick={() => openProcessingForm(row)}>{label.start}</Button>}
-          {row.status === 'processing' && <Button onClick={() => setCompleteDialog(row)}>{label.complete}</Button>}
+          {row.status === 'ready_for_shipment' && <Button variant="secondary" onClick={() => openProcessingForm(row)} ref={processingButtonRef}>{label.start}</Button>}
+          {row.status === 'processing' && <Button onClick={() => setCompleteDialog(row)} ref={completeButtonRef}>{label.complete}</Button>}
           <Button variant="secondary" onClick={() => printShipment(row)}>{t('reports.printPdf')}</Button>
-          {row.status !== 'completed' && row.status !== 'cancelled' && <Button variant="secondary" onClick={() => { setCancelDialog(row); setDialogErrors([]); }}>{t('cancel')}</Button>}
+          {row.status !== 'completed' && row.status !== 'cancelled' && <Button variant="secondary" onClick={() => { setCancelDialog(row); setDialogErrors([]); }} ref={cancelButtonRef}>{t('cancel')}</Button>}
         </div>
       ),
     },
@@ -425,8 +431,18 @@ export default function WeighingShipment() {
         </Card>
       )}
 
-      {selectedShipment && form && (
-        <Card title={label.start} subtitle={selectedShipment.shipment_number}>
+      <AppWindow
+        id="shipment-processing"
+        title={label.start}
+        description={selectedShipment?.shipment_number}
+        isOpen={Boolean(selectedShipment && form)}
+        isDirty={processingDirty}
+        isSubmitting={saving}
+        defaultSize="xlarge"
+        openerRef={processingButtonRef}
+        onClose={() => setForm(null)}
+      >
+        {selectedShipment && form && (
           <form className="shipment-processing-form" onSubmit={saveProcessing}>
             <DetailSection title={label.stepTransport}>
               <div className="form-grid">
@@ -471,11 +487,22 @@ export default function WeighingShipment() {
               <Button type="button" variant="secondary" onClick={() => setForm(null)}>{t('cancel')}</Button>
             </div>
           </form>
-        </Card>
-      )}
+        )}
+      </AppWindow>
 
-      {completeDialog && (
-        <ConfirmationDialog title={label.complete} description={label.completeWarning} confirmLabel={label.complete} cancelLabel={t('cancel')} saving={saving} variant="danger" onCancel={() => setCompleteDialog(null)} onConfirm={confirmComplete}>
+      <AppWindow
+        id="shipment-complete"
+        title={label.complete}
+        description={label.completeWarning}
+        isOpen={Boolean(completeDialog)}
+        isDirty={false}
+        isSubmitting={saving}
+        defaultSize="medium"
+        openerRef={completeButtonRef}
+        onClose={() => setCompleteDialog(null)}
+      >
+        {completeDialog && (
+        <section className="section-panel">
           <RecordMeta items={[
             { label: t('shipments.shipmentId'), value: completeDialog.shipment_number },
             { label: t('common.customerName'), value: completeDialog.customer_name },
@@ -485,16 +512,36 @@ export default function WeighingShipment() {
             {(completeDialog.items || []).map((item) => <p key={item.id}>{isArabic ? item.product_name_ar_snapshot : item.product_name_en_snapshot}: {qty(item.actual_quantity, item.unit_snapshot)} / {item.warehouse_name}</p>)}
           </div>
           <ErrorState errors={dialogErrors} />
-        </ConfirmationDialog>
-      )}
+          <div className="workflow-actions">
+            <Button type="button" onClick={confirmComplete} disabled={saving}>{saving ? label.saving : label.complete}</Button>
+            <Button type="button" variant="secondary" onClick={() => setCompleteDialog(null)} disabled={saving}>{t('cancel')}</Button>
+          </div>
+        </section>
+        )}
+      </AppWindow>
 
-      {cancelDialog && (
-        <ConfirmationDialog title={label.cancelShipment} confirmLabel={label.cancelShipment} cancelLabel={t('cancel')} saving={saving} onCancel={() => setCancelDialog(null)} onConfirm={confirmCancel}>
+      <AppWindow
+        id="shipment-cancel"
+        title={label.cancelShipment}
+        isOpen={Boolean(cancelDialog)}
+        isDirty={cancelDirty}
+        isSubmitting={saving}
+        defaultSize="medium"
+        openerRef={cancelButtonRef}
+        onClose={() => setCancelDialog(null)}
+      >
+        {cancelDialog && (
+        <form className="section-panel" onSubmit={(event) => { event.preventDefault(); confirmCancel(); }}>
           <RecordMeta items={[{ label: t('shipments.shipmentId'), value: cancelDialog.shipment_number }, { label: t('common.customerName'), value: cancelDialog.customer_name }]} />
           <label className="module-dialog-field">{label.reason}<textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} required /></label>
           <ErrorState errors={dialogErrors} />
-        </ConfirmationDialog>
-      )}
+          <div className="workflow-actions">
+            <Button type="submit" disabled={saving}>{saving ? label.saving : label.cancelShipment}</Button>
+            <Button type="button" variant="secondary" onClick={() => setCancelDialog(null)} disabled={saving}>{t('cancel')}</Button>
+          </div>
+        </form>
+        )}
+      </AppWindow>
 
       {selectedShipment && (
         <section className="print-area">

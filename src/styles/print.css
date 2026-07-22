@@ -67,13 +67,15 @@
 
   .print-report {
     color: #000000;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 11px;
-    line-height: 1.35;
+    font-family: var(--font-latin);
+    font-size: 10.5pt;
+    line-height: 1.45;
+    font-variant-numeric: tabular-nums;
   }
 
   [dir="rtl"] .print-report {
-    font-family: Tahoma, Arial, Helvetica, sans-serif;
+    font-family: var(--font-arabic);
+    line-height: 1.65;
   }
 
   .print-report__header {
@@ -90,18 +92,19 @@
   }
 
   .print-report__header h1 {
-    font-size: 18px;
+    font-size: 18pt;
+    line-height: 1.25;
   }
 
   .print-report__header p {
     margin-top: 4px;
-    font-size: 12px;
+    font-size: 10.5pt;
   }
 
   .print-report__header h2 {
     margin-top: 10px;
-    font-size: 15px;
-    text-transform: uppercase;
+    font-size: 14pt;
+    line-height: 1.3;
   }
 
   .print-report__meta,
@@ -144,14 +147,16 @@
   .print-report__meta span,
   .print-report__summary span {
     display: block;
-    font-size: 10px;
+    font-size: 9pt;
+    line-height: 1.35;
   }
 
   .print-report__meta strong,
   .print-report__summary strong {
     display: block;
     margin-top: 3px;
-    font-size: 12px;
+    font-size: 10pt;
+    line-height: 1.35;
   }
 
   .print-report__section {
@@ -161,7 +166,8 @@
 
   .print-report__section h3 {
     margin: 0 0 6px;
-    font-size: 13px;
+    font-size: 12pt;
+    line-height: 1.3;
     border-bottom: 1px solid #000000;
     padding-bottom: 4px;
   }
@@ -175,6 +181,8 @@
   .print-table td {
     border: 1px solid #000000;
     padding: 5px;
+    font-size: 9.5pt;
+    line-height: 1.35;
     text-align: left;
     vertical-align: top;
   }

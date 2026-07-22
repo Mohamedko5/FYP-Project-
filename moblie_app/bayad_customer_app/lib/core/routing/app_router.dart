@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/domain/auth_state.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/registration_screens.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/cart/presentation/cart_screen.dart';
 import '../../features/cart/presentation/checkout_screen.dart';
@@ -24,21 +25,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final location = state.matchedLocation;
       final isSplash = location == '/splash';
-      final isLogin = location == '/login';
-      final isProtected = !isSplash && !isLogin;
+      final isResetFlow = location == '/forgot-password' || location == '/verify-reset-code' || location == '/reset-password';
+      final isPublicAuth = {
+        '/login',
+        '/register',
+        '/verify-email',
+        '/pending-approval',
+        '/registration-status',
+        '/forgot-password',
+        '/verify-reset-code',
+        '/reset-password',
+      }.contains(location);
+      final isProtected = !isSplash && !isPublicAuth;
 
       if (authState.status == AuthStatus.initial || authState.status == AuthStatus.loading) {
         return isSplash ? null : '/splash';
       }
       if (authState.status == AuthStatus.error) return isSplash ? null : '/login';
       if (!authState.isAuthenticated && (isProtected || isSplash)) return '/login';
-      if (authState.isAuthenticated && (isLogin || isSplash)) return '/home';
+      if (authState.isAuthenticated && (isSplash || (isPublicAuth && !isResetFlow))) return '/home';
       return null;
     },
     errorBuilder: (context, state) => const RouteErrorScreen(),
     routes: [
       GoRoute(path: '/splash', name: RouteNames.splash, builder: (context, state) => const SplashScreen()),
       GoRoute(path: '/login', name: RouteNames.login, builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/register', name: RouteNames.register, builder: (context, state) => const RegisterScreen()),
+      GoRoute(path: '/verify-email', name: RouteNames.verifyEmail, builder: (context, state) => const VerifyEmailScreen()),
+      GoRoute(path: '/pending-approval', name: RouteNames.pendingApproval, builder: (context, state) => const PendingApprovalScreen()),
+      GoRoute(path: '/registration-status', name: RouteNames.registrationStatus, builder: (context, state) => const PendingApprovalScreen()),
+      GoRoute(path: '/forgot-password', name: RouteNames.forgotPassword, builder: (context, state) => const ForgotPasswordScreen()),
+      GoRoute(path: '/verify-reset-code', name: RouteNames.verifyResetCode, builder: (context, state) => const VerifyResetCodeScreen()),
+      GoRoute(path: '/reset-password', name: RouteNames.resetPassword, builder: (context, state) => const ResetPasswordScreen()),
       GoRoute(path: '/home', name: RouteNames.home, builder: (context, state) => const HomeScreen()),
       GoRoute(path: '/profile', name: RouteNames.profile, builder: (context, state) => const ProfileScreen()),
       GoRoute(path: '/products', name: RouteNames.products, builder: (context, state) => const ProductsScreen()),

@@ -15,6 +15,9 @@
   "hidePassword": "Hide password",
   "login": "Login",
   "signingIn": "Signing in...",
+  "forgotPassword": "Forgot Password?",
+  "createAccount": "Create Account",
+  "newToBayad": "New to Bayad?",
   "logout": "Logout",
   "profile": "Profile",
   "home": "Home",
@@ -29,7 +32,13 @@
   "address": "Address",
   "customerType": "Customer Type",
   "greeting": "Welcome, {name}",
-  "@greeting": {"placeholders": {"name": {"type": "String"}}},
+  "@greeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "phaseOnePlaceholder": "This customer module will be implemented in the next development phase.",
   "emptyEmail": "Please enter your email address.",
   "invalidEmail": "Please enter a valid email address.",
@@ -41,5 +50,68 @@
   "unknownError": "Something went wrong. Please try again.",
   "emptyState": "No records are available yet.",
   "routeError": "This page is not available.",
-  "language": "العربية"
+  "language": "العربية",
+  "registerTitle": "Create Account",
+  "personalInformation": "Personal Information",
+  "fullName": "Full Name",
+  "fullNameHint": "Ahmed Mohammed",
+  "businessName": "Business or Company Name",
+  "optional": "Optional",
+  "contactInformation": "Contact Information",
+  "phoneNumber": "Phone Number",
+  "phoneHint": "+249912345678",
+  "addressHint": "Omdurman, Sudan",
+  "businessInformation": "Business Information",
+  "accountSecurity": "Account Security",
+  "confirmPassword": "Confirm Password",
+  "repeatPassword": "Repeat password",
+  "acceptTerms": "I accept the terms",
+  "passwordRequirements": "Password must include at least 8 characters, uppercase, lowercase, and a number.",
+  "completeRequiredFields": "Please complete all required fields.",
+  "passwordsDoNotMatch": "Passwords do not match.",
+  "submitting": "Submitting...",
+  "backToLogin": "Back to Login",
+  "farmer": "Farmer",
+  "investor": "Investor",
+  "consumer": "Consumer",
+  "exporter": "Exporter",
+  "factory": "Factory",
+  "supplier": "Supplier",
+  "emailVerification": "Email Verification",
+  "verificationInstruction": "Enter the six-digit code sent to {email}.",
+  "@verificationInstruction": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "verificationCode": "Verification Code",
+  "verifyEmail": "Verify Email",
+  "verifying": "Verifying...",
+  "resendCode": "Resend Code",
+  "enterSixDigitCode": "Enter the 6-digit verification code.",
+  "pendingAdminApproval": "Pending Admin Approval",
+  "pendingApprovalMessage": "Your email has been verified. Bayad Company will review your account request.",
+  "checkStatus": "Check Status",
+  "checking": "Checking...",
+  "forgotPasswordInstruction": "Enter your email address and we will send a secure reset code if the account exists.",
+  "sendResetCode": "Send Reset Code",
+  "sending": "Sending...",
+  "resetCode": "Reset Code",
+  "resetCodeInstruction": "Enter the six-digit reset code sent to {email}.",
+  "@resetCodeInstruction": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyCode": "Verify Code",
+  "resetPassword": "Reset Password",
+  "newPassword": "New Password",
+  "confirmNewPassword": "Confirm New Password",
+  "repeatNewPassword": "Repeat new password",
+  "newPasswordRequirements": "Use at least 8 characters with uppercase, lowercase, and a number.",
+  "saving": "Saving..."
 }

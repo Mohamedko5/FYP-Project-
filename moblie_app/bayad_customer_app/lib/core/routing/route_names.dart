@@ -1,6 +1,13 @@
 class RouteNames {
   static const splash = 'splash';
   static const login = 'login';
+  static const register = 'register';
+  static const verifyEmail = 'verifyEmail';
+  static const pendingApproval = 'pendingApproval';
+  static const registrationStatus = 'registrationStatus';
+  static const forgotPassword = 'forgotPassword';
+  static const verifyResetCode = 'verifyResetCode';
+  static const resetPassword = 'resetPassword';
   static const home = 'home';
   static const profile = 'profile';
   static const products = 'products';

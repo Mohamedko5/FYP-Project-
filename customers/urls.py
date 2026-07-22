@@ -10,5 +10,6 @@ router.register('commodity-transactions', CommodityTransactionViewSet, basename=
 router.register('', CustomerViewSet, basename='customer')
 
 urlpatterns = [
+    path('payments/<int:pk>/reverse/', CashTransactionViewSet.as_view({'post': 'reverse'}), name='customer-payment-reverse'),
     path('', include(router.urls)),
 ]

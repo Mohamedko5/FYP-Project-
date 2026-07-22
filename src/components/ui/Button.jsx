@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import Tooltip from './Tooltip.jsx';
 
@@ -38,16 +39,18 @@ function inferButtonTooltip(label, t) {
   return exactMatches.find(([buttonLabel]) => buttonLabel === label)?.[1] || (label ? `${t('tooltips.buttonAction')} ${label}` : '');
 }
 
-export default function Button({ children, type = 'button', variant = 'primary', onClick, tooltip, ...props }) {
+const Button = forwardRef(function Button({ children, type = 'button', variant = 'primary', onClick, tooltip, ...props }, ref) {
   const { t } = useLanguage();
   const label = textFromChildren(children);
   const tooltipText = tooltip || inferButtonTooltip(label, t);
 
   return (
     <Tooltip content={tooltipText} className="tooltip--inline-flex">
-      <button type={type} className={`button button--${variant}`} onClick={onClick} {...props}>
+      <button ref={ref} type={type} className={`button button--${variant}`} onClick={onClick} {...props}>
         {children}
       </button>
     </Tooltip>
   );
-}
+});
+
+export default Button;

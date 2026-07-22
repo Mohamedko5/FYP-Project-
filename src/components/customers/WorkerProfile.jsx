@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Button from '../ui/Button.jsx';
+import AppWindow from '../ui/AppWindow.jsx';
 import Card from '../ui/Card.jsx';
 import StatusBadge from '../ui/StatusBadge.jsx';
 import Table from '../ui/Table.jsx';
@@ -48,6 +49,8 @@ export default function WorkerProfile({
   const [paymentRecord, setPaymentRecord] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentErrors, setPaymentErrors] = useState([]);
+  const recordButtonRef = useRef(null);
+  const paymentButtonRef = useRef(null);
 
   useEffect(() => {
     setTransactionForm(createTransactionForm(worker, warehouses));
@@ -61,6 +64,8 @@ export default function WorkerProfile({
   const avatar = worker.photo_url || worker.photoUrl
     ? <img src={worker.photo_url || worker.photoUrl} alt={worker.name} />
     : <span>{worker.name.slice(0, 1).toUpperCase()}</span>;
+  const recordDirty = activeSection === 'record' && JSON.stringify(transactionForm) !== JSON.stringify(createTransactionForm(worker, warehouses));
+  const paymentDirty = activeSection === 'payment' && paymentMethod !== 'cash';
 
   const columns = [
     { key: 'date', label: t('common.date') },
@@ -79,7 +84,7 @@ export default function WorkerProfile({
       key: 'actions',
       label: t('common.action'),
       render: (row) => row.payment_status === 'unpaid'
-        ? <Button variant="secondary" onClick={() => openPayment(row)}>{t('customers.markAsPaid')}</Button>
+        ? <Button variant="secondary" onClick={() => openPayment(row)} ref={paymentButtonRef}>{t('customers.markAsPaid')}</Button>
         : <span className="muted-text">{row.paid_by_name || '-'}</span>,
     },
   ];
@@ -167,25 +172,46 @@ export default function WorkerProfile({
       <p className="customer-notes">{worker.notes || t('warehouse.noNotes')}</p>
 
       <div className="customer-profile-tabs">
-        <button type="button" className={`customer-profile-tabs__button ${activeSection === 'record' ? 'is-active' : ''}`} onClick={openRecordForm}>{t('customers.addNewWorkerTransaction')}</button>
+        <button type="button" className={`customer-profile-tabs__button ${activeSection === 'record' ? 'is-active' : ''}`} onClick={openRecordForm} ref={recordButtonRef}>{t('customers.addNewWorkerTransaction')}</button>
         <button type="button" className={`customer-profile-tabs__button ${activeSection === 'history' ? 'is-active' : ''}`} onClick={() => setActiveSection('history')}>{t('customers.workerTransactionHistory')}</button>
         <button type="button" className={`customer-profile-tabs__button ${activeSection === 'statement' ? 'is-active' : ''}`} onClick={() => { setActiveSection('statement'); onLoadStatement?.(); }}>{t('customers.printWorkerStatement')}</button>
       </div>
 
-      {activeSection === 'record' && (
+      <AppWindow
+        id="worker-record"
+        title={t('customers.addNewWorkerTransaction')}
+        description={t('customers.workerProfileSubtitle')}
+        isOpen={activeSection === 'record'}
+        isDirty={recordDirty}
+        isSubmitting={isSavingRecord}
+        defaultSize="large"
+        openerRef={recordButtonRef}
+        onClose={closeSection}
+      >
         <WorkerTransactionForm
-          form={transactionForm}
-          errors={transactionErrors}
-          warehouses={warehouses}
-          workerType={worker.worker_type}
-          onChange={handleTransactionChange}
-          onSubmit={handleTransactionSubmit}
-          onCancel={closeSection}
-          isSaving={isSavingRecord}
-        />
-      )}
+            form={transactionForm}
+            errors={transactionErrors}
+            warehouses={warehouses}
+            workerType={worker.worker_type}
+            onChange={handleTransactionChange}
+            onSubmit={handleTransactionSubmit}
+            onCancel={closeSection}
+            isSaving={isSavingRecord}
+          />
+      </AppWindow>
 
-      {activeSection === 'payment' && paymentRecord && (
+      <AppWindow
+        id="worker-payment"
+        title={t('customers.confirmPayment')}
+        description={paymentRecord?.code}
+        isOpen={activeSection === 'payment' && Boolean(paymentRecord)}
+        isDirty={paymentDirty}
+        isSubmitting={isMarkingPaid}
+        defaultSize="medium"
+        openerRef={paymentButtonRef}
+        onClose={closeSection}
+      >
+      {paymentRecord && (
         <form className="form-grid" onSubmit={handleMarkPaid}>
           {paymentErrors.length > 0 && <div className="form-error form-grid__wide">{paymentErrors.map((error) => <p key={error}>{error}</p>)}</div>}
           <label>{t('customers.workerName')}<input value={worker.name} readOnly /></label>
@@ -198,6 +224,7 @@ export default function WorkerProfile({
           </div>
         </form>
       )}
+      </AppWindow>
 
       {(activeSection === 'history' || !activeSection) && (
         <div className="customer-profile-history">

@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import PrintableProductsReport from '../components/reports/PrintableProductsReport.jsx';
+import AppWindow from '../components/ui/AppWindow.jsx';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 import Table from '../components/ui/Table.jsx';
 import Tooltip from '../components/ui/Tooltip.jsx';
+import { ConfirmationDialog } from '../components/ui/ModuleInterface.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import {
   archiveManagedProduct,
@@ -237,12 +239,16 @@ export default function Products() {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [form, setForm] = useState(createEmptyProduct());
   const [errors, setErrors] = useState([]);
+  const [archiveTarget, setArchiveTarget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const role = readRole();
   const canManage = role === 'admin';
+  const addProductButtonRef = useRef(null);
+  const editProductButtonRef = useRef(null);
 
   const selectedProduct = productRows.find((product) => product.id === selectedProductId) || productRows[0] || null;
+  const productFormDirty = showForm && JSON.stringify(form) !== JSON.stringify(createEmptyProduct());
 
   async function loadProducts(nextFilters = filters) {
     setLoading(true);
@@ -379,11 +385,11 @@ export default function Products() {
   }
 
   async function archiveProduct(productId) {
-    if (!window.confirm(label.archiveConfirm)) return;
     setErrors([]);
     try {
       await archiveManagedProduct(productId);
       if (editingProductId === productId) closeForm();
+      setArchiveTarget(null);
       await loadProducts();
     } catch (error) {
       setErrors([error.message || label.archiveError]);
@@ -416,10 +422,10 @@ export default function Products() {
           {canManage && (
             <>
               <Tooltip content={label.editTooltip}>
-                <button className="product-action-button product-action-button--edit" type="button" onClick={() => openEditForm(row)}>{label.edit}</button>
+                <button className="product-action-button product-action-button--edit" type="button" onClick={() => openEditForm(row)} ref={editProductButtonRef}>{label.edit}</button>
               </Tooltip>
               <Tooltip content={label.archiveTooltip}>
-                <button className="product-action-button product-action-button--delete" type="button" onClick={() => archiveProduct(row.id)}>{label.archive}</button>
+                <button className="product-action-button product-action-button--delete" type="button" onClick={() => setArchiveTarget(row)}>{label.archive}</button>
               </Tooltip>
             </>
           )}
@@ -453,7 +459,7 @@ export default function Products() {
             <option value="">{label.allStockStatuses}</option>
             {stockStatusOptions.map((option) => <option key={option.value} value={option.value}>{isArabic && option.value === 'Available' ? 'متاح' : isArabic && option.value === 'Low Stock' ? label.lowStock : isArabic && option.value === 'Out of Stock' ? label.outOfStock : isArabic && option.value === 'Not Stocked' ? 'غير مخزن' : option.label}</option>)}
           </select>
-          {canManage && <Button onClick={openAddForm}>{label.addProduct}</Button>}
+          {canManage && <Button onClick={openAddForm} ref={addProductButtonRef}>{label.addProduct}</Button>}
           <Button variant="secondary" onClick={printReport}>{label.print}</Button>
         </div>
 
@@ -463,7 +469,17 @@ export default function Products() {
           </div>
         )}
 
-        {showForm && (
+        <AppWindow
+          id="products-product-form"
+          title={editingProductId ? label.editProduct : label.addProductTitle}
+          description={label.formSubtitle}
+          isOpen={showForm}
+          isDirty={productFormDirty}
+          isSubmitting={saving}
+          defaultSize="xlarge"
+          openerRef={editingProductId ? editProductButtonRef : addProductButtonRef}
+          onClose={closeForm}
+        >
           <form className="section-panel product-form" onSubmit={saveProduct}>
             <div className="section-panel__header">
               <div>
@@ -536,7 +552,7 @@ export default function Products() {
               <Button variant="secondary" onClick={closeForm}>Cancel</Button>
             </div>
           </form>
-        )}
+        </AppWindow>
 
         {loading ? <p className="loading-text">{label.loading}</p> : <Table columns={columns} rows={productRows} emptyMessage={label.noProducts} />}
       </Card>
@@ -573,6 +589,18 @@ export default function Products() {
             emptyMessage={label.noWarehouseStock}
           />
         </Card>
+      )}
+
+      {archiveTarget && (
+        <ConfirmationDialog
+          title={label.archive}
+          description={label.archiveConfirm}
+          confirmLabel={label.archive}
+          cancelLabel="Cancel"
+          saving={saving}
+          onCancel={() => setArchiveTarget(null)}
+          onConfirm={() => archiveProduct(archiveTarget.id)}
+        />
       )}
     </div>
   );

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PrintableOrder from '../components/reports/PrintableOrder.jsx';
+import AppWindow from '../components/ui/AppWindow.jsx';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
@@ -76,10 +77,17 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
+  const [cancelDialog, setCancelDialog] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
   const role = readRole();
   const isAdmin = role === 'admin';
+  const addOrderButtonRef = useRef(null);
+  const editOrderButtonRef = useRef(null);
+  const cancelOrderButtonRef = useRef(null);
 
   const selectedPrintOrder = selectedOrder;
+  const orderFormDirty = showForm && JSON.stringify(form) !== JSON.stringify(emptyForm());
+  const cancelDirty = Boolean(cancelDialog) && Boolean(cancelReason.trim());
 
   const loadOrders = useCallback(async (nextFilters = filters, tab = activeTab) => {
     setLoading(true);
@@ -283,14 +291,25 @@ export default function Orders() {
     }
   }
 
-  async function cancelSelectedOrder(order) {
-    const reason = window.prompt(t('orders.cancellationReason'));
-    if (!reason) return;
-    setCancellingId(order.id);
+  function cancelSelectedOrder(order) {
+    setCancelDialog(order);
+    setCancelReason('');
+    setErrors([]);
+  }
+
+  async function confirmCancelOrder(event) {
+    event.preventDefault();
+    if (!cancelDialog || !cancelReason.trim()) {
+      setErrors([t('orders.cancellationReason')]);
+      return;
+    }
+    setCancellingId(cancelDialog.id);
     setErrors([]);
     try {
-      const updated = await cancelOrder(order.id, reason);
+      const updated = await cancelOrder(cancelDialog.id, cancelReason);
       setSelectedOrder(updated);
+      setCancelDialog(null);
+      setCancelReason('');
       await loadOrders();
     } catch (error) {
       setErrors([error.message || t('orders.cancelError')]);
@@ -327,10 +346,10 @@ export default function Orders() {
       render: (row) => (
         <div className="table-action-group order-action-group">
           <Button variant="secondary" onClick={() => loadDetail(row.id)}>{t('view')}</Button>
-          {row.can_edit && <Button variant="secondary" onClick={() => loadAndEdit(row.id)}>{t('edit')}</Button>}
+          {row.can_edit && <Button variant="secondary" onClick={() => loadAndEdit(row.id)} ref={editOrderButtonRef}>{t('edit')}</Button>}
           {row.status === 'pending' && <Button variant="secondary" onClick={() => receiveOrder(row)}>{t('orders.markReceived')}</Button>}
           <Button variant="secondary" disabled={!row.can_create_invoice} onClick={() => createInvoice(row.id)}>{t('invoices.createInvoice')}</Button>
-          {isAdmin && row.can_cancel && <Button variant="secondary" onClick={() => cancelSelectedOrder(row)}>{cancellingId === row.id ? t('orders.cancelling') : t('orders.cancelOrder')}</Button>}
+          {isAdmin && row.can_cancel && <Button variant="secondary" onClick={() => cancelSelectedOrder(row)} ref={cancelOrderButtonRef}>{cancellingId === row.id ? t('orders.cancelling') : t('orders.cancelOrder')}</Button>}
           <Button variant="secondary" onClick={() => printOrder(row)}>{t('reports.printPdf')}</Button>
         </div>
       ),
@@ -370,7 +389,7 @@ export default function Orders() {
             {products.map((product) => <option key={product.id} value={product.id}>{productName(product)}</option>)}
           </select>
           <input name="date" type="date" value={filters.date} onChange={updateFilter} />
-          <Button onClick={openAddForm}>{t('orders.addOrder')}</Button>
+          <Button onClick={openAddForm} ref={addOrderButtonRef}>{t('orders.addOrder')}</Button>
           <Button variant="secondary" onClick={() => window.print()}>{t('reports.printPdf')}</Button>
         </div>
 
@@ -381,7 +400,17 @@ export default function Orders() {
           </div>
         )}
 
-        {showForm && (
+        <AppWindow
+          id="orders-order-form"
+          title={editingId ? t('orders.editOrder') : t('orders.addOrder')}
+          description={t('orders.formSubtitle')}
+          isOpen={showForm}
+          isDirty={orderFormDirty}
+          isSubmitting={saving}
+          defaultSize="xlarge"
+          openerRef={editingId ? editOrderButtonRef : addOrderButtonRef}
+          onClose={() => setShowForm(false)}
+        >
           <form className="section-panel order-form" onSubmit={saveOrder}>
             <div className="section-panel__header">
               <div>
@@ -443,7 +472,7 @@ export default function Orders() {
               <Button variant="secondary" onClick={() => setShowForm(false)}>{t('cancel')}</Button>
             </div>
           </form>
-        )}
+        </AppWindow>
 
         {loading ? <p className="muted-text">{t('orders.loading')}</p> : <Table columns={columns} rows={orders} emptyMessage={t('orders.noOrders')} />}
       </Card>
@@ -481,15 +510,45 @@ export default function Orders() {
           </div>
 
           <div className="workflow-actions">
-            {selectedOrder.can_edit && <Button variant="secondary" onClick={() => openEditForm(selectedOrder)}>{t('edit')}</Button>}
+            {selectedOrder.can_edit && <Button variant="secondary" onClick={() => openEditForm(selectedOrder)} ref={editOrderButtonRef}>{t('edit')}</Button>}
             {selectedOrder.status === 'pending' && <Button variant="secondary" onClick={() => receiveOrder(selectedOrder)}>{t('orders.markReceived')}</Button>}
             <Button variant="secondary" disabled={!selectedOrder.can_create_invoice} onClick={() => createInvoice(selectedOrder.id)}>{t('invoices.createInvoice')}</Button>
-            {isAdmin && selectedOrder.can_cancel && <Button variant="secondary" onClick={() => cancelSelectedOrder(selectedOrder)}>{t('orders.cancelOrder')}</Button>}
+            {isAdmin && selectedOrder.can_cancel && <Button variant="secondary" onClick={() => cancelSelectedOrder(selectedOrder)} ref={cancelOrderButtonRef}>{t('orders.cancelOrder')}</Button>}
             <Button onClick={() => window.print()}>{t('reports.printPdf')}</Button>
             <Button variant="secondary" onClick={() => setSelectedOrder(null)}>{t('customers.closeSection')}</Button>
           </div>
         </Card>
       )}
+
+      <AppWindow
+        id="order-cancel"
+        title={t('orders.cancelOrder')}
+        description={t('orders.cancellationReason')}
+        isOpen={Boolean(cancelDialog)}
+        isDirty={cancelDirty}
+        isSubmitting={Boolean(cancellingId)}
+        defaultSize="medium"
+        openerRef={cancelOrderButtonRef}
+        onClose={() => {
+          setCancelDialog(null);
+          setCancelReason('');
+        }}
+      >
+        {cancelDialog && (
+          <form className="section-panel" onSubmit={confirmCancelOrder}>
+            <div className="form-grid form-grid--single">
+              <label>
+                {t('orders.cancellationReason')}
+                <textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} required />
+              </label>
+            </div>
+            <div className="workflow-actions">
+              <Button type="submit" disabled={Boolean(cancellingId)}>{cancellingId ? t('orders.cancelling') : t('orders.cancelOrder')}</Button>
+              <Button type="button" variant="secondary" onClick={() => setCancelDialog(null)} disabled={Boolean(cancellingId)}>{t('cancel')}</Button>
+            </div>
+          </form>
+        )}
+      </AppWindow>
     </div>
   );
 }

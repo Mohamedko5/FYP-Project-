@@ -4,14 +4,25 @@ from decimal import Decimal
 from django.db import models
 from django.db.models import Count, Sum
 from django.utils import timezone
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import status, viewsets
+from rest_framework.views import APIView
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from inventory.permissions import IsAdminOrManager
+
 from .models import JournalTransaction
-from .serializers import JournalTransactionSerializer
+from .serializers import (
+    JournalTransactionSerializer,
+    WarehouseCommodityReversalSerializer,
+    WarehouseCommodityTransactionResponseSerializer,
+    WarehouseCommodityTransactionSerializer,
+)
+from .services import reverse_warehouse_commodity_transaction
 
 
 def parse_local_date(value):
@@ -111,6 +122,8 @@ class JournalTransactionViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         if instance.is_deleted:
             raise ValidationError({'detail': 'Deleted transactions cannot be deleted again.'})
+        if instance.is_system_generated:
+            raise ValidationError({'detail': 'System-generated journal transactions cannot be deleted here.'})
         instance.is_deleted = True
         instance.deleted_at = timezone.now()
         instance.deleted_by = self.request.user
@@ -188,3 +201,49 @@ class JournalTransactionViewSet(viewsets.ModelViewSet):
                 ],
             },
         })
+
+
+def django_validation_detail(exc):
+    return exc.message_dict if hasattr(exc, 'message_dict') else exc.messages
+
+
+class WarehouseCommodityTransactionView(APIView):
+    permission_classes = [IsAdminOrManager]
+
+    def post(self, request):
+        serializer = WarehouseCommodityTransactionSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        journal, movement, inventory = serializer.save()
+        response = WarehouseCommodityTransactionResponseSerializer({
+            'journal_transaction': journal,
+            'inventory_movement': movement,
+            'inventory': inventory,
+        }, context={'request': request})
+        return Response(response.data, status=status.HTTP_201_CREATED)
+
+
+class WarehouseCommodityTransactionReverseView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        serializer = WarehouseCommodityReversalSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            journal = JournalTransaction.objects.get(pk=pk, is_deleted=False)
+            reversal, movement, inventory = reverse_warehouse_commodity_transaction(
+                journal=journal,
+                user=request.user,
+                reason=serializer.validated_data['reason'],
+            )
+        except JournalTransaction.DoesNotExist as exc:
+            raise ValidationError({'detail': 'Journal transaction was not found.'}) from exc
+        except PermissionError as exc:
+            raise PermissionDenied(str(exc)) from exc
+        except DjangoValidationError as exc:
+            raise ValidationError(django_validation_detail(exc)) from exc
+        response = WarehouseCommodityTransactionResponseSerializer({
+            'journal_transaction': reversal,
+            'inventory_movement': movement,
+            'inventory': inventory,
+        }, context={'request': request})
+        return Response(response.data, status=status.HTTP_201_CREATED)

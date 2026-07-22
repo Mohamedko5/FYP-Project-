@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
@@ -9,15 +9,18 @@ import CashJournalTable from '../components/journal/CashJournalTable.jsx';
 import CommodityJournalForm from '../components/journal/CommodityJournalForm.jsx';
 import CommodityJournalTable from '../components/journal/CommodityJournalTable.jsx';
 import CommoditySummaryCards from '../components/journal/CommoditySummaryCards.jsx';
+import AppWindow from '../components/ui/AppWindow.jsx';
 import { commodityProductLabels, formatCurrency, products } from '../data/dummyData.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import {
+  createWarehouseCommodityTransaction,
   createJournalTransaction,
   deleteJournalTransaction,
   getDailyJournalSummary,
   listJournalTransactions,
   updateJournalTransaction,
 } from '../services/dailyJournalApi.js';
+import { getProducts, getStocks, getWarehouses } from '../services/inventoryApi.js';
 
 function getTodayDate() {
   const today = new Date();
@@ -39,12 +42,18 @@ function createEmptyCashForm() {
 
 function createEmptyCommodityForm() {
   return {
-    product: 'White Sesame',
+    warehouseOperation: 'stock_in',
+    warehouseId: '',
+    productId: '',
+    product: '',
     quantity: '',
-    unit: 'Qintar',
+    unit: '',
     party: '',
     estimatedValue: '',
+    driverName: '',
     description: '',
+    minimumThreshold: '0',
+    idempotencyKey: '',
   };
 }
 
@@ -78,13 +87,36 @@ function mapCommodityTransaction(row) {
     id: row.id,
     date: row.date,
     time: row.time,
+    warehouseOperation: row.warehouse_operation,
+    warehouseId: row.warehouse,
+    warehouseName: row.warehouse_name,
+    sourceType: row.source_type,
+    sourceReference: row.source_reference,
+    movementReference: row.movement_reference,
+    isSystemGenerated: row.is_system_generated,
+    isReversed: row.is_reversed,
     product: row.product_name,
     quantity: decimalNumber(row.quantity),
     unit: row.unit,
     party: row.party,
     estimatedValue: decimalNumber(row.estimated_value),
     description: row.description,
+    administrator: row.created_by_name,
   };
+}
+
+function productName(product) {
+  return product.name_en || product.name || product.product_name || '';
+}
+
+function productUnits(product) {
+  if (Array.isArray(product.units)) return product.units.map((unit) => unit.unit || unit.value || unit).filter(Boolean);
+  return [];
+}
+
+function makeIdempotencyKey() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function cashSummaryFromApi(summary) {
@@ -110,6 +142,39 @@ function formatApiError(error) {
   return String(error?.message || 'Unable to complete this request. Please try again.')
     .split('\n')
     .filter(Boolean);
+}
+
+function WarehouseTransactionDialog({ children, title, description, onClose, isSaving, isArabic }) {
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const firstField = dialogRef.current?.querySelector('select, input, textarea, button');
+    firstField?.focus();
+    function handleKeyDown(event) {
+      if (event.key === 'Escape' && !isSaving) onClose();
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSaving, onClose]);
+
+  return (
+    <div className="module-dialog-backdrop warehouse-transaction-backdrop" role="presentation">
+      <section
+        className="module-dialog warehouse-transaction-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="warehouse-transaction-title"
+        dir={isArabic ? 'rtl' : 'ltr'}
+        ref={dialogRef}
+      >
+        <header>
+          <h2 id="warehouse-transaction-title">{title}</h2>
+          <p>{description}</p>
+        </header>
+        <div className="module-dialog__body">{children}</div>
+      </section>
+    </div>
+  );
 }
 
 function JournalConfirmationDialog({ confirmation, onCancel, onConfirm, t, isDeleting }) {
@@ -139,6 +204,9 @@ export default function DailyJournal() {
   const [journalType, setJournalType] = useState('cash');
   const [cashEntries, setCashEntries] = useState([]);
   const [commodityEntries, setCommodityEntries] = useState([]);
+  const [inventoryProducts, setInventoryProducts] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [stockItems, setStockItems] = useState([]);
   const [summary, setSummary] = useState(null);
   const [cashForm, setCashForm] = useState(() => createEmptyCashForm());
   const [commodityForm, setCommodityForm] = useState(() => createEmptyCommodityForm());
@@ -154,8 +222,11 @@ export default function DailyJournal() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [cashFilters, setCashFilters] = useState({ payment_method: '' });
   const [commodityFilters, setCommodityFilters] = useState({ product_name: '', unit: '' });
+  const cashButtonRef = useRef(null);
+  const newWarehouseButtonRef = useRef(null);
 
   const cashTotals = useMemo(() => cashSummaryFromApi(summary), [summary]);
 
@@ -179,9 +250,28 @@ export default function DailyJournal() {
     }
   }, [selectedDate, cashFilters, commodityFilters]);
 
+  const loadInventoryChoices = useCallback(async () => {
+    try {
+      const [productRows, warehouseRows, stockRows] = await Promise.all([
+        getProducts({ is_active: true }),
+        getWarehouses({ is_active: true }),
+        getStocks(),
+      ]);
+      setInventoryProducts(Array.isArray(productRows) ? productRows : []);
+      setWarehouses(Array.isArray(warehouseRows) ? warehouseRows.filter((warehouse) => !warehouse.is_deleted && warehouse.is_active !== false) : []);
+      setStockItems(Array.isArray(stockRows) ? stockRows : []);
+    } catch (error) {
+      setApiError(error.message || 'Unable to load warehouse choices.');
+    }
+  }, []);
+
   useEffect(() => {
     loadJournalData();
   }, [loadJournalData]);
+
+  useEffect(() => {
+    loadInventoryChoices();
+  }, [loadInventoryChoices]);
 
   function resetForms() {
     setEditingCashId(null);
@@ -193,6 +283,7 @@ export default function DailyJournal() {
     setCashErrors([]);
     setCommodityErrors([]);
     setConfirmation(null);
+    setSuccessMessage('');
   }
 
   function handleJournalTypeChange(nextType) {
@@ -237,8 +328,11 @@ export default function DailyJournal() {
 
   function validateCommodityForm() {
     const nextErrors = [];
-    if (!commodityForm.product || commodityForm.quantity === '' || !commodityForm.party.trim() || commodityForm.estimatedValue === '' || !commodityForm.description.trim()) {
+    if (!commodityForm.warehouseOperation || !commodityForm.warehouseId || !commodityForm.productId || !commodityForm.unit || commodityForm.quantity === '' || !commodityForm.party.trim() || !commodityForm.description.trim()) {
       nextErrors.push(t('journal.commodityRequiredFieldsError'));
+    }
+    if (commodityForm.warehouseOperation === 'manual_withdrawal' && !commodityForm.description.trim()) {
+      nextErrors.push(t('journal.withdrawalReasonRequired'));
     }
     if (Number(commodityForm.quantity) <= 0) {
       nextErrors.push(t('journal.positiveQuantityError'));
@@ -281,25 +375,41 @@ export default function DailyJournal() {
   async function saveCommodityPayload(payload) {
     setIsSaving(true);
     setCommodityErrors([]);
+    setSuccessMessage('');
     try {
-      const apiPayload = {
-        journal_type: 'commodity',
-        product_name: payload.product,
-        quantity: payload.quantity,
-        unit: payload.unit,
-        estimated_value: payload.estimatedValue,
-        party: payload.party,
-        description: payload.description,
-      };
       if (editingCommodityId) {
+        const apiPayload = {
+          journal_type: 'commodity',
+          product_name: payload.product,
+          quantity: payload.quantity,
+          unit: payload.unit,
+          estimated_value: payload.estimatedValue || '0',
+          party: payload.party,
+          description: payload.description,
+        };
         await updateJournalTransaction(editingCommodityId, apiPayload);
       } else {
-        await createJournalTransaction(apiPayload);
+        await createWarehouseCommodityTransaction({
+          warehouse_operation: payload.warehouseOperation,
+          warehouse_id: payload.warehouseId,
+          product_id: payload.productId,
+          unit: payload.unit,
+          quantity: payload.quantity,
+          minimum_threshold: payload.minimumThreshold || '0',
+          party: payload.party,
+          estimated_value: payload.estimatedValue || '0',
+          driver_name: payload.driverName || '',
+          description: payload.description,
+          idempotency_key: payload.idempotencyKey || makeIdempotencyKey(),
+        });
       }
       setEditingCommodityId(null);
       setCommodityForm(createEmptyCommodityForm());
       setShowCommodityForm(false);
+      setSuccessMessage(payload.warehouseOperation === 'manual_withdrawal' ? t('journal.stockWithdrawnSuccess') : t('journal.stockAddedSuccess'));
       await loadJournalData();
+      await loadInventoryChoices();
+      newWarehouseButtonRef.current?.focus();
     } catch (error) {
       setCommodityErrors(formatApiError(error));
     } finally {
@@ -364,6 +474,10 @@ export default function DailyJournal() {
   }
 
   function handleCommodityEdit(entry) {
+    if (entry.isSystemGenerated) {
+      setCommodityErrors([t('journal.linkedTransactionReadOnly')]);
+      return;
+    }
     setEditingCommodityId(entry.id);
     setShowCommodityForm(true);
     setCommodityForm({
@@ -389,6 +503,7 @@ export default function DailyJournal() {
     setShowCommodityForm(false);
     setCommodityForm(createEmptyCommodityForm());
     setCommodityErrors([]);
+    newWarehouseButtonRef.current?.focus();
   }
 
   function handleCashDelete(entryId) {
@@ -422,8 +537,9 @@ export default function DailyJournal() {
 
   function handleAddCommodityTransaction() {
     setEditingCommodityId(null);
-    setCommodityForm(createEmptyCommodityForm());
+    setCommodityForm({ ...createEmptyCommodityForm(), idempotencyKey: makeIdempotencyKey() });
     setCommodityErrors([]);
+    setSuccessMessage('');
     setShowCommodityForm(true);
   }
 
@@ -470,6 +586,13 @@ export default function DailyJournal() {
   function productLabel(productName) {
     return commodityProductLabels[productName]?.[isArabic ? 'ar' : 'en'] || productName;
   }
+
+  const commodityProductOptions = inventoryProducts.length > 0
+    ? inventoryProducts
+    : products.map((product) => ({ id: product.id, name_en: product.name, units: [] }));
+
+  const isCashDirty = showCashForm && JSON.stringify(cashForm) !== JSON.stringify(createEmptyCashForm());
+  const isCommodityDirty = showCommodityForm && JSON.stringify({ ...commodityForm, idempotencyKey: '' }) !== JSON.stringify(createEmptyCommodityForm());
 
   useEffect(() => {
     setHeaderAddon(
@@ -543,7 +666,7 @@ export default function DailyJournal() {
                   <option value="online">{t('journal.paymentMethods.online')}</option>
                 </select>
               </div>
-              <Button onClick={handleAddCashTransaction}>{t('journal.addTransaction')}</Button>
+              <Button onClick={handleAddCashTransaction} ref={cashButtonRef}>{t('journal.addTransaction')}</Button>
             </div>
             {isLoading ? (
               <div className="journal-state">{t('journal.loading')}</div>
@@ -558,9 +681,19 @@ export default function DailyJournal() {
             )}
           </Card>
 
-          {showCashForm && (
+          <AppWindow
+            id="daily-journal-cash-transaction"
+            title={editingCashId ? t('journal.editingTitle') : t('journal.cashJournalTitle')}
+            description={editingCashId ? t('journal.editingSubtitle') : t('journal.cashJournalSubtitle')}
+            isOpen={showCashForm}
+            isDirty={isCashDirty}
+            isSubmitting={isSaving}
+            defaultSize="medium"
+            openerRef={cashButtonRef}
+            onClose={handleCashCancel}
+          >
             <Card
-              className="journal-expandable-form"
+              className="journal-expandable-form app-window-card"
               title={editingCashId ? t('journal.editingTitle') : t('journal.cashJournalTitle')}
               subtitle={editingCashId ? t('journal.editingSubtitle') : t('journal.cashJournalSubtitle')}
             >
@@ -576,7 +709,7 @@ export default function DailyJournal() {
                 statusLabel={statusLabel}
               />
             </Card>
-          )}
+          </AppWindow>
 
           <PrintableDailyJournal
             entries={cashEntries}
@@ -598,7 +731,10 @@ export default function DailyJournal() {
                   onChange={(event) => setCommodityFilters((current) => ({ ...current, product_name: event.target.value }))}
                 >
                   <option value="">{t('journal.allProducts')}</option>
-                  {products.map((product) => <option key={product.id} value={product.name}>{productLabel(product.name)}</option>)}
+                  {commodityProductOptions.map((product) => {
+                    const name = productName(product);
+                    return <option key={product.id} value={name}>{productLabel(name)}</option>;
+                  })}
                 </select>
                 <select
                   value={commodityFilters.unit}
@@ -608,7 +744,7 @@ export default function DailyJournal() {
                   {['Qintar', 'KG', 'Bag', 'Bale', 'Unit'].map((unit) => <option key={unit} value={unit}>{unit}</option>)}
                 </select>
               </div>
-              <Button onClick={handleAddCommodityTransaction}>{t('journal.addTransaction')}</Button>
+              <Button onClick={handleAddCommodityTransaction} ref={newWarehouseButtonRef}>{t('journal.newWarehouseTransaction')}</Button>
             </div>
             {isLoading ? (
               <div className="journal-state">{t('journal.loading')}</div>
@@ -625,26 +761,34 @@ export default function DailyJournal() {
             )}
           </Card>
 
-          {showCommodityForm && (
-            <Card
-              className="journal-expandable-form"
-              title={editingCommodityId ? t('journal.editingCommodityTitle') : t('journal.addCommodityTitle')}
-              subtitle={editingCommodityId ? t('journal.editingCommoditySubtitle') : t('journal.addCommoditySubtitle')}
-            >
+          {successMessage && <div className="journal-success-message" role="status">{successMessage}</div>}
+
+          <AppWindow
+            id="daily-journal-commodity-transaction"
+            title={t('journal.warehouseTransactionTitle')}
+            description={t('journal.warehouseTransactionDescription')}
+            isOpen={showCommodityForm}
+            isDirty={isCommodityDirty}
+            isSubmitting={isSaving}
+            defaultSize="large"
+            openerRef={newWarehouseButtonRef}
+            onClose={handleCommodityCancel}
+          >
               <CommodityJournalForm
                 form={commodityForm}
                 errors={commodityErrors}
                 isEditing={Boolean(editingCommodityId)}
                 isSaving={isSaving}
-                products={products}
+                products={commodityProductOptions}
+                warehouses={warehouses}
+                stockItems={stockItems}
                 isArabic={isArabic}
                 onChange={handleCommodityChange}
                 onSubmit={handleCommoditySubmit}
                 onCancel={handleCommodityCancel}
                 t={t}
               />
-            </Card>
-          )}
+          </AppWindow>
 
           <PrintableDailyJournal
             entries={commodityEntries}

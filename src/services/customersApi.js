@@ -52,6 +52,13 @@ export function createCustomerCashTransaction(customerId, payload) {
   });
 }
 
+export function createCustomerPayment(customerId, payload) {
+  return apiRequest(`/api/customers/${customerId}/payments/`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export function deleteCustomerCashTransaction(id) {
   return apiRequest(`/api/customers/cash-transactions/${id}/`, { method: 'DELETE' });
 }

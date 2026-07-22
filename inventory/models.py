@@ -319,11 +319,13 @@ class InventoryMovement(models.Model):
     ]
 
     SOURCE_MANUAL = 'manual'
+    SOURCE_DAILY_JOURNAL = 'daily_journal'
     SOURCE_SHIPMENT = 'shipment'
     SOURCE_TRANSFER = 'transfer'
     SOURCE_SYSTEM = 'system'
     SOURCE_TYPE_CHOICES = [
         (SOURCE_MANUAL, 'Manual'),
+        (SOURCE_DAILY_JOURNAL, 'Daily Journal'),
         (SOURCE_SHIPMENT, 'Shipment'),
         (SOURCE_TRANSFER, 'Transfer'),
         (SOURCE_SYSTEM, 'System'),

@@ -54,6 +54,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signingIn => 'Signing in...';
 
   @override
+  String get forgotPassword => 'Forgot Password?';
+
+  @override
+  String get createAccount => 'Create Account';
+
+  @override
+  String get newToBayad => 'New to Bayad?';
+
+  @override
   String get logout => 'Logout';
 
   @override
@@ -133,4 +142,159 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get language => 'العربية';
+
+  @override
+  String get registerTitle => 'Create Account';
+
+  @override
+  String get personalInformation => 'Personal Information';
+
+  @override
+  String get fullName => 'Full Name';
+
+  @override
+  String get fullNameHint => 'Ahmed Mohammed';
+
+  @override
+  String get businessName => 'Business or Company Name';
+
+  @override
+  String get optional => 'Optional';
+
+  @override
+  String get contactInformation => 'Contact Information';
+
+  @override
+  String get phoneNumber => 'Phone Number';
+
+  @override
+  String get phoneHint => '+249912345678';
+
+  @override
+  String get addressHint => 'Omdurman, Sudan';
+
+  @override
+  String get businessInformation => 'Business Information';
+
+  @override
+  String get accountSecurity => 'Account Security';
+
+  @override
+  String get confirmPassword => 'Confirm Password';
+
+  @override
+  String get repeatPassword => 'Repeat password';
+
+  @override
+  String get acceptTerms => 'I accept the terms';
+
+  @override
+  String get passwordRequirements =>
+      'Password must include at least 8 characters, uppercase, lowercase, and a number.';
+
+  @override
+  String get completeRequiredFields => 'Please complete all required fields.';
+
+  @override
+  String get passwordsDoNotMatch => 'Passwords do not match.';
+
+  @override
+  String get submitting => 'Submitting...';
+
+  @override
+  String get backToLogin => 'Back to Login';
+
+  @override
+  String get farmer => 'Farmer';
+
+  @override
+  String get investor => 'Investor';
+
+  @override
+  String get consumer => 'Consumer';
+
+  @override
+  String get exporter => 'Exporter';
+
+  @override
+  String get factory => 'Factory';
+
+  @override
+  String get supplier => 'Supplier';
+
+  @override
+  String get emailVerification => 'Email Verification';
+
+  @override
+  String verificationInstruction(String email) {
+    return 'Enter the six-digit code sent to $email.';
+  }
+
+  @override
+  String get verificationCode => 'Verification Code';
+
+  @override
+  String get verifyEmail => 'Verify Email';
+
+  @override
+  String get verifying => 'Verifying...';
+
+  @override
+  String get resendCode => 'Resend Code';
+
+  @override
+  String get enterSixDigitCode => 'Enter the 6-digit verification code.';
+
+  @override
+  String get pendingAdminApproval => 'Pending Admin Approval';
+
+  @override
+  String get pendingApprovalMessage =>
+      'Your email has been verified. Bayad Company will review your account request.';
+
+  @override
+  String get checkStatus => 'Check Status';
+
+  @override
+  String get checking => 'Checking...';
+
+  @override
+  String get forgotPasswordInstruction =>
+      'Enter your email address and we will send a secure reset code if the account exists.';
+
+  @override
+  String get sendResetCode => 'Send Reset Code';
+
+  @override
+  String get sending => 'Sending...';
+
+  @override
+  String get resetCode => 'Reset Code';
+
+  @override
+  String resetCodeInstruction(String email) {
+    return 'Enter the six-digit reset code sent to $email.';
+  }
+
+  @override
+  String get verifyCode => 'Verify Code';
+
+  @override
+  String get resetPassword => 'Reset Password';
+
+  @override
+  String get newPassword => 'New Password';
+
+  @override
+  String get confirmNewPassword => 'Confirm New Password';
+
+  @override
+  String get repeatNewPassword => 'Repeat new password';
+
+  @override
+  String get newPasswordRequirements =>
+      'Use at least 8 characters with uppercase, lowercase, and a number.';
+
+  @override
+  String get saving => 'Saving...';
 }

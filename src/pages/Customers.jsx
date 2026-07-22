@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import Tooltip from '../components/ui/Tooltip.jsx';
+import AppWindow from '../components/ui/AppWindow.jsx';
 import CustomerForm from '../components/customers/CustomerForm.jsx';
 import CustomerList from '../components/customers/CustomerList.jsx';
 import CustomerProfile from '../components/customers/CustomerProfile.jsx';
@@ -13,6 +14,7 @@ import {
   createCustomer,
   createCustomerCashTransaction,
   createCustomerCommodityTransaction,
+  createCustomerPayment,
   getCustomer,
   getCustomerCashTransactions,
   getCustomerCommodityTransactions,
@@ -122,6 +124,7 @@ export default function Customers() {
   const [isSavingCustomer, setIsSavingCustomer] = useState(false);
   const [isSavingCash, setIsSavingCash] = useState(false);
   const [isSavingCommodity, setIsSavingCommodity] = useState(false);
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
   const [isLoadingWorkers, setIsLoadingWorkers] = useState(false);
   const [isLoadingWorkerProfile, setIsLoadingWorkerProfile] = useState(false);
   const [isSavingWorker, setIsSavingWorker] = useState(false);
@@ -132,8 +135,12 @@ export default function Customers() {
   const [workerRecords, setWorkerRecords] = useState([]);
   const [workerStatement, setWorkerStatement] = useState(null);
   const adminName = storedAdminName();
+  const addCustomerButtonRef = useRef(null);
+  const addWorkerButtonRef = useRef(null);
 
   const selectedPayments = cashTransactions.filter((transaction) => transaction.transaction_type === 'payment_received');
+  const customerFormDirty = showCustomerForm && JSON.stringify({ ...customerForm, photoPreview: '', photo: null }) !== JSON.stringify(createCustomerForm());
+  const workerFormDirty = showWorkerForm && JSON.stringify({ ...workerForm, photoPreview: '', photo: null }) !== JSON.stringify(createWorkerForm());
 
   const loadCustomers = useCallback(async () => {
     setIsLoadingCustomers(true);
@@ -381,6 +388,17 @@ export default function Customers() {
     }
   }
 
+  async function handleAddPayment(payload) {
+    if (!selectedCustomerId) return;
+    setIsSavingPayment(true);
+    try {
+      await createCustomerPayment(selectedCustomerId, payload);
+      await Promise.all([loadCustomers(), loadSelectedCustomer(selectedCustomerId)]);
+    } finally {
+      setIsSavingPayment(false);
+    }
+  }
+
   async function handleAddCommodityTransaction(payload) {
     if (!selectedCustomerId) return;
     setIsSavingCommodity(true);
@@ -484,7 +502,7 @@ export default function Customers() {
                 </select>
               </label>
               <div className="customer-toolbar__action">
-                <Button variant="secondary" onClick={openCustomerForm}>{t('customers.addNewCustomer')}</Button>
+                <Button variant="secondary" onClick={openCustomerForm} ref={addCustomerButtonRef}>{t('customers.addNewCustomer')}</Button>
               </div>
             </div>
             {apiError && (
@@ -510,9 +528,11 @@ export default function Customers() {
               statement={statement}
               isSavingCash={isSavingCash}
               isSavingCommodity={isSavingCommodity}
+              isSavingPayment={isSavingPayment}
               isLoadingProfile={isLoadingProfile}
               onAddCashTransaction={handleAddCashTransaction}
               onAddCommodityTransaction={handleAddCommodityTransaction}
+              onAddPayment={handleAddPayment}
               onLoadStatement={handleLoadStatement}
               onPrint={handlePrintStatement}
               onClose={() => {
@@ -523,11 +543,19 @@ export default function Customers() {
             />
           )}
 
-          {showCustomerForm && (
-            <Card title={t('customers.formTitle')} subtitle={t('customers.formSubtitle')}>
-              <CustomerForm form={customerForm} errors={formErrors} onChange={handleChange} onSubmit={handleAddCustomer} onCancel={closeCustomerForm} isSaving={isSavingCustomer} />
-            </Card>
-          )}
+          <AppWindow
+            id="customers-add-customer"
+            title={t('customers.formTitle')}
+            description={t('customers.formSubtitle')}
+            isOpen={showCustomerForm}
+            isDirty={customerFormDirty}
+            isSubmitting={isSavingCustomer}
+            defaultSize="large"
+            openerRef={addCustomerButtonRef}
+            onClose={closeCustomerForm}
+          >
+            <CustomerForm form={customerForm} errors={formErrors} onChange={handleChange} onSubmit={handleAddCustomer} onCancel={closeCustomerForm} isSaving={isSavingCustomer} />
+          </AppWindow>
         </>
       )}
 
@@ -558,7 +586,7 @@ export default function Customers() {
                 </select>
               </label>
               <div className="customer-toolbar__action">
-                <Button variant="secondary" onClick={openWorkerForm}>{t('customers.addNewWorker')}</Button>
+                <Button variant="secondary" onClick={openWorkerForm} ref={addWorkerButtonRef}>{t('customers.addNewWorker')}</Button>
               </div>
             </div>
             {apiError && (
@@ -594,11 +622,19 @@ export default function Customers() {
             />
           )}
 
-          {showWorkerForm && (
-            <Card title={t('customers.addWorkerTitle')} subtitle={t('customers.addWorkerSubtitle')}>
-              <WorkerForm form={workerForm} errors={workerErrors} onChange={handleWorkerChange} onSubmit={handleAddWorker} onCancel={closeWorkerForm} isSaving={isSavingWorker} />
-            </Card>
-          )}
+          <AppWindow
+            id="customers-add-worker"
+            title={t('customers.addWorkerTitle')}
+            description={t('customers.addWorkerSubtitle')}
+            isOpen={showWorkerForm}
+            isDirty={workerFormDirty}
+            isSubmitting={isSavingWorker}
+            defaultSize="large"
+            openerRef={addWorkerButtonRef}
+            onClose={closeWorkerForm}
+          >
+            <WorkerForm form={workerForm} errors={workerErrors} onChange={handleWorkerChange} onSubmit={handleAddWorker} onCancel={closeWorkerForm} isSaving={isSavingWorker} />
+          </AppWindow>
         </>
       )}
     </div>

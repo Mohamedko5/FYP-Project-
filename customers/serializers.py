@@ -17,6 +17,7 @@ from .services import (
     customer_commodity_balances,
     money,
     quantity,
+    record_customer_payment,
     update_customer_basic,
 )
 
@@ -194,45 +195,66 @@ class CustomerCashTransactionSerializer(serializers.ModelSerializer):
     time = serializers.SerializerMethodField()
     administrator_name = serializers.SerializerMethodField()
     balance_after = serializers.SerializerMethodField()
+    invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
+    linked_journal_reference = serializers.CharField(source='linked_journal_transaction.source_reference', read_only=True)
 
     class Meta:
         model = CustomerCashTransaction
         fields = (
             'id',
+            'reference_number',
             'customer',
             'customer_name',
             'customer_code',
             'transaction_type',
             'payment_method',
+            'payment_purpose',
+            'invoice',
+            'invoice_number',
             'amount',
             'description',
             'source_type',
             'source_reference',
             'is_system_generated',
             'linked_journal_transaction',
+            'linked_journal_reference',
             'created_by',
             'created_at',
             'date',
             'time',
             'administrator_name',
             'balance_after',
+            'is_reversed',
+            'reversed_at',
+            'reversed_by',
+            'reversal_reason',
+            'reversal_transaction',
             'is_deleted',
             'deleted_by',
             'deleted_at',
         )
         read_only_fields = (
             'id',
+            'reference_number',
             'customer',
+            'invoice',
+            'invoice_number',
             'source_type',
             'source_reference',
             'is_system_generated',
             'linked_journal_transaction',
+            'linked_journal_reference',
             'created_by',
             'created_at',
             'date',
             'time',
             'administrator_name',
             'balance_after',
+            'is_reversed',
+            'reversed_at',
+            'reversed_by',
+            'reversal_reason',
+            'reversal_transaction',
             'is_deleted',
             'deleted_by',
             'deleted_at',
@@ -279,6 +301,84 @@ class CustomerCashTransactionSerializer(serializers.ModelSerializer):
         instance.full_clean()
         instance.save(update_fields=['description'])
         return instance
+
+
+class CustomerPaymentCreateSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=18, decimal_places=2)
+    payment_method = serializers.ChoiceField(choices=CustomerCashTransaction.PAYMENT_METHOD_CHOICES)
+    payment_purpose = serializers.ChoiceField(choices=CustomerCashTransaction.PAYMENT_PURPOSE_CHOICES)
+    invoice_id = serializers.IntegerField(required=False, allow_null=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+    idempotency_key = serializers.CharField(required=False, allow_blank=True, max_length=120)
+
+    blocked_fields = {
+        'created_by',
+        'created_at',
+        'source_type',
+        'source_reference',
+        'is_system_generated',
+        'reference_number',
+        'linked_journal_transaction',
+    }
+
+    def to_internal_value(self, data):
+        blocked = self.blocked_fields.intersection(data.keys())
+        if blocked:
+            raise serializers.ValidationError({field: ['This field cannot be supplied by the client.'] for field in blocked})
+        return super().to_internal_value(data)
+
+    def validate(self, attrs):
+        invoice_id = attrs.get('invoice_id')
+        invoice = None
+        if invoice_id:
+            from invoices.models import Invoice
+
+            try:
+                invoice = Invoice.objects.get(pk=invoice_id)
+            except Invoice.DoesNotExist as exc:
+                raise serializers.ValidationError({'invoice_id': 'Invoice was not found.'}) from exc
+        attrs['invoice'] = invoice
+        return attrs
+
+    def save(self, **kwargs):
+        try:
+            return record_customer_payment(
+                customer=self.context['customer'],
+                amount=self.validated_data['amount'],
+                payment_method=self.validated_data['payment_method'],
+                payment_purpose=self.validated_data['payment_purpose'],
+                description=self.validated_data.get('description', ''),
+                user=self.context['request'].user,
+                invoice=self.validated_data.get('invoice'),
+                idempotency_key=self.validated_data.get('idempotency_key', ''),
+            )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc
+
+
+class CustomerPaymentResponseSerializer(serializers.Serializer):
+    def to_representation(self, instance):
+        payment, previous_balance, new_balance = instance
+        journal = payment.linked_journal_transaction
+        return {
+            'payment': CustomerCashTransactionSerializer(payment, context=self.context).data,
+            'journal_transaction': {
+                'id': journal.id if journal else None,
+                'cash_type': journal.cash_type if journal else '',
+                'amount': money(journal.amount) if journal else '',
+                'source_type': journal.source_type if journal else '',
+                'source_reference': journal.source_reference if journal else '',
+            },
+            'customer_account': {
+                'previous_balance': money(previous_balance),
+                'new_balance': money(new_balance),
+                'cash_status': customer_cash_status(payment.customer),
+            },
+        }
+
+
+class CustomerPaymentReverseSerializer(serializers.Serializer):
+    reason = serializers.CharField()
 
 
 class CustomerCommodityTransactionSerializer(serializers.ModelSerializer):

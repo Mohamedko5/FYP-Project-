@@ -15,6 +15,9 @@ from .permissions import IsAdminForDeleteOnly
 from .serializers import (
     CustomerCashTransactionSerializer,
     CustomerCommodityTransactionSerializer,
+    CustomerPaymentCreateSerializer,
+    CustomerPaymentResponseSerializer,
+    CustomerPaymentReverseSerializer,
     CustomerSerializer,
 )
 from .services import (
@@ -23,9 +26,11 @@ from .services import (
     customer_cash_totals,
     customer_commodity_balances,
     money,
+    reverse_customer_payment,
     soft_delete_cash_transaction,
     soft_delete_commodity_transaction,
 )
+from .permissions import user_role
 
 
 class CustomerPagination(PageNumberPagination):
@@ -71,6 +76,14 @@ def filter_cash_transactions(queryset, params):
         if payment_method not in dict(CustomerCashTransaction.PAYMENT_METHOD_CHOICES):
             raise ValidationError({'payment_method': 'Choose cash or online.'})
         queryset = queryset.filter(payment_method=payment_method)
+    payment_purpose = params.get('payment_purpose')
+    if payment_purpose:
+        if payment_purpose not in dict(CustomerCashTransaction.PAYMENT_PURPOSE_CHOICES):
+            raise ValidationError({'payment_purpose': 'Unsupported payment purpose.'})
+        queryset = queryset.filter(payment_purpose=payment_purpose)
+    reversed_filter = parse_bool(params.get('is_reversed'), 'is_reversed')
+    if reversed_filter is not None:
+        queryset = queryset.filter(is_reversed=reversed_filter)
     if params.get('date'):
         start, end = day_bounds(parse_local_date(params['date']))
         queryset = queryset.filter(created_at__gte=start, created_at__lte=end)
@@ -202,6 +215,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
         customer.refresh_from_db()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['post'], url_path='payments')
+    def payments(self, request, pk=None):
+        customer = self.get_object()
+        serializer = CustomerPaymentCreateSerializer(data=request.data, context={'request': request, 'customer': customer})
+        serializer.is_valid(raise_exception=True)
+        result = serializer.save()
+        return Response(CustomerPaymentResponseSerializer(result, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=['get', 'post'], url_path='commodity-transactions')
     def commodity_transactions(self, request, pk=None):
         customer = self.get_object()
@@ -245,6 +266,19 @@ class CashTransactionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin,
         except DjangoValidationError as exc:
             raise ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'], url_path='reverse')
+    def reverse(self, request, pk=None):
+        if user_role(request.user) != 'admin':
+            return Response({'detail': 'Only admin users can reverse payments.'}, status=status.HTTP_403_FORBIDDEN)
+        transaction_obj = self.get_object()
+        serializer = CustomerPaymentReverseSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            reversal = reverse_customer_payment(payment=transaction_obj, user=request.user, reason=serializer.validated_data['reason'])
+        except DjangoValidationError as exc:
+            raise ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc
+        return Response(CustomerCashTransactionSerializer(reversal, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
 class CommodityTransactionViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):

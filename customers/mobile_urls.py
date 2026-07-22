@@ -2,6 +2,7 @@ from django.urls import path
 
 from .mobile_views import (
     MobileHomeSummaryView,
+    MobileForgotPasswordView,
     MobileInvoiceDetailView,
     MobileInvoiceListView,
     MobileLoginView,
@@ -11,14 +12,27 @@ from .mobile_views import (
     MobileOrderListCreateView,
     MobileProductDetailView,
     MobileProductListView,
+    MobileRegisterView,
+    MobileRegistrationStatusView,
+    MobileResendVerificationView,
+    MobileResetPasswordView,
     MobileRefreshView,
     MobileShipmentDetailView,
     MobileShipmentListView,
+    MobileVerifyEmailView,
+    MobileVerifyResetCodeView,
 )
 
 
 urlpatterns = [
     path('auth/login/', MobileLoginView.as_view(), name='mobile_auth_login'),
+    path('auth/register/', MobileRegisterView.as_view(), name='mobile_auth_register'),
+    path('auth/verify-email/', MobileVerifyEmailView.as_view(), name='mobile_auth_verify_email'),
+    path('auth/resend-verification/', MobileResendVerificationView.as_view(), name='mobile_auth_resend_verification'),
+    path('auth/registration-status/', MobileRegistrationStatusView.as_view(), name='mobile_auth_registration_status'),
+    path('auth/forgot-password/', MobileForgotPasswordView.as_view(), name='mobile_auth_forgot_password'),
+    path('auth/verify-reset-code/', MobileVerifyResetCodeView.as_view(), name='mobile_auth_verify_reset_code'),
+    path('auth/reset-password/', MobileResetPasswordView.as_view(), name='mobile_auth_reset_password'),
     path('auth/refresh/', MobileRefreshView.as_view(), name='mobile_auth_refresh'),
     path('auth/logout/', MobileLogoutView.as_view(), name='mobile_auth_logout'),
     path('me/', MobileMeView.as_view(), name='mobile_me'),

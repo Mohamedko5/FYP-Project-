@@ -40,6 +40,13 @@ class JournalTransaction(models.Model):
         (SOURCE_WORKER, 'Worker'),
     ]
 
+    WAREHOUSE_STOCK_IN = 'stock_in'
+    WAREHOUSE_MANUAL_WITHDRAWAL = 'manual_withdrawal'
+    WAREHOUSE_OPERATION_CHOICES = [
+        (WAREHOUSE_STOCK_IN, 'Add Stock'),
+        (WAREHOUSE_MANUAL_WITHDRAWAL, 'Manual Withdrawal'),
+    ]
+
     PRODUCT_WHITE_SESAME = 'White Sesame'
     PRODUCT_RED_SESAME = 'Red Sesame'
     PRODUCT_CORN = 'Corn'
@@ -66,6 +73,16 @@ class JournalTransaction(models.Model):
     source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES, default=SOURCE_MANUAL)
     source_reference = models.CharField(max_length=120, blank=True)
     is_system_generated = models.BooleanField(default=False)
+    idempotency_key = models.CharField(max_length=120, blank=True)
+    idempotency_hash = models.CharField(max_length=64, blank=True)
+    linked_inventory_movement = models.OneToOneField('inventory.InventoryMovement', on_delete=models.PROTECT, related_name='journal_transaction', null=True, blank=True)
+    warehouse_operation = models.CharField(max_length=30, choices=WAREHOUSE_OPERATION_CHOICES, null=True, blank=True)
+    warehouse = models.ForeignKey('inventory.Warehouse', on_delete=models.PROTECT, related_name='journal_transactions', null=True, blank=True)
+    is_reversed = models.BooleanField(default=False)
+    reversed_at = models.DateTimeField(null=True, blank=True)
+    reversed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='reversed_journal_transactions', null=True, blank=True)
+    reversal_reason = models.TextField(blank=True)
+    reversal_transaction = models.ForeignKey('self', on_delete=models.PROTECT, related_name='reversed_originals', null=True, blank=True)
 
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='created_journal_transactions')
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='updated_journal_transactions', null=True, blank=True)
@@ -92,6 +109,11 @@ class JournalTransaction(models.Model):
             models.Index(fields=['cash_type']),
             models.Index(fields=['payment_method']),
             models.Index(fields=['product_name']),
+            models.Index(fields=['source_type', 'source_reference']),
+            models.Index(fields=['warehouse_operation']),
+            models.Index(fields=['warehouse']),
+            models.Index(fields=['idempotency_key']),
+            models.Index(fields=['is_reversed']),
             models.Index(fields=['is_deleted']),
             models.Index(fields=['journal_type', 'created_at']),
         ]
@@ -107,6 +129,16 @@ class JournalTransaction(models.Model):
             models.CheckConstraint(
                 name='journal_estimated_value_non_negative_or_null',
                 condition=models.Q(estimated_value__gte=0) | models.Q(estimated_value__isnull=True),
+            ),
+            models.UniqueConstraint(
+                fields=['source_type', 'source_reference'],
+                condition=~models.Q(source_reference=''),
+                name='unique_journal_source_reference',
+            ),
+            models.UniqueConstraint(
+                fields=['created_by', 'idempotency_key'],
+                condition=~models.Q(idempotency_key=''),
+                name='unique_journal_user_idempotency_key',
             ),
         ]
 

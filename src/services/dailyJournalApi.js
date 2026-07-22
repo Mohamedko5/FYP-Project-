@@ -26,6 +26,21 @@ export function createJournalTransaction(payload) {
   });
 }
 
+export function createWarehouseCommodityTransaction(payload) {
+  return apiRequest('/api/journal/warehouse-commodity-transactions/', {
+    method: 'POST',
+    headers: payload.idempotency_key ? { 'Idempotency-Key': payload.idempotency_key } : undefined,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function reverseWarehouseCommodityTransaction(id, payload) {
+  return apiRequest(`/api/journal/warehouse-commodity-transactions/${id}/reverse/`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export function updateJournalTransaction(id, payload) {
   return apiRequest(`/api/journal/transactions/${id}/`, {
     method: 'PATCH',

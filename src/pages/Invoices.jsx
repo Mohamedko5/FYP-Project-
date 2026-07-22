@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ConfirmationDialog,
@@ -15,6 +15,7 @@ import {
 } from '../components/ui/ModuleInterface.jsx';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
+import AppWindow from '../components/ui/AppWindow.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 import Table from '../components/ui/Table.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
@@ -156,8 +157,13 @@ export default function Invoices() {
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const processedOrderRef = useRef(null);
+  const paymentButtonRef = useRef(null);
+  const cancelButtonRef = useRef(null);
   const role = readRole();
   const isAdmin = role === 'admin';
+  const paymentDirty = Boolean(paymentDialog) && JSON.stringify(paymentForm) !== JSON.stringify({ payment_method: 'cash', payment_reference: '' });
+  const cancelDirty = Boolean(cancelDialog) && Boolean(cancelReason.trim());
 
   const loadInvoices = useCallback(async (nextFilters = filters, tab = activeTab) => {
     setLoading(true);
@@ -184,6 +190,8 @@ export default function Invoices() {
   useEffect(() => {
     const orderId = location.state?.orderId;
     if (!orderId) return;
+    if (processedOrderRef.current === orderId) return;
+    processedOrderRef.current = orderId;
     setSaving(true);
     setErrors([]);
     createInvoiceFromOrder(orderId)
@@ -277,9 +285,9 @@ export default function Invoices() {
       render: (row) => (
         <div className="table-action-group">
           <Button variant="secondary" onClick={() => setSelectedInvoice(row)}>{t('view')}</Button>
-          {row.payment_status === 'unpaid' && row.status !== 'cancelled' && <Button variant="secondary" onClick={() => openPaymentDialog(row)}>{label.markPaid}</Button>}
+          {row.payment_status === 'unpaid' && row.status !== 'cancelled' && <Button variant="secondary" onClick={() => openPaymentDialog(row)} ref={paymentButtonRef}>{label.markPaid}</Button>}
           <Button variant="secondary" onClick={() => printInvoice(row)}>{t('reports.printPdf')}</Button>
-          {isAdmin && row.payment_status === 'unpaid' && row.status !== 'cancelled' && <Button variant="secondary" onClick={() => { setCancelDialog(row); setDialogErrors([]); }}>{t('cancel')}</Button>}
+          {isAdmin && row.payment_status === 'unpaid' && row.status !== 'cancelled' && <Button variant="secondary" onClick={() => { setCancelDialog(row); setDialogErrors([]); }} ref={cancelButtonRef}>{t('cancel')}</Button>}
         </div>
       ),
     },
@@ -408,15 +416,26 @@ export default function Invoices() {
             ] : [
               { label: t('orders.paymentStatus'), value: <StatusBadge status="Unpaid" /> },
               { label: label.outstanding, value: money(selectedInvoice.outstanding_amount, selectedInvoice.currency) },
-              { label: label.markPaid, value: <Button onClick={() => openPaymentDialog(selectedInvoice)}>{label.markPaid}</Button> },
+              { label: label.markPaid, value: <Button onClick={() => openPaymentDialog(selectedInvoice)} ref={paymentButtonRef}>{label.markPaid}</Button> },
             ]} />
           </DetailSection>
           {selectedInvoice.notes && <DetailSection title={label.notes}><p className="module-notes">{selectedInvoice.notes}</p></DetailSection>}
         </Card>
       )}
 
-      {paymentDialog && (
-        <ConfirmationDialog title={label.confirmPayment} description={label.paymentWarning} confirmLabel={label.confirmPayment} cancelLabel={t('cancel')} saving={saving} onCancel={() => setPaymentDialog(null)} onConfirm={confirmPayment}>
+      <AppWindow
+        id="invoice-payment"
+        title={label.confirmPayment}
+        description={label.paymentWarning}
+        isOpen={Boolean(paymentDialog)}
+        isDirty={paymentDirty}
+        isSubmitting={saving}
+        defaultSize="medium"
+        openerRef={paymentButtonRef}
+        onClose={() => setPaymentDialog(null)}
+      >
+        {paymentDialog && (
+        <form className="section-panel" onSubmit={(event) => { event.preventDefault(); confirmPayment(); }}>
           <RecordMeta items={[
             { label: t('common.invoiceNumber'), value: paymentDialog.invoice_number },
             { label: t('common.customerName'), value: paymentDialog.customer_name },
@@ -427,19 +446,40 @@ export default function Invoices() {
             <label>{label.paymentReference}<input value={paymentForm.payment_reference} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_reference: event.target.value }))} /></label>
           </div>
           <ErrorState errors={dialogErrors} />
-        </ConfirmationDialog>
-      )}
+          <div className="workflow-actions">
+            <Button type="submit" disabled={saving}>{saving ? label.saving : label.confirmPayment}</Button>
+            <Button type="button" variant="secondary" onClick={() => setPaymentDialog(null)} disabled={saving}>{t('cancel')}</Button>
+          </div>
+        </form>
+        )}
+      </AppWindow>
 
-      {cancelDialog && (
-        <ConfirmationDialog title={label.cancelInvoice} description={label.cancelWarning} confirmLabel={label.cancelInvoice} cancelLabel={t('cancel')} saving={saving} variant="danger" onCancel={() => setCancelDialog(null)} onConfirm={confirmCancel}>
+      <AppWindow
+        id="invoice-cancel"
+        title={label.cancelInvoice}
+        description={label.cancelWarning}
+        isOpen={Boolean(cancelDialog)}
+        isDirty={cancelDirty}
+        isSubmitting={saving}
+        defaultSize="medium"
+        openerRef={cancelButtonRef}
+        onClose={() => setCancelDialog(null)}
+      >
+        {cancelDialog && (
+        <form className="section-panel" onSubmit={(event) => { event.preventDefault(); confirmCancel(); }}>
           <RecordMeta items={[
             { label: t('common.invoiceNumber'), value: cancelDialog.invoice_number },
             { label: t('common.customerName'), value: cancelDialog.customer_name },
           ]} />
           <label className="module-dialog-field">{label.reason}<textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} required /></label>
           <ErrorState errors={dialogErrors} />
-        </ConfirmationDialog>
-      )}
+          <div className="workflow-actions">
+            <Button type="submit" disabled={saving}>{saving ? label.saving : label.cancelInvoice}</Button>
+            <Button type="button" variant="secondary" onClick={() => setCancelDialog(null)} disabled={saving}>{t('cancel')}</Button>
+          </div>
+        </form>
+        )}
+      </AppWindow>
 
       {selectedInvoice && (
         <div className="invoice-print-page print-area">

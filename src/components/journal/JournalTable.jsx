@@ -11,11 +11,15 @@ export default function JournalTable({ entries, onEdit, t }) {
     { key: 'category', label: t('common.category') },
     { key: 'party', label: t('common.customerSupplier') },
     { key: 'amount', label: t('common.amount'), render: (row) => formatCurrency(row.amount) },
+    { key: 'source_type', label: t('journal.source'), render: (row) => row.source_type === 'customer' ? t('customers.customerPayment') : row.source_type || '-' },
+    { key: 'source_reference', label: t('customers.paymentReference'), render: (row) => row.source_reference || '-' },
     { key: 'description', label: t('common.description') },
     {
       key: 'actions',
       label: t('common.action'),
-      render: (row) => (
+      render: (row) => row.is_system_generated ? (
+        <span className="muted-text">{t('customers.readOnly')}</span>
+      ) : (
         <Button variant="secondary" onClick={() => onEdit(row)}>
           {t('edit')}
         </Button>

@@ -1,7 +1,9 @@
 from decimal import Decimal
+import secrets
 import re
 
 from django.conf import settings
+from django.contrib.auth.hashers import check_password, make_password
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, Sum
@@ -207,6 +209,116 @@ class MobileIdempotencyKey(models.Model):
         return f'{self.customer.code} {self.operation} {self.key}'
 
 
+def six_digit_code():
+    return f'{secrets.randbelow(1000000):06d}'
+
+
+class CustomerRegistrationRequest(models.Model):
+    STATUS_EMAIL_PENDING = 'email_verification_pending'
+    STATUS_PENDING_APPROVAL = 'pending_approval'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+    STATUS_EXPIRED = 'expired'
+    STATUS_CHOICES = [
+        (STATUS_EMAIL_PENDING, 'Email Verification Pending'),
+        (STATUS_PENDING_APPROVAL, 'Pending Approval'),
+        (STATUS_APPROVED, 'Approved'),
+        (STATUS_REJECTED, 'Rejected'),
+        (STATUS_EXPIRED, 'Expired'),
+    ]
+
+    full_name = models.CharField(max_length=150)
+    business_name = models.CharField(max_length=150, blank=True)
+    email = models.EmailField()
+    phone = models.CharField(max_length=30)
+    secondary_phone = models.CharField(max_length=30, blank=True)
+    address = models.CharField(max_length=255)
+    customer_type = models.CharField(max_length=20, choices=Customer.CUSTOMER_TYPE_CHOICES)
+    password_hash = models.CharField(max_length=255)
+    email_verified = models.BooleanField(default=False)
+    verification_code_hash = models.CharField(max_length=255, blank=True)
+    verification_code_expires_at = models.DateTimeField(null=True, blank=True)
+    verification_attempts = models.PositiveIntegerField(default=0)
+    last_verification_sent_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=40, choices=STATUS_CHOICES, default=STATUS_EMAIL_PENDING)
+    rejection_reason = models.TextField(blank=True)
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='approved_customer_registrations', null=True, blank=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    created_user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='customer_registration_request', null=True, blank=True)
+    created_customer = models.OneToOneField(Customer, on_delete=models.SET_NULL, related_name='registration_request', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['email']),
+            models.Index(fields=['phone']),
+            models.Index(fields=['status']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def set_password(self, raw_password):
+        self.password_hash = make_password(raw_password)
+
+    def check_registration_password(self, raw_password):
+        return check_password(raw_password, self.password_hash)
+
+    def set_verification_code(self, raw_code=None):
+        code = raw_code or six_digit_code()
+        self.verification_code_hash = make_password(code)
+        self.verification_code_expires_at = timezone.now() + timezone.timedelta(minutes=10)
+        self.verification_attempts = 0
+        self.last_verification_sent_at = timezone.now()
+        return code
+
+    def check_verification_code(self, code):
+        return bool(self.verification_code_hash and check_password(code, self.verification_code_hash))
+
+    @property
+    def is_verification_expired(self):
+        return bool(self.verification_code_expires_at and timezone.now() > self.verification_code_expires_at)
+
+    def __str__(self):
+        return f'{self.email} - {self.status}'
+
+
+class CustomerPasswordResetRequest(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='customer_password_reset_requests')
+    code_hash = models.CharField(max_length=255)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveIntegerField(default=0)
+    is_verified = models.BooleanField(default=False)
+    is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_used']),
+            models.Index(fields=['expires_at']),
+        ]
+
+    def set_code(self, raw_code=None):
+        code = raw_code or six_digit_code()
+        self.code_hash = make_password(code)
+        self.expires_at = timezone.now() + timezone.timedelta(minutes=10)
+        self.attempts = 0
+        return code
+
+    def check_code(self, code):
+        return check_password(code, self.code_hash)
+
+    @property
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    def __str__(self):
+        return f'{self.user.email} reset {self.created_at:%Y-%m-%d %H:%M}'
+
+
 class CustomerCashTransaction(models.Model):
     OPENING_DEBT = 'opening_debt'
     OPENING_CREDIT = 'opening_credit'
@@ -239,6 +351,19 @@ class CustomerCashTransaction(models.Model):
     PAYMENT_REQUIRED_TYPES = {PAYMENT_RECEIVED, CUSTOMER_EXPENSE}
     PAYMENT_FORBIDDEN_TYPES = {PAYMENT_OWED, OPENING_DEBT, OPENING_CREDIT, INVOICE_CHARGE}
 
+    PURPOSE_INVOICE_PAYMENT = 'invoice_payment'
+    PURPOSE_PREVIOUS_BALANCE = 'previous_balance'
+    PURPOSE_ADVANCE_PAYMENT = 'advance_payment'
+    PURPOSE_GENERAL_ACCOUNT_PAYMENT = 'general_account_payment'
+    PURPOSE_OTHER = 'other'
+    PAYMENT_PURPOSE_CHOICES = [
+        (PURPOSE_INVOICE_PAYMENT, 'Invoice Payment'),
+        (PURPOSE_PREVIOUS_BALANCE, 'Previous Balance Payment'),
+        (PURPOSE_ADVANCE_PAYMENT, 'Advance Payment'),
+        (PURPOSE_GENERAL_ACCOUNT_PAYMENT, 'General Account Payment'),
+        (PURPOSE_OTHER, 'Other'),
+    ]
+
     SOURCE_MANUAL = 'manual'
     SOURCE_CUSTOMER = 'customer'
     SOURCE_INVOICE = 'invoice'
@@ -250,17 +375,27 @@ class CustomerCashTransaction(models.Model):
         (SOURCE_SYSTEM, 'System'),
     ]
 
+    reference_number = models.CharField(max_length=30, unique=True, null=True, blank=True)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='cash_transactions')
     transaction_type = models.CharField(max_length=30, choices=TRANSACTION_TYPE_CHOICES)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True)
+    payment_purpose = models.CharField(max_length=40, choices=PAYMENT_PURPOSE_CHOICES, blank=True)
+    invoice = models.ForeignKey('invoices.Invoice', on_delete=models.PROTECT, related_name='customer_cash_transactions', null=True, blank=True)
     amount = models.DecimalField(max_digits=18, decimal_places=2)
     description = models.TextField()
     source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES, default=SOURCE_MANUAL)
     source_reference = models.CharField(max_length=120, blank=True)
     is_system_generated = models.BooleanField(default=False)
     linked_journal_transaction = models.ForeignKey('daily_journal.JournalTransaction', on_delete=models.PROTECT, null=True, blank=True, related_name='customer_cash_transactions')
+    idempotency_key = models.CharField(max_length=120, blank=True)
+    idempotency_hash = models.CharField(max_length=64, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='created_customer_cash_transactions')
     created_at = models.DateTimeField(default=timezone.now)
+    is_reversed = models.BooleanField(default=False)
+    reversed_at = models.DateTimeField(null=True, blank=True)
+    reversed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='reversed_customer_cash_transactions', null=True, blank=True)
+    reversal_reason = models.TextField(blank=True)
+    reversal_transaction = models.ForeignKey('self', on_delete=models.PROTECT, related_name='reversed_originals', null=True, blank=True)
     is_deleted = models.BooleanField(default=False)
     deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='deleted_customer_cash_transactions', null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
@@ -268,17 +403,36 @@ class CustomerCashTransaction(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
+            models.Index(fields=['reference_number']),
             models.Index(fields=['customer']),
             models.Index(fields=['transaction_type']),
             models.Index(fields=['payment_method']),
+            models.Index(fields=['payment_purpose']),
+            models.Index(fields=['invoice']),
             models.Index(fields=['created_at']),
             models.Index(fields=['source_type']),
             models.Index(fields=['source_reference']),
+            models.Index(fields=['idempotency_key']),
+            models.Index(fields=['is_reversed']),
             models.Index(fields=['is_deleted']),
         ]
         constraints = [
             models.CheckConstraint(condition=Q(amount__gt=0), name='customer_cash_amount_positive'),
+            models.UniqueConstraint(
+                fields=['customer', 'idempotency_key'],
+                condition=~Q(idempotency_key=''),
+                name='unique_customer_payment_idempotency_key',
+            ),
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.reference_number:
+            year = timezone.localdate().year
+            prefix = f'CUS-PAY-{year}-'
+            last = CustomerCashTransaction.objects.filter(reference_number__startswith=prefix).order_by('-reference_number').values_list('reference_number', flat=True).first()
+            next_number = int(last.rsplit('-', 1)[1]) + 1 if last else 1
+            self.reference_number = f'{prefix}{next_number:06d}'
+        super().save(*args, **kwargs)
 
     def clean(self):
         errors = {}
@@ -297,6 +451,8 @@ class CustomerCashTransaction(models.Model):
             errors['payment_method'] = 'Choose cash or online.'
         if self.transaction_type not in dict(self.TRANSACTION_TYPE_CHOICES):
             errors['transaction_type'] = 'Choose a valid transaction type.'
+        if self.payment_purpose and self.payment_purpose not in dict(self.PAYMENT_PURPOSE_CHOICES):
+            errors['payment_purpose'] = 'Choose a valid payment purpose.'
         if errors:
             raise ValidationError(errors)
 

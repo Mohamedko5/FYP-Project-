@@ -6,9 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/routing/route_names.dart';
 import '../../../core/storage/preferences_provider.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_text_field.dart';
 import '../domain/auth_state.dart';
+import 'auth_login_widgets.dart';
 import 'auth_controller.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -62,107 +61,165 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final auth = ref.watch(authControllerProvider);
     final isLoading = auth.status == AuthStatus.loading;
     return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight - 40),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
+      body: LoginBackground(
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isShort = constraints.maxHeight < 680;
+              return SingleChildScrollView(
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.fromLTRB(20, isShort ? 18 : 28, 20, 22),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight - (isShort ? 40 : 56)),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 460),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 420),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, child) {
+                          return Opacity(
+                            opacity: value,
+                            child: Transform.translate(
+                              offset: Offset(0, 18 * (1 - value)),
+                              child: child,
+                            ),
+                          );
+                        },
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Align(
-                              alignment: AlignmentDirectional.centerEnd,
-                              child: TextButton(
-                                onPressed: () => ref.read(localeControllerProvider.notifier).toggle(),
-                                child: Text(l10n.language),
-                              ),
+                            AppLogoHeader(
+                              companyName: l10n.companyName,
+                              systemName: l10n.systemName,
+                              language: l10n.language,
+                              onLanguagePressed: () => ref.read(localeControllerProvider.notifier).toggle(),
                             ),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 56,
-                                  height: 56,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(color: AppColors.green, borderRadius: BorderRadius.circular(12)),
-                                  child: const Text('B', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(l10n.companyName, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                                      const SizedBox(height: 4),
-                                      Text(l10n.systemName, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.mutedText)),
+                            SizedBox(height: isShort ? 22 : 34),
+                            LoginCard(
+                              child: Padding(
+                                padding: EdgeInsets.fromLTRB(24, isShort ? 24 : 28, 24, 24),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      l10n.appTitle.toUpperCase(),
+                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                            color: AppColors.green,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.7,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      l10n.loginTitle,
+                                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                            color: AppColors.text,
+                                            fontWeight: FontWeight.w900,
+                                            height: 1.05,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      l10n.loginSubtitle,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            color: AppColors.mutedText,
+                                            fontWeight: FontWeight.w600,
+                                            height: 1.45,
+                                          ),
+                                    ),
+                                    if (auth.message != null && auth.message!.isNotEmpty) ...[
+                                      const SizedBox(height: 18),
+                                      AuthErrorBanner(message: auth.message!),
                                     ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 24),
-                            Text(l10n.loginTitle, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-                            const SizedBox(height: 8),
-                            Text(l10n.loginSubtitle, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.mutedText)),
-                            if (auth.message != null && auth.message!.isNotEmpty) ...[
-                              const SizedBox(height: 16),
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: AppColors.danger.withValues(alpha: 0.09),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: AppColors.danger.withValues(alpha: 0.28)),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Text(auth.message!, style: const TextStyle(color: AppColors.danger)),
+                                    SizedBox(height: isShort ? 22 : 28),
+                                    LoginTextField(
+                                      controller: _emailController,
+                                      label: l10n.emailAddress,
+                                      hint: l10n.enterEmail,
+                                      errorText: _emailError,
+                                      keyboardType: TextInputType.emailAddress,
+                                      textInputAction: TextInputAction.next,
+                                      enabled: !isLoading,
+                                      textDirection: TextDirection.ltr,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    LoginTextField(
+                                      controller: _passwordController,
+                                      label: l10n.password,
+                                      hint: l10n.enterPassword,
+                                      errorText: _passwordError,
+                                      obscureText: !_showPassword,
+                                      enabled: !isLoading,
+                                      textInputAction: TextInputAction.done,
+                                      onSubmitted: (_) => _submit(l10n),
+                                      suffixIcon: IconButton(
+                                        tooltip: _showPassword ? l10n.hidePassword : l10n.showPassword,
+                                        onPressed: isLoading ? null : () => setState(() => _showPassword = !_showPassword),
+                                        icon: Icon(_showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Align(
+                                      alignment: AlignmentDirectional.centerEnd,
+                                      child: TextButton(
+                                        onPressed: isLoading ? null : () => context.goNamed(RouteNames.forgotPassword),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: AppColors.green,
+                                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
+                                        ),
+                                        child: Text(l10n.forgotPassword),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    LoginPrimaryButton(label: isLoading ? l10n.signingIn : l10n.login, isLoading: isLoading, onPressed: () => _submit(l10n)),
+                                  ],
                                 ),
                               ),
-                            ],
-                            const SizedBox(height: 22),
-                            AppTextField(
-                              controller: _emailController,
-                              label: l10n.emailAddress,
-                              hint: l10n.enterEmail,
-                              errorText: _emailError,
-                              keyboardType: TextInputType.emailAddress,
-                              textInputAction: TextInputAction.next,
-                              enabled: !isLoading,
                             ),
-                            const SizedBox(height: 16),
-                            AppTextField(
-                              controller: _passwordController,
-                              label: l10n.password,
-                              hint: l10n.enterPassword,
-                              errorText: _passwordError,
-                              obscureText: !_showPassword,
-                              enabled: !isLoading,
-                              textInputAction: TextInputAction.done,
-                              onSubmitted: (_) => _submit(l10n),
-                              suffixIcon: IconButton(
-                                tooltip: _showPassword ? l10n.hidePassword : l10n.showPassword,
-                                onPressed: isLoading ? null : () => setState(() => _showPassword = !_showPassword),
-                                icon: Icon(_showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                            const SizedBox(height: 18),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.68),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                child: Wrap(
+                                  alignment: WrapAlignment.center,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      l10n.newToBayad,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            color: AppColors.deepGreen,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    TextButton(
+                                      onPressed: isLoading ? null : () => context.goNamed(RouteNames.register),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: AppColors.green,
+                                        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
+                                      ),
+                                      child: Text(l10n.createAccount),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 24),
-                            AppButton(label: isLoading ? l10n.signingIn : l10n.login, isLoading: isLoading, onPressed: () => _submit(l10n)),
                           ],
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

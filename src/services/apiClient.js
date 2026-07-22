@@ -35,7 +35,13 @@ async function readResponseBody(response) {
 
 function flattenErrors(data) {
   if (!data) return ['Request failed. Please try again.'];
-  if (typeof data === 'string') return [data];
+  if (typeof data === 'string') {
+    if (data.trim().toLowerCase().startsWith('<!doctype html') || data.trim().toLowerCase().startsWith('<html')) {
+      const title = data.match(/<title>(.*?)<\/title>/is)?.[1]?.replace(/\s+/g, ' ').trim();
+      return [title ? `Server error: ${title}` : 'Server error. Please check the backend console.'];
+    }
+    return [data];
+  }
   if (Array.isArray(data)) return data.map(String);
   if (data.detail) return [String(data.detail)];
 

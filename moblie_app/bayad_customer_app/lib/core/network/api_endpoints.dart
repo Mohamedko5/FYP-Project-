@@ -1,5 +1,12 @@
 class ApiEndpoints {
   static const mobileLogin = '/api/mobile/auth/login/';
+  static const mobileRegister = '/api/mobile/auth/register/';
+  static const mobileVerifyEmail = '/api/mobile/auth/verify-email/';
+  static const mobileResendVerification = '/api/mobile/auth/resend-verification/';
+  static const mobileRegistrationStatus = '/api/mobile/auth/registration-status/';
+  static const mobileForgotPassword = '/api/mobile/auth/forgot-password/';
+  static const mobileVerifyResetCode = '/api/mobile/auth/verify-reset-code/';
+  static const mobileResetPassword = '/api/mobile/auth/reset-password/';
   static const mobileRefresh = '/api/mobile/auth/refresh/';
   static const mobileLogout = '/api/mobile/auth/logout/';
   static const mobileMe = '/api/mobile/me/';

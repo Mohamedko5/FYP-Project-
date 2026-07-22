@@ -188,6 +188,16 @@ void main() {
     expect(find.text('Customer Login'), findsOneWidget);
   });
 
+  testWidgets('Login displays Create Account', (tester) async {
+    await pumpBayadApp(tester);
+    expect(find.text('Create Account'), findsOneWidget);
+  });
+
+  testWidgets('Login displays Forgot Password', (tester) async {
+    await pumpBayadApp(tester);
+    expect(find.text('Forgot Password?'), findsOneWidget);
+  });
+
   test('Logout clears secure tokens path', () async {
     final repository = FakeAuthRepository();
     final controller = AuthController(repository: repository, storage: SecureStorageService());

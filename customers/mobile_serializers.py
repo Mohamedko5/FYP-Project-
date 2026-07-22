@@ -1,9 +1,14 @@
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from django.conf import settings
 
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
+from django.core import signing
 from rest_framework import serializers
 
 from inventory.models import Inventory, Product, ProductUnit
@@ -11,13 +16,14 @@ from invoices.models import Invoice
 from orders.models import Order, OrderItem
 from shipments.models import Shipment
 
-from .models import Customer, CustomerAccount
+from .models import Customer, CustomerAccount, CustomerPasswordResetRequest, CustomerRegistrationRequest, PHONE_RE, normalize_phone
 from .permissions import is_mobile_customer_user
 
 
 User = get_user_model()
 MONEY_QUANT = Decimal('0.01')
 QTY_QUANT = Decimal('0.001')
+GENERIC_RESET_MESSAGE = 'If an account exists for this email, a password reset code has been sent.'
 
 
 def money(value):
@@ -110,6 +116,19 @@ class MobileLoginSerializer(serializers.Serializer):
         email = attrs['email'].lower()
         password = attrs['password']
         user = User.objects.filter(email__iexact=email).first()
+        registration = CustomerRegistrationRequest.objects.filter(email__iexact=email).exclude(status=CustomerRegistrationRequest.STATUS_APPROVED).order_by('-created_at').first()
+        if registration and registration.check_registration_password(password):
+            code = {
+                CustomerRegistrationRequest.STATUS_EMAIL_PENDING: 'email_not_verified',
+                CustomerRegistrationRequest.STATUS_PENDING_APPROVAL: 'account_pending_approval',
+                CustomerRegistrationRequest.STATUS_REJECTED: 'registration_rejected',
+            }.get(registration.status, 'account_pending_approval')
+            detail = {
+                'email_not_verified': 'Please verify your email before signing in.',
+                'account_pending_approval': 'Your account is waiting for administrator approval.',
+                'registration_rejected': 'Your account registration was not approved. Please contact Bayad Company.',
+            }[code]
+            raise serializers.ValidationError({'code': code, 'detail': detail})
         if not user:
             self.fail('invalid_credentials')
 
@@ -127,6 +146,229 @@ class MobileLoginSerializer(serializers.Serializer):
         attrs['user'] = authenticated_user
         attrs['customer'] = account.customer
         return attrs
+
+
+def mask_email(email):
+    name, _, domain = email.partition('@')
+    if len(name) <= 2:
+        masked = name[:1] + '*'
+    else:
+        masked = f'{name[0]}***{name[-1]}'
+    return f'{masked}@{domain}'
+
+
+def send_registration_code(registration, code):
+    send_mail(
+        subject='Bayad Customer Email Verification',
+        message=f'Your Bayad customer verification code is {code}. It expires in 10 minutes.',
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[registration.email],
+        fail_silently=False,
+    )
+
+
+def send_reset_code(user, code):
+    send_mail(
+        subject='Bayad Customer Password Reset',
+        message=f'Your Bayad customer password reset code is {code}. It expires in 10 minutes.',
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
+
+
+class MobileRegistrationSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=150)
+    business_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    email = serializers.EmailField()
+    phone = serializers.CharField(max_length=30)
+    secondary_phone = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    address = serializers.CharField(max_length=255)
+    customer_type = serializers.ChoiceField(choices=[choice[0] for choice in Customer.CUSTOMER_TYPE_CHOICES])
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
+    confirm_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    accept_terms = serializers.BooleanField(required=False)
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        if User.objects.filter(email__iexact=email, is_active=True).exists():
+            raise serializers.ValidationError('Unable to create account with these details.')
+        if CustomerRegistrationRequest.objects.filter(email__iexact=email, status__in=[
+            CustomerRegistrationRequest.STATUS_EMAIL_PENDING,
+            CustomerRegistrationRequest.STATUS_PENDING_APPROVAL,
+        ]).exists():
+            raise serializers.ValidationError('A registration request is already being reviewed.')
+        return email
+
+    def validate_phone(self, value):
+        phone = normalize_phone(value)
+        if not PHONE_RE.match(phone):
+            raise serializers.ValidationError('Enter a valid phone number.')
+        if Customer.objects.filter(phone=phone, is_active=True, is_deleted=False).exists():
+            raise serializers.ValidationError('Unable to create account with these details.')
+        return phone
+
+    def validate_secondary_phone(self, value):
+        phone = normalize_phone(value)
+        if phone and not PHONE_RE.match(phone):
+            raise serializers.ValidationError('Enter a valid phone number.')
+        return phone
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({'confirm_password': 'Passwords do not match.'})
+        if attrs.get('accept_terms') is False:
+            raise serializers.ValidationError({'accept_terms': 'You must accept the terms.'})
+        password = attrs['password']
+        if not (any(char.isupper() for char in password) and any(char.islower() for char in password) and any(char.isdigit() for char in password)):
+            raise serializers.ValidationError({'password': 'Password must include uppercase, lowercase, and number characters.'})
+        try:
+            validate_password(password)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({'password': list(exc.messages)}) from exc
+        return attrs
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        validated_data.pop('confirm_password', None)
+        validated_data.pop('accept_terms', None)
+        registration = CustomerRegistrationRequest(**validated_data)
+        registration.set_password(password)
+        code = registration.set_verification_code()
+        registration.full_clean(exclude=['password_hash', 'verification_code_hash'])
+        registration.save()
+        send_registration_code(registration, code)
+        return registration
+
+
+class MobileVerifyEmailSerializer(serializers.Serializer):
+    registration_id = serializers.IntegerField()
+    verification_code = serializers.RegexField(r'^\d{6}$')
+
+    def save(self):
+        try:
+            registration = CustomerRegistrationRequest.objects.get(pk=self.validated_data['registration_id'])
+        except CustomerRegistrationRequest.DoesNotExist as exc:
+            raise serializers.ValidationError({'detail': 'Invalid or expired verification code.'}) from exc
+        if registration.status != CustomerRegistrationRequest.STATUS_EMAIL_PENDING or registration.is_verification_expired:
+            raise serializers.ValidationError({'detail': 'Invalid or expired verification code.'})
+        if registration.verification_attempts >= 5:
+            raise serializers.ValidationError({'detail': 'Too many verification attempts. Please request a new code.'})
+        if not registration.check_verification_code(self.validated_data['verification_code']):
+            registration.verification_attempts += 1
+            registration.save(update_fields=['verification_attempts', 'updated_at'])
+            raise serializers.ValidationError({'detail': 'Invalid or expired verification code.'})
+        registration.email_verified = True
+        registration.status = CustomerRegistrationRequest.STATUS_PENDING_APPROVAL
+        registration.verification_code_hash = ''
+        registration.verification_code_expires_at = None
+        registration.save(update_fields=['email_verified', 'status', 'verification_code_hash', 'verification_code_expires_at', 'updated_at'])
+        return registration
+
+
+class MobileResendVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def save(self):
+        email = self.validated_data['email'].strip().lower()
+        registration = CustomerRegistrationRequest.objects.filter(email__iexact=email, status=CustomerRegistrationRequest.STATUS_EMAIL_PENDING).order_by('-created_at').first()
+        if registration:
+            code = registration.set_verification_code()
+            registration.save(update_fields=['verification_code_hash', 'verification_code_expires_at', 'verification_attempts', 'last_verification_sent_at', 'updated_at'])
+            send_registration_code(registration, code)
+        return None
+
+
+class MobileRegistrationStatusSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def status_payload(self):
+        email = self.validated_data['email'].strip().lower()
+        registration = CustomerRegistrationRequest.objects.filter(email__iexact=email).order_by('-created_at').first()
+        if not registration:
+            return {'status': 'not_found', 'message': 'No active registration request was found.'}
+        messages = {
+            CustomerRegistrationRequest.STATUS_EMAIL_PENDING: 'Please verify your email before administrator review.',
+            CustomerRegistrationRequest.STATUS_PENDING_APPROVAL: 'Your account is waiting for administrator approval.',
+            CustomerRegistrationRequest.STATUS_APPROVED: 'Your account has been approved. You can sign in.',
+            CustomerRegistrationRequest.STATUS_REJECTED: 'Your account registration was not approved. Please contact Bayad Company.',
+            CustomerRegistrationRequest.STATUS_EXPIRED: 'This registration request has expired.',
+        }
+        return {'status': registration.status, 'message': messages.get(registration.status, '')}
+
+
+class MobileForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def save(self):
+        email = self.validated_data['email'].strip().lower()
+        user = User.objects.filter(email__iexact=email, is_active=True, is_staff=False, is_superuser=False).first()
+        if user and is_mobile_customer_user(user):
+            CustomerPasswordResetRequest.objects.filter(user=user, is_used=False).update(is_used=True, used_at=timezone.now())
+            request = CustomerPasswordResetRequest(user=user, expires_at=timezone.now())
+            code = request.set_code()
+            request.save()
+            send_reset_code(user, code)
+        return None
+
+
+class MobileVerifyResetCodeSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    verification_code = serializers.RegexField(r'^\d{6}$')
+
+    def save(self):
+        email = self.validated_data['email'].strip().lower()
+        user = User.objects.filter(email__iexact=email, is_active=True, is_staff=False, is_superuser=False).first()
+        if not user:
+            raise serializers.ValidationError({'detail': 'Invalid or expired reset code.'})
+        reset = CustomerPasswordResetRequest.objects.filter(user=user, is_used=False).order_by('-created_at').first()
+        if not reset or reset.is_expired or reset.attempts >= 5:
+            raise serializers.ValidationError({'detail': 'Invalid or expired reset code.'})
+        if not reset.check_code(self.validated_data['verification_code']):
+            reset.attempts += 1
+            reset.save(update_fields=['attempts'])
+            raise serializers.ValidationError({'detail': 'Invalid or expired reset code.'})
+        reset.is_verified = True
+        reset.verified_at = timezone.now()
+        reset.save(update_fields=['is_verified', 'verified_at'])
+        token = signing.dumps({'reset_id': reset.id, 'user_id': user.id}, salt='bayad-mobile-reset')
+        return {'reset_token': token, 'expires_in': 600}
+
+
+class MobileResetPasswordSerializer(serializers.Serializer):
+    reset_token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    confirm_password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({'confirm_password': 'Passwords do not match.'})
+        try:
+            payload = signing.loads(attrs['reset_token'], salt='bayad-mobile-reset', max_age=600)
+            reset = CustomerPasswordResetRequest.objects.select_related('user').get(pk=payload['reset_id'], user_id=payload['user_id'], is_verified=True, is_used=False)
+        except (signing.BadSignature, CustomerPasswordResetRequest.DoesNotExist, KeyError) as exc:
+            raise serializers.ValidationError({'detail': 'Invalid or expired reset token.'}) from exc
+        if reset.is_expired:
+            raise serializers.ValidationError({'detail': 'Invalid or expired reset token.'})
+        password = attrs['new_password']
+        if not (any(char.isupper() for char in password) and any(char.islower() for char in password) and any(char.isdigit() for char in password)):
+            raise serializers.ValidationError({'new_password': 'Password must include uppercase, lowercase, and number characters.'})
+        try:
+            validate_password(password, reset.user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({'new_password': list(exc.messages)}) from exc
+        attrs['reset'] = reset
+        return attrs
+
+    def save(self):
+        reset = self.validated_data['reset']
+        user = reset.user
+        user.set_password(self.validated_data['new_password'])
+        user.save(update_fields=['password'])
+        reset.is_used = True
+        reset.used_at = timezone.now()
+        reset.save(update_fields=['is_used', 'used_at'])
+        return user
 
 
 class MobileProductUnitSerializer(serializers.ModelSerializer):

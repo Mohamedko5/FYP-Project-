@@ -25,9 +25,12 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final token = await storage.readAccessToken();
-        if (token != null && token.isNotEmpty) {
+        final skipAuth = options.extra['skipAuth'] == true;
+        final token = skipAuth ? null : await storage.readAccessToken();
+        if (!skipAuth && token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
+        } else {
+          options.headers.remove('Authorization');
         }
         handler.next(options);
       },
@@ -51,7 +54,7 @@ final dioProvider = Provider<Dio>((ref) {
             .post<Map<String, dynamic>>(
               ApiEndpoints.mobileRefresh,
               data: {'refresh': refresh},
-              options: Options(headers: {'Authorization': null}),
+              options: Options(extra: {'skipAuth': true}),
             )
             .then((response) async {
               final access = response.data?['access'] as String?;

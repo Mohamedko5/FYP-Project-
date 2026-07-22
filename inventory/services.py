@@ -42,7 +42,7 @@ def warehouse_used_capacity(warehouse):
     return sum((item.quantity for item in warehouse.inventory_items.select_for_update()), Decimal('0.000'))
 
 
-def add_stock(*, warehouse_id, product_id, quantity, unit, minimum_threshold=0, driver_name='', notes='', user):
+def add_stock(*, warehouse_id, product_id, quantity, unit, minimum_threshold=0, driver_name='', notes='', user, source_type=None, source_reference=''):
     quantity = parse_positive_decimal(quantity)
     minimum_threshold = parse_non_negative_decimal(minimum_threshold, 'minimum_threshold')
     with transaction.atomic():
@@ -79,13 +79,14 @@ def add_stock(*, warehouse_id, product_id, quantity, unit, minimum_threshold=0, 
             quantity_after=inventory.quantity,
             driver_name=(driver_name or '').strip(),
             notes=(notes or '').strip(),
-            source_type=InventoryMovement.SOURCE_MANUAL,
+            source_type=source_type or InventoryMovement.SOURCE_MANUAL,
+            source_reference=(source_reference or '').strip(),
             created_by=user,
         )
         return inventory, movement
 
 
-def withdraw_stock(*, warehouse_id, product_id, quantity, unit, driver_name='', notes='', user, source_type=None, movement_type=None):
+def withdraw_stock(*, warehouse_id, product_id, quantity, unit, driver_name='', notes='', user, source_type=None, source_reference='', movement_type=None):
     if source_type == InventoryMovement.SOURCE_SHIPMENT or movement_type == InventoryMovement.SHIPMENT_OUT:
         raise ValidationError({'source_type': 'Manual withdrawal cannot be used for shipment deductions.'})
     if not (notes or '').strip():
@@ -117,7 +118,8 @@ def withdraw_stock(*, warehouse_id, product_id, quantity, unit, driver_name='', 
             quantity_after=inventory.quantity,
             driver_name=(driver_name or '').strip(),
             notes=notes.strip(),
-            source_type=InventoryMovement.SOURCE_MANUAL,
+            source_type=source_type or InventoryMovement.SOURCE_MANUAL,
+            source_reference=(source_reference or '').strip(),
             created_by=user,
         )
         return inventory, movement

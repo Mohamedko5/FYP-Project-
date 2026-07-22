@@ -11,6 +11,7 @@ from rest_framework import permissions, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -21,7 +22,9 @@ from orders.models import Order
 from shipments.models import Shipment
 
 from .mobile_serializers import (
+    GENERIC_RESET_MESSAGE,
     MobileCustomerSerializer,
+    MobileForgotPasswordSerializer,
     MobileInvoiceDetailSerializer,
     MobileInvoiceListSerializer,
     MobileLoginSerializer,
@@ -29,8 +32,15 @@ from .mobile_serializers import (
     MobileOrderDetailSerializer,
     MobileOrderListSerializer,
     MobileProductSerializer,
+    MobileRegistrationSerializer,
+    MobileRegistrationStatusSerializer,
+    MobileResendVerificationSerializer,
+    MobileResetPasswordSerializer,
     MobileShipmentDetailSerializer,
     MobileShipmentListSerializer,
+    MobileVerifyEmailSerializer,
+    MobileVerifyResetCodeSerializer,
+    mask_email,
 )
 from .models import MobileIdempotencyKey
 from .permissions import IsMobileCustomer, is_mobile_customer_user
@@ -82,12 +92,102 @@ def mobile_token_response(user, customer):
 
 class MobileLoginView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         serializer = MobileLoginSerializer(data=request.data)
         if not serializer.is_valid():
+            errors = serializer.errors
+            if isinstance(errors, dict) and 'non_field_errors' in errors:
+                first = errors['non_field_errors'][0]
+                if isinstance(first, dict) or hasattr(first, 'get'):
+                    return Response(first, status=status.HTTP_403_FORBIDDEN)
+            if isinstance(errors, dict) and {'code', 'detail'} <= set(errors.keys()):
+                return Response({'code': str(errors['code'][0]), 'detail': str(errors['detail'][0])}, status=status.HTTP_403_FORBIDDEN)
             return Response({'detail': 'Invalid email or password.'}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(mobile_token_response(serializer.validated_data['user'], serializer.validated_data['customer']))
+
+
+class MobileRegisterView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def post(self, request):
+        serializer = MobileRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        registration = serializer.save()
+        return Response({
+            'message': 'A verification code has been sent to your email.',
+            'registration_id': registration.id,
+            'email_masked': mask_email(registration.email),
+        }, status=status.HTTP_201_CREATED)
+
+
+class MobileVerifyEmailView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def post(self, request):
+        serializer = MobileVerifyEmailSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        registration = serializer.save()
+        return Response({
+            'message': 'Your email has been verified. Your account is waiting for administrator approval.',
+            'status': registration.status,
+        })
+
+
+class MobileResendVerificationView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def post(self, request):
+        serializer = MobileResendVerificationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'message': 'If a verification is pending, a new code has been sent.'})
+
+
+class MobileRegistrationStatusView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def get(self, request):
+        serializer = MobileRegistrationStatusSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.status_payload())
+
+
+class MobileForgotPasswordView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def post(self, request):
+        serializer = MobileForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'message': GENERIC_RESET_MESSAGE})
+
+
+class MobileVerifyResetCodeView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def post(self, request):
+        serializer = MobileVerifyResetCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.save())
+
+
+class MobileResetPasswordView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def post(self, request):
+        serializer = MobileResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'message': 'Your password has been reset successfully. Please sign in.'})
 
 
 class MobileRefreshView(APIView):

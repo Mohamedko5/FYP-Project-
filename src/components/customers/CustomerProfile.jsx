@@ -1,16 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
+import AppWindow from '../ui/AppWindow.jsx';
 import StatusBadge from '../ui/StatusBadge.jsx';
 import Table from '../ui/Table.jsx';
 import Tooltip from '../ui/Tooltip.jsx';
 import { formatCurrency } from '../../data/dummyData.js';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
+import { getInvoices } from '../../services/invoicesApi.js';
 import { getOrders } from '../../services/ordersApi.js';
 import CashAccountTable from './CashAccountTable.jsx';
 import CommodityAccountTable from './CommodityAccountTable.jsx';
 import CustomerCashTransactionForm from './CustomerCashTransactionForm.jsx';
 import CustomerCommodityTransactionForm from './CustomerCommodityTransactionForm.jsx';
+import CustomerPaymentForm from './CustomerPaymentForm.jsx';
 import CustomerStatement from './CustomerStatement.jsx';
 import { customerTypeLabel, productLabel, unitLabel } from './customerHelpers.js';
 
@@ -21,6 +24,17 @@ function createCashForm(customerName = '') {
     customer: customerName,
     amount: '',
     description: '',
+  };
+}
+
+function createPaymentForm() {
+  return {
+    amount: '',
+    paymentMethod: 'cash',
+    paymentPurpose: 'previous_balance',
+    invoiceId: '',
+    description: '',
+    idempotencyKey: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`,
   };
 }
 
@@ -53,9 +67,11 @@ export default function CustomerProfile({
   statement,
   isSavingCash,
   isSavingCommodity,
+  isSavingPayment,
   isLoadingProfile,
   onAddCashTransaction,
   onAddCommodityTransaction,
+  onAddPayment,
   onLoadStatement,
   onPrint,
   onClose,
@@ -64,19 +80,28 @@ export default function CustomerProfile({
   const { t, isArabic } = useLanguage();
   const [activeSection, setActiveSection] = useState('');
   const [cashForm, setCashForm] = useState(createCashForm(customer?.name));
+  const [paymentForm, setPaymentForm] = useState(createPaymentForm());
   const [commodityForm, setCommodityForm] = useState(createCommodityForm(customer?.name, products));
   const [cashErrors, setCashErrors] = useState([]);
+  const [paymentErrors, setPaymentErrors] = useState([]);
+  const [paymentMessage, setPaymentMessage] = useState('');
+  const [unpaidInvoices, setUnpaidInvoices] = useState([]);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
   const [commodityErrors, setCommodityErrors] = useState([]);
   const [orderRows, setOrderRows] = useState([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [orderError, setOrderError] = useState('');
+  const activeSectionButtonRef = useRef(null);
 
   useEffect(() => {
     if (!customer) return;
     setActiveSection('');
     setCashForm(createCashForm(customer.name));
+    setPaymentForm(createPaymentForm());
     setCommodityForm(createCommodityForm(customer.name, products));
     setCashErrors([]);
+    setPaymentErrors([]);
+    setPaymentMessage('');
     setCommodityErrors([]);
   }, [customer?.id, products]);
 
@@ -92,21 +117,54 @@ export default function CustomerProfile({
     ? <img src={customer.photoUrl || customer.photo_url} alt={customer.name} />
     : <span>{customer.name.slice(0, 1).toUpperCase()}</span>;
   const profileSections = [
+    { key: 'payment', label: t('customers.addPayment'), tooltip: t('tooltips.addCustomerPayment') },
     { key: 'cash', label: t('customers.addCashTransaction'), tooltip: t('tooltips.addCashTransaction') },
     { key: 'commodity', label: t('customers.addCommodityTransaction'), tooltip: t('tooltips.addCommodityTransaction') },
     { key: 'orders', label: t('customers.viewOrders'), tooltip: t('tooltips.viewOrders') },
     { key: 'payments', label: t('customers.viewPaymentHistory'), tooltip: t('tooltips.viewPayments') },
     { key: 'statement', label: t('customers.printStatement'), tooltip: t('tooltips.printPdf') },
   ];
+  const formWindowTitles = {
+    payment: t('customers.addPayment'),
+    cash: t('customers.addCashTransaction'),
+    commodity: t('customers.addCommodityTransaction'),
+  };
+  const formWindowDescriptions = {
+    payment: t('customers.customerPaymentSubtitle'),
+    cash: t('customers.cashAccountSubtitle'),
+    commodity: t('customers.commodityAccountSubtitle'),
+  };
+  const isFormSection = ['payment', 'cash', 'commodity'].includes(activeSection);
+  const paymentDirty = activeSection === 'payment' && JSON.stringify({ ...paymentForm, idempotencyKey: '' }) !== JSON.stringify({ ...createPaymentForm(), idempotencyKey: '' });
+  const cashDirty = activeSection === 'cash' && JSON.stringify(cashForm) !== JSON.stringify(createCashForm(customer.name));
+  const commodityDirty = activeSection === 'commodity' && JSON.stringify(commodityForm) !== JSON.stringify(createCommodityForm(customer.name, products));
 
   function openSection(section) {
     setActiveSection(section);
     setCashErrors([]);
+    setPaymentErrors([]);
+    setPaymentMessage('');
     setCommodityErrors([]);
     if (section === 'cash') setCashForm(createCashForm(customer.name));
+    if (section === 'payment') {
+      setPaymentForm(createPaymentForm());
+      loadUnpaidInvoices();
+    }
     if (section === 'commodity') setCommodityForm(createCommodityForm(customer.name, products));
     if (section === 'orders') loadCustomerOrders();
     if (section === 'statement') onLoadStatement?.();
+  }
+
+  async function loadUnpaidInvoices() {
+    setIsLoadingInvoices(true);
+    try {
+      const response = await getInvoices({ customer: customer.id, payment_status: 'unpaid', status: 'issued', page_size: 100 });
+      setUnpaidInvoices(Array.isArray(response) ? response : response.results || []);
+    } catch {
+      setUnpaidInvoices([]);
+    } finally {
+      setIsLoadingInvoices(false);
+    }
   }
 
   async function loadCustomerOrders() {
@@ -125,6 +183,7 @@ export default function CustomerProfile({
   function closeSection() {
     setActiveSection('');
     setCashErrors([]);
+    setPaymentErrors([]);
     setCommodityErrors([]);
   }
 
@@ -134,6 +193,22 @@ export default function CustomerProfile({
       const next = { ...current, [name]: value };
       if (name === 'type' && value === 'payment_owed') next.paymentMethod = '';
       if (name === 'type' && value !== 'payment_owed' && !next.paymentMethod) next.paymentMethod = 'cash';
+      return next;
+    });
+  }
+
+  function handlePaymentChange(event) {
+    const { name, value } = event.target;
+    setPaymentForm((current) => {
+      const next = { ...current, [name]: value };
+      if (name === 'paymentPurpose' && value !== 'invoice_payment') {
+        next.invoiceId = '';
+        if (current.paymentPurpose === 'invoice_payment') next.amount = '';
+      }
+      if (name === 'invoiceId') {
+        const invoice = unpaidInvoices.find((row) => String(row.id) === String(value));
+        next.amount = invoice ? String(invoice.outstanding_amount || invoice.total_amount || '') : '';
+      }
       return next;
     });
   }
@@ -160,6 +235,26 @@ export default function CustomerProfile({
     }
   }
 
+  async function handlePaymentSubmit(event) {
+    event.preventDefault();
+    setPaymentErrors([]);
+    setPaymentMessage('');
+    try {
+      await onAddPayment({
+        amount: paymentForm.amount,
+        payment_method: paymentForm.paymentMethod,
+        payment_purpose: paymentForm.paymentPurpose,
+        invoice_id: paymentForm.invoiceId || null,
+        description: paymentForm.description,
+        idempotency_key: paymentForm.idempotencyKey,
+      });
+      setPaymentForm(createPaymentForm());
+      closeSection();
+    } catch (error) {
+      setPaymentErrors(String(error.message || error).split('\n'));
+    }
+  }
+
   async function handleCommoditySubmit(event) {
     event.preventDefault();
     setCommodityErrors([]);
@@ -180,6 +275,30 @@ export default function CustomerProfile({
   }
 
   function renderActiveSection() {
+    if (activeSection === 'payment') {
+      return (
+        <Card title={t('customers.addPayment')} subtitle={t('customers.customerPaymentSubtitle')}>
+          <div className="customer-section-header">
+            <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
+          </div>
+          {paymentMessage && <div className="form-success">{paymentMessage}</div>}
+          <CustomerPaymentForm
+            form={paymentForm}
+            errors={paymentErrors}
+            customer={customer}
+            unpaidInvoices={unpaidInvoices}
+            isLoadingInvoices={isLoadingInvoices}
+            onChange={handlePaymentChange}
+            onSubmit={handlePaymentSubmit}
+            onCancel={closeSection}
+            isSaving={isSavingPayment}
+            t={t}
+          />
+          <CashAccountTable transactions={cashTransactions} emptyMessage={t('customers.noCashTransactions')} />
+        </Card>
+      );
+    }
+
     if (activeSection === 'cash') {
       return (
         <Card title={t('customers.addCashTransaction')} subtitle={t('customers.cashAccountSubtitle')}>
@@ -355,6 +474,7 @@ export default function CustomerProfile({
                 type="button"
                 className={`customer-profile-tabs__button ${activeSection === section.key ? 'is-active' : ''}`}
                 onClick={() => openSection(section.key)}
+                ref={['payment', 'cash', 'commodity'].includes(section.key) ? activeSectionButtonRef : undefined}
               >
                 {section.label}
               </button>
@@ -363,7 +483,23 @@ export default function CustomerProfile({
         </div>
       </Card>
 
-      {renderActiveSection()}
+      {isFormSection ? (
+        <AppWindow
+          id={`customer-profile-${activeSection}`}
+          title={formWindowTitles[activeSection]}
+          description={formWindowDescriptions[activeSection]}
+          isOpen={isFormSection}
+          isDirty={paymentDirty || cashDirty || commodityDirty}
+          isSubmitting={isSavingPayment || isSavingCash || isSavingCommodity}
+          defaultSize="large"
+          openerRef={activeSectionButtonRef}
+          onClose={closeSection}
+        >
+          {renderActiveSection()}
+        </AppWindow>
+      ) : (
+        renderActiveSection()
+      )}
 
       <CustomerStatement
         customer={customer}

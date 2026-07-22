@@ -188,6 +188,24 @@ abstract class AppLocalizations {
   /// **'Signing in...'**
   String get signingIn;
 
+  /// No description provided for @forgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot Password?'**
+  String get forgotPassword;
+
+  /// No description provided for @createAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get createAccount;
+
+  /// No description provided for @newToBayad.
+  ///
+  /// In en, this message translates to:
+  /// **'New to Bayad?'**
+  String get newToBayad;
+
   /// No description provided for @logout.
   ///
   /// In en, this message translates to:
@@ -343,6 +361,300 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'العربية'**
   String get language;
+
+  /// No description provided for @registerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get registerTitle;
+
+  /// No description provided for @personalInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal Information'**
+  String get personalInformation;
+
+  /// No description provided for @fullName.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Name'**
+  String get fullName;
+
+  /// No description provided for @fullNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Ahmed Mohammed'**
+  String get fullNameHint;
+
+  /// No description provided for @businessName.
+  ///
+  /// In en, this message translates to:
+  /// **'Business or Company Name'**
+  String get businessName;
+
+  /// No description provided for @optional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get optional;
+
+  /// No description provided for @contactInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Information'**
+  String get contactInformation;
+
+  /// No description provided for @phoneNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone Number'**
+  String get phoneNumber;
+
+  /// No description provided for @phoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'+249912345678'**
+  String get phoneHint;
+
+  /// No description provided for @addressHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Omdurman, Sudan'**
+  String get addressHint;
+
+  /// No description provided for @businessInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Business Information'**
+  String get businessInformation;
+
+  /// No description provided for @accountSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Security'**
+  String get accountSecurity;
+
+  /// No description provided for @confirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Password'**
+  String get confirmPassword;
+
+  /// No description provided for @repeatPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat password'**
+  String get repeatPassword;
+
+  /// No description provided for @acceptTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'I accept the terms'**
+  String get acceptTerms;
+
+  /// No description provided for @passwordRequirements.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must include at least 8 characters, uppercase, lowercase, and a number.'**
+  String get passwordRequirements;
+
+  /// No description provided for @completeRequiredFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Please complete all required fields.'**
+  String get completeRequiredFields;
+
+  /// No description provided for @passwordsDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match.'**
+  String get passwordsDoNotMatch;
+
+  /// No description provided for @submitting.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitting...'**
+  String get submitting;
+
+  /// No description provided for @backToLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Login'**
+  String get backToLogin;
+
+  /// No description provided for @farmer.
+  ///
+  /// In en, this message translates to:
+  /// **'Farmer'**
+  String get farmer;
+
+  /// No description provided for @investor.
+  ///
+  /// In en, this message translates to:
+  /// **'Investor'**
+  String get investor;
+
+  /// No description provided for @consumer.
+  ///
+  /// In en, this message translates to:
+  /// **'Consumer'**
+  String get consumer;
+
+  /// No description provided for @exporter.
+  ///
+  /// In en, this message translates to:
+  /// **'Exporter'**
+  String get exporter;
+
+  /// No description provided for @factory.
+  ///
+  /// In en, this message translates to:
+  /// **'Factory'**
+  String get factory;
+
+  /// No description provided for @supplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier'**
+  String get supplier;
+
+  /// No description provided for @emailVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Email Verification'**
+  String get emailVerification;
+
+  /// No description provided for @verificationInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the six-digit code sent to {email}.'**
+  String verificationInstruction(String email);
+
+  /// No description provided for @verificationCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Code'**
+  String get verificationCode;
+
+  /// No description provided for @verifyEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Email'**
+  String get verifyEmail;
+
+  /// No description provided for @verifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying...'**
+  String get verifying;
+
+  /// No description provided for @resendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend Code'**
+  String get resendCode;
+
+  /// No description provided for @enterSixDigitCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit verification code.'**
+  String get enterSixDigitCode;
+
+  /// No description provided for @pendingAdminApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Admin Approval'**
+  String get pendingAdminApproval;
+
+  /// No description provided for @pendingApprovalMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your email has been verified. Bayad Company will review your account request.'**
+  String get pendingApprovalMessage;
+
+  /// No description provided for @checkStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Check Status'**
+  String get checkStatus;
+
+  /// No description provided for @checking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking...'**
+  String get checking;
+
+  /// No description provided for @forgotPasswordInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email address and we will send a secure reset code if the account exists.'**
+  String get forgotPasswordInstruction;
+
+  /// No description provided for @sendResetCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Reset Code'**
+  String get sendResetCode;
+
+  /// No description provided for @sending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending...'**
+  String get sending;
+
+  /// No description provided for @resetCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Code'**
+  String get resetCode;
+
+  /// No description provided for @resetCodeInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the six-digit reset code sent to {email}.'**
+  String resetCodeInstruction(String email);
+
+  /// No description provided for @verifyCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Code'**
+  String get verifyCode;
+
+  /// No description provided for @resetPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Password'**
+  String get resetPassword;
+
+  /// No description provided for @newPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New Password'**
+  String get newPassword;
+
+  /// No description provided for @confirmNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm New Password'**
+  String get confirmNewPassword;
+
+  /// No description provided for @repeatNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat new password'**
+  String get repeatNewPassword;
+
+  /// No description provided for @newPasswordRequirements.
+  ///
+  /// In en, this message translates to:
+  /// **'Use at least 8 characters with uppercase, lowercase, and a number.'**
+  String get newPasswordRequirements;
+
+  /// No description provided for @saving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving...'**
+  String get saving;
 }
 
 class _AppLocalizationsDelegate
