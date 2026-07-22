@@ -1,5 +1,7 @@
 import { NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
+import { getAdminChatUnreadCount } from '../../services/chatApi.js';
 
 const navigationItems = [
   { path: '/', labelKey: 'routes.dashboard' },
@@ -9,12 +11,32 @@ const navigationItems = [
   { path: '/products', labelKey: 'routes.products' },
   { path: '/orders', labelKey: 'routes.orders' },
   { path: '/invoices', labelKey: 'routes.invoices' },
+  { path: '/customer-messages', labelKey: 'routes.customerMessages', badge: 'chat' },
   { path: '/weighing-shipment', labelKey: 'routes.weighingShipment' },
   { path: '/reports', labelKey: 'routes.reports' },
 ];
 
 export default function Sidebar({ onLogout, onModuleNavigate, isOpen = false }) {
   const { t } = useLanguage();
+  const [chatUnread, setChatUnread] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    async function loadUnread() {
+      try {
+        const response = await getAdminChatUnreadCount();
+        if (active) setChatUnread(Number(response.unread_count || 0));
+      } catch {
+        if (active) setChatUnread(0);
+      }
+    }
+    loadUnread();
+    const id = window.setInterval(loadUnread, 30000);
+    return () => {
+      active = false;
+      window.clearInterval(id);
+    };
+  }, []);
 
   return (
     <aside className={`sidebar ${isOpen ? 'is-open' : ''}`} aria-label={t('mainNavigation')}>
@@ -35,7 +57,8 @@ export default function Sidebar({ onLogout, onModuleNavigate, isOpen = false }) 
             className={({ isActive }) => `sidebar__link ${isActive ? 'is-active' : ''}`}
             onClick={onModuleNavigate}
           >
-            {t(item.labelKey)}
+            <span>{t(item.labelKey)}</span>
+            {item.badge === 'chat' && chatUnread > 0 && <span className="sidebar__badge">{chatUnread}</span>}
           </NavLink>
         ))}
       </nav>

@@ -1,11 +1,17 @@
+import logging
+
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import UserProfile
+from .email_service import EmailDeliveryError, send_registration_approved_email, send_registration_rejected_email
 from .models import Customer, CustomerAccount, CustomerCashTransaction, CustomerCommodityTransaction, CustomerRegistrationRequest
 from .services import customer_cash_balance, customer_cash_status
+
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(Customer)
@@ -84,6 +90,7 @@ def approve_registration(registration, admin_user):
         registration.created_user = user
         registration.created_customer = customer
         registration.save(update_fields=['status', 'approved_by', 'approved_at', 'created_user', 'created_customer', 'updated_at'])
+        transaction.on_commit(lambda: _send_approval_notification(registration.pk))
         return registration
 
 
@@ -93,7 +100,24 @@ def reject_registration(registration, admin_user, reason='Rejected by Admin.'):
     registration.status = CustomerRegistrationRequest.STATUS_REJECTED
     registration.rejection_reason = reason or 'Rejected by Admin.'
     registration.save(update_fields=['status', 'rejection_reason', 'updated_at'])
+    _send_rejection_notification(registration.pk)
     return registration
+
+
+def _send_approval_notification(registration_id):
+    try:
+        registration = CustomerRegistrationRequest.objects.get(pk=registration_id)
+        send_registration_approved_email(registration)
+    except (CustomerRegistrationRequest.DoesNotExist, EmailDeliveryError) as exc:
+        logger.warning('Customer approval notification failed for registration_id=%s error=%s', registration_id, exc.__class__.__name__)
+
+
+def _send_rejection_notification(registration_id):
+    try:
+        registration = CustomerRegistrationRequest.objects.get(pk=registration_id)
+        send_registration_rejected_email(registration)
+    except (CustomerRegistrationRequest.DoesNotExist, EmailDeliveryError) as exc:
+        logger.warning('Customer rejection notification failed for registration_id=%s error=%s', registration_id, exc.__class__.__name__)
 
 
 @admin.register(CustomerRegistrationRequest)
@@ -118,10 +142,13 @@ class CustomerRegistrationRequestAdmin(admin.ModelAdmin):
 
     @admin.action(description='Reject selected registration requests')
     def reject_selected_registrations(self, request, queryset):
-        updated = queryset.filter(status__in=[
+        updated = 0
+        for registration in queryset.filter(status__in=[
             CustomerRegistrationRequest.STATUS_EMAIL_PENDING,
             CustomerRegistrationRequest.STATUS_PENDING_APPROVAL,
-        ]).update(status=CustomerRegistrationRequest.STATUS_REJECTED, rejection_reason='Rejected by Admin.')
+        ]):
+            reject_registration(registration, request.user)
+            updated += 1
         self.message_user(request, f'Rejected {updated} registration request(s).')
 
     def has_delete_permission(self, request, obj=None):

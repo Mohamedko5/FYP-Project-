@@ -3,6 +3,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TransactionTestCase
@@ -77,9 +78,41 @@ class JournalTransactionAPITests(APITestCase):
         transaction = self.create_transaction(self.cash_payload(payment_method='cash'))
         self.assertEqual(transaction.payment_method, JournalTransaction.PAYMENT_CASH)
 
-    def test_cash_transaction_with_payment_method_online_succeeds(self):
-        transaction = self.create_transaction(self.cash_payload(payment_method='online'))
-        self.assertEqual(transaction.payment_method, JournalTransaction.PAYMENT_ONLINE)
+    def receipt_file(self, name='receipt.jpg'):
+        return SimpleUploadedFile(name, b'receipt image bytes', content_type='image/jpeg')
+
+    def electronic_payload(self, **overrides):
+        payload = self.cash_payload(
+            payment_method='electronic',
+            electronic_reference='TRX-12345',
+            payment_receipt=self.receipt_file(),
+        )
+        payload.update(overrides)
+        return payload
+
+    def test_cash_transaction_with_payment_method_electronic_succeeds(self):
+        self.authenticate()
+        response = self.client.post(self.url, self.electronic_payload(), format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        transaction = JournalTransaction.objects.get(id=response.data['id'])
+        self.assertEqual(transaction.payment_method, JournalTransaction.PAYMENT_ELECTRONIC)
+        self.assertEqual(transaction.electronic_reference, 'TRX-12345')
+        self.assertTrue(transaction.payment_receipt)
+
+    def test_electronic_payment_requires_reference_and_receipt(self):
+        self.authenticate()
+        missing_reference = self.client.post(self.url, self.cash_payload(payment_method='electronic'), format='multipart')
+        self.assertEqual(missing_reference.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('electronic_reference', missing_reference.data)
+        self.assertIn('payment_receipt', missing_reference.data)
+
+    def test_cash_payment_clears_electronic_reference_and_receipt(self):
+        self.authenticate()
+        response = self.client.post(self.url, self.cash_payload(electronic_reference='TRX-1', payment_receipt=self.receipt_file()), format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        transaction = JournalTransaction.objects.get(id=response.data['id'])
+        self.assertEqual(transaction.electronic_reference, '')
+        self.assertFalse(transaction.payment_receipt)
 
     def test_created_by_is_assigned_automatically(self):
         transaction = self.create_transaction()
@@ -240,21 +273,25 @@ class JournalTransactionAPITests(APITestCase):
 
     def test_filtering_by_payment_method_cash_works(self):
         cash = self.create_transaction(self.cash_payload(payment_method='cash'))
-        self.create_transaction(self.cash_payload(payment_method='online'))
+        self.authenticate()
+        electronic = self.client.post(self.url, self.electronic_payload(), format='multipart')
+        self.assertEqual(electronic.status_code, status.HTTP_201_CREATED, electronic.data)
 
         self.authenticate()
         response = self.client.get(self.url, {'journal_type': 'cash', 'payment_method': 'cash'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual([row['id'] for row in response.data], [cash.id])
 
-    def test_filtering_by_payment_method_online_works(self):
+    def test_filtering_by_payment_method_electronic_works(self):
         self.create_transaction(self.cash_payload(payment_method='cash'))
-        online = self.create_transaction(self.cash_payload(payment_method='online'))
+        self.authenticate()
+        electronic_response = self.client.post(self.url, self.electronic_payload(), format='multipart')
+        self.assertEqual(electronic_response.status_code, status.HTTP_201_CREATED, electronic_response.data)
 
         self.authenticate()
-        response = self.client.get(self.url, {'journal_type': 'cash', 'payment_method': 'online'})
+        response = self.client.get(self.url, {'journal_type': 'cash', 'payment_method': 'electronic'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual([row['id'] for row in response.data], [online.id])
+        self.assertEqual([row['id'] for row in response.data], [electronic_response.data['id']])
 
     def test_patch_preserves_created_at_and_created_by(self):
         transaction = self.create_transaction()
@@ -335,9 +372,14 @@ class JournalTransactionAPITests(APITestCase):
     def test_payment_method_does_not_change_financial_summary_calculations(self):
         today = timezone.localdate()
         self.move_created_at(self.create_transaction(self.cash_payload(amount='700.00', cash_type='income', payment_method='cash')), today)
-        self.move_created_at(self.create_transaction(self.cash_payload(amount='300.00', cash_type='income', payment_method='online')), today)
+        self.authenticate()
+        electronic_income = self.client.post(self.url, self.electronic_payload(amount='300.00', cash_type='income', payment_receipt=self.receipt_file('income.jpg')), format='multipart')
+        electronic_expense = self.client.post(self.url, self.electronic_payload(amount='100.00', cash_type='expense', payment_receipt=self.receipt_file('expense.jpg')), format='multipart')
+        self.assertEqual(electronic_income.status_code, status.HTTP_201_CREATED, electronic_income.data)
+        self.assertEqual(electronic_expense.status_code, status.HTTP_201_CREATED, electronic_expense.data)
+        self.move_created_at(JournalTransaction.objects.get(id=electronic_income.data['id']), today)
         self.move_created_at(self.create_transaction(self.cash_payload(amount='100.00', cash_type='expense', payment_method='cash')), today)
-        self.move_created_at(self.create_transaction(self.cash_payload(amount='100.00', cash_type='expense', payment_method='online')), today)
+        self.move_created_at(JournalTransaction.objects.get(id=electronic_expense.data['id']), today)
 
         self.authenticate()
         response = self.client.get(self.summary_url, {'date': today.isoformat()})
@@ -348,8 +390,8 @@ class JournalTransactionAPITests(APITestCase):
         self.assertEqual(response.data['cash']['closing_balance'], '800.00')
         self.assertEqual(response.data['cash']['payment_methods']['cash']['income'], '700.00')
         self.assertEqual(response.data['cash']['payment_methods']['cash']['expenses'], '100.00')
-        self.assertEqual(response.data['cash']['payment_methods']['online']['income'], '300.00')
-        self.assertEqual(response.data['cash']['payment_methods']['online']['expenses'], '100.00')
+        self.assertEqual(response.data['cash']['payment_methods']['electronic']['income'], '300.00')
+        self.assertEqual(response.data['cash']['payment_methods']['electronic']['expenses'], '100.00')
 
     def test_commodity_summary_groups_by_product_name_and_unit(self):
         today = timezone.localdate()
@@ -440,12 +482,12 @@ class JournalTransactionAPITests(APITestCase):
         self.assertNotIn('cashFilters.search', source)
         self.assertNotIn("placeholder={t('journal.searchPlaceholder')}", source.split("journalType === 'cash'")[1].split(") : (")[0])
 
-    def test_payment_method_dropdown_displays_cash_and_online(self):
+    def test_payment_method_segment_displays_cash_and_electronic(self):
         form = Path(__file__).resolve().parents[1] / 'src' / 'components' / 'journal' / 'CashJournalForm.jsx'
         source = form.read_text(encoding='utf-8')
         self.assertIn('name="paymentMethod"', source)
         self.assertIn('value="cash"', source)
-        self.assertIn('value="online"', source)
+        self.assertIn('value="electronic"', source)
 
 
 class PaymentMethodMigrationTests(TransactionTestCase):

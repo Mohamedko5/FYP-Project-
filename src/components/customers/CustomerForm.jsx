@@ -5,7 +5,7 @@ import { customerTypeLabel } from './customerHelpers.js';
 const customerTypes = ['farmer', 'investor', 'consumer', 'exporter', 'factory', 'supplier'];
 
 export default function CustomerForm({ form, errors, onChange, onSubmit, onCancel, isSaving = false }) {
-  const { t, isArabic } = useLanguage();
+  const { t } = useLanguage();
   const preview = form.photoPreview
     ? <img src={form.photoPreview} alt={form.name || t('customers.photo')} />
     : <span>{(form.name || t('customers.avatarPlaceholder')).slice(0, 1).toUpperCase()}</span>;
@@ -18,13 +18,17 @@ export default function CustomerForm({ form, errors, onChange, onSubmit, onCance
         </div>
       )}
 
-      <label>
-        {t('customers.photo')}
+      <div className="form-field">
+        <span className="form-field__label">{t('customers.photo')}</span>
         <div className="customer-photo-input">
           <div className="customer-avatar">{preview}</div>
-          <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onChange} />
+          <label className="localized-file-input">
+            <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onChange} aria-label={t('customers.choosePhoto')} />
+            <span className="localized-file-input__button">{t('customers.choosePhoto')}</span>
+            <span className="localized-file-input__name">{form.photo?.name || t('customers.noFileSelected')}</span>
+          </label>
         </div>
-      </label>
+      </div>
       <label>
         {t('common.customerName')}
         <input name="name" value={form.name} onChange={onChange} placeholder={t('customers.namePlaceholder')} />
@@ -45,7 +49,7 @@ export default function CustomerForm({ form, errors, onChange, onSubmit, onCance
         {t('customers.customerType')}
         <select name="customerType" value={form.customerType} onChange={onChange}>
           {customerTypes.map((type) => (
-            <option key={type} value={type}>{customerTypeLabel(type, isArabic)}</option>
+            <option key={type} value={type}>{customerTypeLabel(type, t)}</option>
           ))}
         </select>
       </label>

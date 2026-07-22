@@ -7,31 +7,29 @@ export function productLabel(productName, isArabic) {
 export function unitLabel(unitValue, isArabic) {
   const unit = commodityUnits.find((item) => item.value === unitValue);
   const fallback = {
-    Qintar: { en: 'Qintar', ar: 'Qintar' },
-    KG: { en: 'KG', ar: 'KG' },
-    Bag: { en: 'Bag', ar: 'Bag' },
-    Bale: { en: 'Bale', ar: 'Bale' },
-    Unit: { en: 'Unit', ar: 'Unit' },
+    Qintar: { en: 'Qintar', ar: 'قنطار' },
+    KG: { en: 'KG', ar: 'كجم' },
+    kg: { en: 'kg', ar: 'كجم' },
+    Bag: { en: 'Bag', ar: 'جوال' },
+    Bale: { en: 'Bale', ar: 'بالة' },
+    Unit: { en: 'Unit', ar: 'وحدة' },
   }[unitValue];
   return isArabic ? (unit?.arabicLabel || fallback?.ar || unitValue) : (unit?.englishLabel || fallback?.en || unitValue);
 }
 
-export function customerTypeLabel(type, isArabic) {
+export function customerTypeLabel(type, t) {
+  const key = String(type || '')
+    .trim()
+    .replaceAll('-', '_')
+    .replace(/\s+/g, '_')
+    .toLowerCase();
   const normalized = {
-    farmer: 'Farmer',
-    investor: 'Investor',
-    consumer: 'Consumer',
-    exporter: 'Exporter',
-    factory: 'Factory',
-    supplier: 'Supplier',
-  }[type] || type;
-  const labels = {
-    Farmer: 'Farmer',
-    Investor: 'Investor',
-    Consumer: 'Consumer',
-    Exporter: 'Exporter',
-    Factory: 'Factory',
-    Supplier: 'Supplier',
-  };
-  return isArabic ? (labels[normalized] || normalized) : normalized;
+    farmer: 'farmer',
+    investor: 'investor',
+    consumer: 'consumer',
+    exporter: 'exporter',
+    factory: 'factory',
+    supplier: 'supplier',
+  }[key];
+  return normalized ? t(`customers.types.${normalized}`) : '-';
 }

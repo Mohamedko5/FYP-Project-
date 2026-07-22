@@ -1,10 +1,8 @@
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-from django.conf import settings
 
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
@@ -16,6 +14,7 @@ from invoices.models import Invoice
 from orders.models import Order, OrderItem
 from shipments.models import Shipment
 
+from .email_service import EmailDeliveryError, send_customer_verification_email, send_password_reset_email
 from .models import Customer, CustomerAccount, CustomerPasswordResetRequest, CustomerRegistrationRequest, PHONE_RE, normalize_phone
 from .permissions import is_mobile_customer_user
 
@@ -157,24 +156,11 @@ def mask_email(email):
     return f'{masked}@{domain}'
 
 
-def send_registration_code(registration, code):
-    send_mail(
-        subject='Bayad Customer Email Verification',
-        message=f'Your Bayad customer verification code is {code}. It expires in 10 minutes.',
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[registration.email],
-        fail_silently=False,
-    )
-
-
-def send_reset_code(user, code):
-    send_mail(
-        subject='Bayad Customer Password Reset',
-        message=f'Your Bayad customer password reset code is {code}. It expires in 10 minutes.',
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=False,
-    )
+def email_delivery_validation_error(detail):
+    return serializers.ValidationError({
+        'code': 'email_delivery_failed',
+        'detail': detail,
+    })
 
 
 class MobileRegistrationSerializer(serializers.Serializer):
@@ -237,7 +223,10 @@ class MobileRegistrationSerializer(serializers.Serializer):
         code = registration.set_verification_code()
         registration.full_clean(exclude=['password_hash', 'verification_code_hash'])
         registration.save()
-        send_registration_code(registration, code)
+        try:
+            send_customer_verification_email(registration, code)
+        except EmailDeliveryError as exc:
+            raise email_delivery_validation_error(exc.detail) from exc
         return registration
 
 
@@ -275,7 +264,10 @@ class MobileResendVerificationSerializer(serializers.Serializer):
         if registration:
             code = registration.set_verification_code()
             registration.save(update_fields=['verification_code_hash', 'verification_code_expires_at', 'verification_attempts', 'last_verification_sent_at', 'updated_at'])
-            send_registration_code(registration, code)
+            try:
+                send_customer_verification_email(registration, code)
+            except EmailDeliveryError as exc:
+                raise email_delivery_validation_error(exc.detail) from exc
         return None
 
 
@@ -308,7 +300,10 @@ class MobileForgotPasswordSerializer(serializers.Serializer):
             request = CustomerPasswordResetRequest(user=user, expires_at=timezone.now())
             code = request.set_code()
             request.save()
-            send_reset_code(user, code)
+            try:
+                send_password_reset_email(user, code)
+            except EmailDeliveryError as exc:
+                raise email_delivery_validation_error(exc.detail) from exc
         return None
 
 

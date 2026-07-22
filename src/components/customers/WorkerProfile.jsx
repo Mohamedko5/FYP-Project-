@@ -42,7 +42,7 @@ export default function WorkerProfile({
   onPrint,
   adminName,
 }) {
-  const { t, isArabic } = useLanguage();
+  const { t } = useLanguage();
   const [activeSection, setActiveSection] = useState('');
   const [transactionForm, setTransactionForm] = useState(createTransactionForm(worker, warehouses));
   const [transactionErrors, setTransactionErrors] = useState([]);
@@ -153,7 +153,7 @@ export default function WorkerProfile({
             <h3>{worker.name}</h3>
             <p>{worker.code}</p>
             <p>{worker.phone}</p>
-            <p>{workerTypeLabel(worker.worker_type, isArabic)}</p>
+            <p>{workerTypeLabel(worker.worker_type, t)}</p>
           </div>
         </div>
         <div className="customer-profile-header__actions">

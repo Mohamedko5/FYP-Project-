@@ -3,7 +3,7 @@ import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import { workerTypeLabel } from '../customers/workerHelpers.js';
 
 export default function PrintableWorkerStatement({ worker, statement, records, adminName }) {
-  const { t, isArabic } = useLanguage();
+  const { t, statusLabel } = useLanguage();
   if (!worker) return null;
   const rows = statement?.work_records || records || [];
   const generatedAt = statement?.generated_at ? new Date(statement.generated_at).toLocaleString() : new Date().toLocaleString();
@@ -24,9 +24,9 @@ export default function PrintableWorkerStatement({ worker, statement, records, a
         <p><strong>{t('customers.workerCode')}:</strong> {worker.code}</p>
         <p><strong>{t('customers.workerName')}:</strong> {worker.name}</p>
         <p><strong>{t('common.phone')}:</strong> {worker.phone}</p>
-        <p><strong>{t('customers.workerType')}:</strong> {workerTypeLabel(worker.worker_type, isArabic)}</p>
+        <p><strong>{t('customers.workerType')}:</strong> {workerTypeLabel(worker.worker_type, t)}</p>
         <p><strong>{t('customers.assignedWork')}:</strong> {worker.assigned_work}</p>
-        <p><strong>{t('common.status')}:</strong> {worker.status}</p>
+        <p><strong>{t('common.status')}:</strong> {statusLabel(worker.status)}</p>
         <p><strong>{t('customers.paidWages')}:</strong> {formatCurrency(statement?.total_paid_wages || worker.paid_wage_total || 0)}</p>
         <p><strong>{t('customers.unpaidWages')}:</strong> {formatCurrency(statement?.total_unpaid_wages || worker.unpaid_wage_total || 0)}</p>
         <p><strong>{t('warehouse.admin')}:</strong> {adminName || '-'}</p>
@@ -50,10 +50,10 @@ export default function PrintableWorkerStatement({ worker, statement, records, a
               <td>{row.date}</td>
               <td>{row.code}</td>
               <td>{row.warehouse_name}</td>
-              <td>{row.calculation_method}</td>
+              <td>{row.calculation_method === 'daily_wage' ? t('customers.dailyWagePayment') : t('customers.bagBasedPayment')}</td>
               <td>{formatCurrency(row.total_wage)}</td>
-              <td>{row.payment_status}</td>
-              <td>{row.payment_method || '-'}</td>
+              <td>{statusLabel(row.payment_status)}</td>
+              <td>{row.payment_method ? t(`customers.paymentMethods.${row.payment_method}`) : '-'}</td>
             </tr>
           ))}
         </tbody>

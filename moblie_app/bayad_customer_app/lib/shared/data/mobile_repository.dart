@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 import '../../core/network/api_exception.dart';
+import '../../features/chat/domain/chat_models.dart';
 import '../models/mobile_models.dart';
 import '../models/paged_response.dart';
 
@@ -86,6 +87,76 @@ class MobileRepository {
   }
 
   Future<ShipmentDetail> shipment(int id) async => ShipmentDetail.fromJson(await _getMap(ApiEndpoints.shipmentDetail(id)));
+
+  Future<List<ChatMessage>> chatMessages() async {
+    final response = await _getMap(ApiEndpoints.chatMessages, queryParameters: {'page_size': 50});
+    return (response['results'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(ChatMessage.fromJson)
+        .toList()
+        .reversed
+        .toList();
+  }
+
+  Future<int> chatUnreadCount() async {
+    final response = await _getMap(ApiEndpoints.chatUnreadCount);
+    return response['unread_count'] as int? ?? 0;
+  }
+
+  Future<void> markChatRead() async {
+    try {
+      await _dio.post<Map<String, dynamic>>(ApiEndpoints.chatRead);
+    } on DioException catch (error) {
+      throw _mapDioError(error);
+    }
+  }
+
+  Future<ChatMessage> sendChatText({required String body, required String clientMessageId}) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.chatMessages,
+        data: {'body': body, 'client_message_id': clientMessageId},
+      );
+      return ChatMessage.fromJson(response.data ?? const {});
+    } on DioException catch (error) {
+      throw _mapDioError(error);
+    }
+  }
+
+  Future<ChatMessage> sendChatAttachment({
+    required String path,
+    required String filename,
+    required String body,
+    required String clientMessageId,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'body': body,
+        'client_message_id': clientMessageId,
+        'attachment': await MultipartFile.fromFile(path, filename: filename),
+      });
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.chatMessages,
+        data: formData,
+        options: Options(contentType: Headers.multipartFormDataContentType),
+      );
+      return ChatMessage.fromJson(response.data ?? const {});
+    } on DioException catch (error) {
+      throw _mapDioError(error);
+    }
+  }
+
+  Future<ChatMessage> shareCustomerCard({required String clientMessageId}) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.chatCustomerCard,
+        data: {'client_message_id': clientMessageId},
+      );
+      return ChatMessage.fromJson(response.data ?? const {});
+    } on DioException catch (error) {
+      throw _mapDioError(error);
+    }
+  }
 
   Future<Map<String, dynamic>> _getMap(String path, {Map<String, dynamic>? queryParameters}) async {
     try {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import PrintableProductsReport from '../components/reports/PrintableProductsReport.jsx';
 import AppWindow from '../components/ui/AppWindow.jsx';
 import Button from '../components/ui/Button.jsx';
@@ -27,6 +27,38 @@ const stockStatusOptions = [
   { value: 'Out of Stock', label: 'Out of Stock' },
   { value: 'Not Stocked', label: 'Not Stocked' },
 ];
+
+const unitLabels = {
+  en: {
+    Qintar: 'Qintar',
+    KG: 'KG',
+    Bag: 'Bag',
+    Bale: 'Bale',
+    Unit: 'Unit',
+  },
+  ar: {
+    Qintar: 'قنطار',
+    KG: 'كجم',
+    Bag: 'جوال',
+    Bale: 'بالة',
+    Unit: 'وحدة',
+  },
+};
+
+const stockStatusLabels = {
+  en: {
+    Available: 'Available',
+    'Low Stock': 'Low Stock',
+    'Out of Stock': 'Out of Stock',
+    'Not Stocked': 'Not Stocked',
+  },
+  ar: {
+    Available: 'متوفر',
+    'Low Stock': 'مخزون منخفض',
+    'Out of Stock': 'نفد المخزون',
+    'Not Stocked': 'غير مخزن',
+  },
+};
 
 const copy = {
   en: {
@@ -75,9 +107,6 @@ const copy = {
     view: 'View',
     archive: 'Archive',
     edit: 'Edit',
-    stockPosition: 'Stock Position',
-    unitsAndPrices: 'Units and Prices',
-    detailsSubtitle: 'Read-only stock and pricing details',
     warehouseStockNote: 'warehouses with stock',
     lowStockRecords: 'low-stock records',
     sell: 'Sell',
@@ -145,9 +174,6 @@ const copy = {
     view: 'عرض',
     archive: 'أرشفة',
     edit: 'تعديل',
-    stockPosition: 'حالة المخزون',
-    unitsAndPrices: 'الوحدات والأسعار',
-    detailsSubtitle: 'تفاصيل المخزون والأسعار للقراءة فقط',
     warehouseStockNote: 'مخازن بها مخزون',
     lowStockRecords: 'سجلات منخفضة المخزون',
     sell: 'بيع',
@@ -219,13 +245,17 @@ function normalizeProduct(product) {
   };
 }
 
-function totalStock(product) {
-  if (!product.stock_summary?.length) return '0.000';
-  return product.stock_summary.map((row) => `${row.quantity} ${row.unit}`).join(', ');
+function unitLabel(unit, isArabic) {
+  return unitLabels[isArabic ? 'ar' : 'en'][unit] || unit || '-';
 }
 
-function formatPrice(value) {
-  return `SDG ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function statusOptionLabel(status, isArabic) {
+  return stockStatusLabels[isArabic ? 'ar' : 'en'][status] || status || '-';
+}
+
+function totalStock(product, isArabic) {
+  if (!product.stock_summary?.length) return '0.000';
+  return product.stock_summary.map((row) => `${row.quantity} ${unitLabel(row.unit, isArabic)}`).join(', ');
 }
 
 export default function Products() {
@@ -236,7 +266,6 @@ export default function Products() {
   const [filters, setFilters] = useState({ search: '', category: '', unit: '', stock_status: '' });
   const [showForm, setShowForm] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
-  const [selectedProductId, setSelectedProductId] = useState(null);
   const [form, setForm] = useState(createEmptyProduct());
   const [errors, setErrors] = useState([]);
   const [archiveTarget, setArchiveTarget] = useState(null);
@@ -247,7 +276,6 @@ export default function Products() {
   const addProductButtonRef = useRef(null);
   const editProductButtonRef = useRef(null);
 
-  const selectedProduct = productRows.find((product) => product.id === selectedProductId) || productRows[0] || null;
   const productFormDirty = showForm && JSON.stringify(form) !== JSON.stringify(createEmptyProduct());
 
   async function loadProducts(nextFilters = filters) {
@@ -267,7 +295,6 @@ export default function Products() {
       const rows = unwrapResults(productsData).map(normalizeProduct);
       setProductRows(rows);
       setSummary(summaryData);
-      setSelectedProductId((current) => (rows.some((row) => row.id === current) ? current : rows[0]?.id || null));
     } catch (error) {
       setErrors([error.message || label.loadError]);
     } finally {
@@ -406,19 +433,16 @@ export default function Products() {
 
   const columns = [
     { key: 'code', label: label.code },
-    { key: 'name_en', label: label.product, render: (row) => <button className="link-button" type="button" onClick={() => setSelectedProductId(row.id)}>{productDisplayName(row)}</button> },
+    { key: 'name_en', label: label.product, render: (row) => productDisplayName(row) },
     { key: 'category', label: label.category, render: (row) => row.category === 'commodity' ? label.commodity : label.supply },
-    { key: 'units', label: label.units, render: (row) => row.units.map((unit) => unit.unit).join(', ') },
-    { key: 'stock', label: label.currentStock, render: totalStock },
+    { key: 'units', label: label.units, render: (row) => row.units.map((unit) => unitLabel(unit.unit, isArabic)).join(', ') },
+    { key: 'stock', label: label.currentStock, render: (row) => totalStock(row, isArabic) },
     { key: 'status', label: label.status, render: (row) => <StatusBadge status={row.stock_status} /> },
     {
       key: 'actions',
       label: label.action,
       render: (row) => (
         <div className="table-action-group product-action-group">
-          <Tooltip content={label.viewTooltip}>
-            <button className="product-action-button" type="button" onClick={() => setSelectedProductId(row.id)}>{label.view}</button>
-          </Tooltip>
           {canManage && (
             <>
               <Tooltip content={label.editTooltip}>
@@ -453,11 +477,11 @@ export default function Products() {
           </select>
           <select name="unit" value={filters.unit} onChange={updateFilter}>
             <option value="">{label.allUnits}</option>
-            {unitOptions.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+            {unitOptions.map((unit) => <option key={unit} value={unit}>{unitLabel(unit, isArabic)}</option>)}
           </select>
           <select name="stock_status" value={filters.stock_status} onChange={updateFilter}>
             <option value="">{label.allStockStatuses}</option>
-            {stockStatusOptions.map((option) => <option key={option.value} value={option.value}>{isArabic && option.value === 'Available' ? 'متاح' : isArabic && option.value === 'Low Stock' ? label.lowStock : isArabic && option.value === 'Out of Stock' ? label.outOfStock : isArabic && option.value === 'Not Stocked' ? 'غير مخزن' : option.label}</option>)}
+            {stockStatusOptions.map((option) => <option key={option.value} value={option.value}>{statusOptionLabel(option.value, isArabic)}</option>)}
           </select>
           {canManage && <Button onClick={openAddForm} ref={addProductButtonRef}>{label.addProduct}</Button>}
           <Button variant="secondary" onClick={printReport}>{label.print}</Button>
@@ -529,7 +553,7 @@ export default function Products() {
                 <div className="product-unit-row" key={`${unit.id || 'new'}-${index}`}>
                   <select value={unit.unit} onChange={(event) => updateUnit(index, 'unit', event.target.value)}>
                     <option value="">{label.selectUnit}</option>
-                    {unitOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                    {unitOptions.map((option) => <option key={option} value={option}>{unitLabel(option, isArabic)}</option>)}
                   </select>
                   <input type="number" min="0" step="0.01" value={unit.purchase_price} onChange={(event) => updateUnit(index, 'purchase_price', event.target.value)} placeholder={label.purchasePrice} />
                   <input type="number" min="0" step="0.01" value={unit.selling_price} onChange={(event) => updateUnit(index, 'selling_price', event.target.value)} placeholder={label.sellingPrice} />
@@ -556,40 +580,6 @@ export default function Products() {
 
         {loading ? <p className="loading-text">{label.loading}</p> : <Table columns={columns} rows={productRows} emptyMessage={label.noProducts} />}
       </Card>
-
-      {selectedProduct && (
-        <Card title={`${selectedProduct.code} - ${productDisplayName(selectedProduct)}`} subtitle={label.detailsSubtitle}>
-          <div className="product-details-grid">
-            <div>
-              <h3>{label.stockPosition}</h3>
-              <StatusBadge status={selectedProduct.stock_status} />
-              <p>{totalStock(selectedProduct)}</p>
-              <small>{selectedProduct.total_warehouses} {label.warehouseStockNote}, {selectedProduct.low_stock_warehouse_count} {label.lowStockRecords}</small>
-            </div>
-            <div>
-              <h3>{label.unitsAndPrices}</h3>
-              <div className="product-chip-list">
-                {selectedProduct.units.map((unit) => (
-                  <span key={unit.id}>
-                    {unit.unit} - {label.sell} {formatPrice(unit.selling_price)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-          <Table
-            columns={[
-              { key: 'warehouse_name', label: label.warehouse },
-              { key: 'unit', label: 'Unit' },
-              { key: 'quantity', label: label.quantity },
-              { key: 'minimum_threshold', label: label.minimumThreshold },
-              { key: 'stock_status', label: label.status, render: (row) => <StatusBadge status={row.stock_status} /> },
-            ]}
-            rows={(selectedProduct.warehouse_stock || []).map((row) => ({ ...row, id: `${row.warehouse_id}-${row.unit}` }))}
-            emptyMessage={label.noWarehouseStock}
-          />
-        </Card>
-      )}
 
       {archiveTarget && (
         <ConfirmationDialog

@@ -1,0 +1,9 @@
+.env
+*.pyc
+__pycache__/
+db.sqlite3
+db.sqlite3.backup-*
+media/
+node_modules/
+dist/
+moblie_app/bayad_customer_app/build/

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bayad</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4f1eb;color:#2e2e2a;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f1eb;padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border:1px solid #ded8cd;border-radius:8px;overflow:hidden;">
+            <tr>
+              <td style="background:#51754f;color:#ffffff;padding:20px 24px;">
+                <div style="font-size:20px;font-weight:700;">{{ company_name }}</div>
+                <div style="font-size:13px;margin-top:4px;">Integrated Agricultural Trading System</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;">
+                {% block content %}{% endblock %}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 24px;border-top:1px solid #e5ded4;color:#6f6a60;font-size:13px;">
+                {{ company_name }}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

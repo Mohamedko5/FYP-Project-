@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/mobile_models.dart';
 import '../models/paged_response.dart';
+import '../../features/chat/domain/chat_models.dart';
 import 'mobile_repository.dart';
 
 final homeSummaryProvider = FutureProvider.autoDispose<HomeSummary>((ref) => ref.watch(mobileRepositoryProvider).homeSummary());
@@ -20,3 +21,5 @@ final invoiceDetailProvider = FutureProvider.autoDispose.family<InvoiceDetail, i
 final shipmentFilterProvider = StateProvider.autoDispose<String?>((ref) => null);
 final shipmentsProvider = FutureProvider.autoDispose<PagedResponse<ShipmentSummary>>((ref) => ref.watch(mobileRepositoryProvider).shipments(status: ref.watch(shipmentFilterProvider)));
 final shipmentDetailProvider = FutureProvider.autoDispose.family<ShipmentDetail, int>((ref, id) => ref.watch(mobileRepositoryProvider).shipment(id));
+final chatMessagesProvider = FutureProvider.autoDispose<List<ChatMessage>>((ref) => ref.watch(mobileRepositoryProvider).chatMessages());
+final chatUnreadCountProvider = FutureProvider.autoDispose<int>((ref) => ref.watch(mobileRepositoryProvider).chatUnreadCount());

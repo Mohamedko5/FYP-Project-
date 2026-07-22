@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import Tooltip from '../components/ui/Tooltip.jsx';
@@ -63,8 +64,9 @@ function createWorkerForm() {
   };
 }
 
-function formatApiError(error) {
-  return String(error?.message || 'Unable to complete this request. Please try again.');
+function formatApiError(error, t) {
+  if (error?.code === 'ERR_NETWORK') return t('common.networkError');
+  return t('common.requestFailed');
 }
 
 function storedAdminName() {
@@ -100,6 +102,7 @@ function mapWarehouse(row) {
 
 export default function Customers() {
   const { t } = useLanguage();
+  const [searchParams] = useSearchParams();
   const [activeCustomerTab, setActiveCustomerTab] = useState('business');
   const [customerList, setCustomerList] = useState([]);
   const [workerList, setWorkerList] = useState([]);
@@ -158,11 +161,11 @@ export default function Customers() {
         setSelectedCustomer(null);
       }
     } catch (error) {
-      setApiError(formatApiError(error));
+      setApiError(formatApiError(error, t));
     } finally {
       setIsLoadingCustomers(false);
     }
-  }, [filters, selectedCustomerId]);
+  }, [filters, selectedCustomerId, t]);
 
   const loadSelectedCustomer = useCallback(async (customerId) => {
     if (!customerId) return;
@@ -179,11 +182,11 @@ export default function Customers() {
       setCommodityTransactions(commodityRows);
       setStatement(null);
     } catch (error) {
-      setApiError(formatApiError(error));
+      setApiError(formatApiError(error, t));
     } finally {
       setIsLoadingProfile(false);
     }
-  }, []);
+  }, [t]);
 
   const loadWorkers = useCallback(async () => {
     setIsLoadingWorkers(true);
@@ -201,11 +204,11 @@ export default function Customers() {
         setSelectedWorker(null);
       }
     } catch (error) {
-      setApiError(formatApiError(error));
+      setApiError(formatApiError(error, t));
     } finally {
       setIsLoadingWorkers(false);
     }
-  }, [workerFilters, selectedWorkerId]);
+  }, [workerFilters, selectedWorkerId, t]);
 
   const loadSelectedWorker = useCallback(async (workerId) => {
     if (!workerId) return;
@@ -220,15 +223,23 @@ export default function Customers() {
       setWorkerRecords(records);
       setWorkerStatement(null);
     } catch (error) {
-      setApiError(formatApiError(error));
+      setApiError(formatApiError(error, t));
     } finally {
       setIsLoadingWorkerProfile(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (activeCustomerTab === 'business') loadCustomers();
   }, [activeCustomerTab, loadCustomers]);
+
+  useEffect(() => {
+    const customerId = searchParams.get('customer');
+    if (customerId) {
+      setActiveCustomerTab('business');
+      setSelectedCustomerId(customerId);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (activeCustomerTab === 'workers') loadWorkers();
@@ -340,7 +351,7 @@ export default function Customers() {
       await loadCustomers();
       setSelectedCustomerId(created.id);
     } catch (error) {
-      setFormErrors(formatApiError(error).split('\n'));
+      setFormErrors([formatApiError(error, t)]);
     } finally {
       setIsSavingCustomer(false);
     }
@@ -367,7 +378,7 @@ export default function Customers() {
       await loadWorkers();
       setSelectedWorkerId(created.id);
     } catch (error) {
-      setWorkerErrors(formatApiError(error).split('\n'));
+      setWorkerErrors([formatApiError(error, t)]);
     } finally {
       setIsSavingWorker(false);
     }
@@ -415,7 +426,7 @@ export default function Customers() {
     try {
       setStatement(await getCustomerStatement(selectedCustomerId));
     } catch (error) {
-      setApiError(formatApiError(error));
+      setApiError(formatApiError(error, t));
     }
   }
 
@@ -445,7 +456,7 @@ export default function Customers() {
     try {
       setWorkerStatement(await getWorkerStatement(selectedWorkerId));
     } catch (error) {
-      setApiError(formatApiError(error));
+      setApiError(formatApiError(error, t));
     }
   }
 

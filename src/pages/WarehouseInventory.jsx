@@ -206,7 +206,6 @@ export default function WarehouseInventory() {
   const [stockWarning, setStockWarning] = useState('');
   const [withdrawErrors, setWithdrawErrors] = useState([]);
   const [movementHistory, setMovementHistory] = useState([]);
-  const [filters, setFilters] = useState({ search: '', product: '', status: '' });
   const [movementFilters, setMovementFilters] = useState({ movement_type: '', date_from: '', date_to: '' });
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
@@ -241,7 +240,7 @@ export default function WarehouseInventory() {
     try {
       const [productsData, warehousesData] = await Promise.all([
         getProducts({ active: 'true' }),
-        getWarehouses(filters),
+        getWarehouses(),
       ]);
       const mappedProducts = productsData.map(mapProduct);
       const mappedWarehouses = warehousesData
@@ -258,7 +257,7 @@ export default function WarehouseInventory() {
     } finally {
       setIsLoading(false);
     }
-  }, [filters, t, warehouseForm.productType]);
+  }, [t, warehouseForm.productType]);
 
   const loadWarehouseDetails = useCallback(async (warehouseId = selectedWarehouseId) => {
     if (!warehouseId) {
@@ -495,17 +494,6 @@ export default function WarehouseInventory() {
     <div className="page-grid">
       <Card title={t('warehouse.overviewTitle')} subtitle={t('warehouse.overviewSubtitle')} className="warehouse-overview-card">
         <div className="workflow-toolbar workflow-toolbar--split warehouse-toolbar">
-          <div className="journal-filter-group journal-filter-group--wide">
-            <input value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} placeholder={t('warehouse.searchPlaceholder')} />
-            <select value={filters.product} onChange={(event) => setFilters((current) => ({ ...current, product: event.target.value }))}>
-              <option value="">{t('warehouse.allProducts')}</option>
-              {productRows.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
-            </select>
-            <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
-              <option value="">{t('warehouse.allStatuses')}</option>
-              {['Inactive', 'Available', 'Almost Full', 'Full', 'Archived'].map((status) => <option key={status} value={status}>{t(`status.${status}`)}</option>)}
-            </select>
-          </div>
           <div className="journal-date-search__actions">
             {selectedWarehouse && <Button variant="secondary" onClick={handlePrint}>{t('journal.printPdf')}</Button>}
             {activeForm !== 'warehouse' && <Button variant="secondary" onClick={openWarehouseForm} ref={addWarehouseButtonRef}>{t('warehouse.actionAddNewWarehouse')}</Button>}

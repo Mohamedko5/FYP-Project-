@@ -22,7 +22,7 @@ export function getDailyJournalSummary(params) {
 export function createJournalTransaction(payload) {
   return apiRequest('/api/journal/transactions/', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: payload instanceof FormData ? payload : JSON.stringify(payload),
   });
 }
 
@@ -44,7 +44,7 @@ export function reverseWarehouseCommodityTransaction(id, payload) {
 export function updateJournalTransaction(id, payload) {
   return apiRequest(`/api/journal/transactions/${id}/`, {
     method: 'PATCH',
-    body: JSON.stringify(payload),
+    body: payload instanceof FormData ? payload : JSON.stringify(payload),
   });
 }
 

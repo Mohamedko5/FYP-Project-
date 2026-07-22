@@ -60,7 +60,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get createAccount => 'إنشاء حساب';
 
   @override
-  String get newToBayad => 'مستخدم جديد في بياد؟';
+  String get newToBayad => 'مستخدم جديد في بياض؟';
 
   @override
   String get logout => 'تسجيل الخروج';
@@ -145,157 +145,253 @@ class AppLocalizationsAr extends AppLocalizations {
   String get language => 'English';
 
   @override
-  String get registerTitle => '????? ????';
+  String get registerTitle => 'إنشاء حساب';
 
   @override
-  String get personalInformation => '????????? ???????';
+  String get personalInformation => 'المعلومات الشخصية';
 
   @override
-  String get fullName => '????? ??????';
+  String get fullName => 'الاسم الكامل';
 
   @override
-  String get fullNameHint => '???? ????';
+  String get fullNameHint => 'أحمد محمد';
 
   @override
-  String get businessName => '??? ????? ?? ??????';
+  String get businessName => 'اسم العمل أو الشركة';
 
   @override
-  String get optional => '???????';
+  String get optional => 'اختياري';
 
   @override
-  String get contactInformation => '??????? ???????';
+  String get contactInformation => 'معلومات التواصل';
 
   @override
-  String get phoneNumber => '??? ??????';
+  String get phoneNumber => 'رقم الهاتف';
 
   @override
   String get phoneHint => '+249912345678';
 
   @override
-  String get addressHint => '?? ?????? ???????';
+  String get addressHint => 'أم درمان، السودان';
 
   @override
-  String get businessInformation => '??????? ?????';
+  String get businessInformation => 'معلومات النشاط';
 
   @override
-  String get accountSecurity => '???? ??????';
+  String get accountSecurity => 'أمان الحساب';
 
   @override
-  String get confirmPassword => '????? ???? ??????';
+  String get confirmPassword => 'تأكيد كلمة المرور';
 
   @override
-  String get repeatPassword => '??? ????? ???? ??????';
+  String get repeatPassword => 'أعد إدخال كلمة المرور';
 
   @override
-  String get acceptTerms => '????? ??? ??????';
+  String get acceptTerms => 'أوافق على الشروط';
 
   @override
   String get passwordRequirements =>
-      '??? ?? ????? ???? ?????? ?? 8 ???? ??? ????? ?????? ??? ??? ???? ???? ???? ????.';
+      'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل، وحرف كبير، وحرف صغير، ورقم.';
 
   @override
-  String get completeRequiredFields => '???? ????? ?? ?????? ????????.';
+  String get completeRequiredFields => 'يرجى إكمال جميع الحقول المطلوبة.';
 
   @override
-  String get passwordsDoNotMatch => '????? ?????? ??? ?????????.';
+  String get passwordsDoNotMatch => 'كلمتا المرور غير متطابقتين.';
 
   @override
-  String get submitting => '???? ???????...';
+  String get submitting => 'جاري الإرسال...';
 
   @override
-  String get backToLogin => '?????? ??? ????? ??????';
+  String get backToLogin => 'العودة إلى تسجيل الدخول';
 
   @override
-  String get farmer => '?????';
+  String get farmer => 'مزارع';
 
   @override
-  String get investor => '??????';
+  String get investor => 'مستثمر';
 
   @override
-  String get consumer => '??????';
+  String get consumer => 'مستهلك';
 
   @override
-  String get exporter => '????';
+  String get exporter => 'مصدر';
 
   @override
-  String get factory => '????';
+  String get factory => 'مصنع';
 
   @override
-  String get supplier => '????';
+  String get supplier => 'مورد';
 
   @override
-  String get emailVerification => '????? ?????? ??????????';
+  String get emailVerification => 'تأكيد البريد الإلكتروني';
 
   @override
   String verificationInstruction(String email) {
-    return '???? ????? ?????? ?? ??? ????? ?????? ??? $email.';
+    return 'أدخل الرمز المكون من ستة أرقام المرسل إلى $email.';
   }
 
   @override
-  String get verificationCode => '??? ??????';
+  String get verificationCode => 'رمز التحقق';
 
   @override
-  String get verifyEmail => '????? ??????';
+  String get verifyEmail => 'تأكيد البريد';
 
   @override
-  String get verifying => '???? ??????...';
+  String get verifying => 'جاري التحقق...';
 
   @override
-  String get resendCode => '????? ????? ?????';
+  String get resendCode => 'إعادة إرسال الرمز';
 
   @override
-  String get enterSixDigitCode => '???? ??? ?????? ?????? ?? 6 ?????.';
+  String get enterSixDigitCode => 'أدخل رمز التحقق المكون من 6 أرقام.';
 
   @override
-  String get pendingAdminApproval => '??????? ?????? ???????';
+  String get pendingAdminApproval => 'بانتظار موافقة الإدارة';
 
   @override
   String get pendingApprovalMessage =>
-      '?? ????? ????? ??????????. ?????? ???? ???? ??? ?????.';
+      'تم تأكيد بريدك الإلكتروني. ستراجع شركة بياض طلب حسابك.';
 
   @override
-  String get checkStatus => '??? ??????';
+  String get checkStatus => 'فحص الحالة';
 
   @override
-  String get checking => '???? ?????...';
+  String get checking => 'جاري الفحص...';
 
   @override
   String get forgotPasswordInstruction =>
-      '???? ????? ?????????? ?????? ??? ????? ????? ??? ??? ??? ?????? ???????.';
+      'أدخل بريدك الإلكتروني وسنرسل رمز إعادة تعيين آمن إذا كان الحساب موجوداً.';
 
   @override
-  String get sendResetCode => '????? ??? ????? ???????';
+  String get sendResetCode => 'إرسال رمز إعادة التعيين';
 
   @override
-  String get sending => '???? ???????...';
+  String get sending => 'جاري الإرسال...';
 
   @override
-  String get resetCode => '??? ????? ???????';
+  String get resetCode => 'رمز إعادة التعيين';
 
   @override
   String resetCodeInstruction(String email) {
-    return '???? ??? ????? ??????? ?????? ?? ??? ????? ?????? ??? $email.';
+    return 'أدخل رمز إعادة التعيين المكون من ستة أرقام المرسل إلى $email.';
   }
 
   @override
-  String get verifyCode => '????? ?????';
+  String get verifyCode => 'تأكيد الرمز';
 
   @override
-  String get resetPassword => '????? ????? ???? ??????';
+  String get resetPassword => 'إعادة تعيين كلمة المرور';
 
   @override
-  String get newPassword => '???? ?????? ???????';
+  String get newPassword => 'كلمة المرور الجديدة';
 
   @override
-  String get confirmNewPassword => '????? ???? ?????? ???????';
+  String get confirmNewPassword => 'تأكيد كلمة المرور الجديدة';
 
   @override
-  String get repeatNewPassword => '??? ????? ???? ?????? ???????';
+  String get repeatNewPassword => 'أعد إدخال كلمة المرور الجديدة';
 
   @override
   String get newPasswordRequirements =>
-      '?????? 8 ???? ??? ????? ?? ??? ???? ???? ???? ????.';
+      'استخدم 8 أحرف على الأقل مع حرف كبير وحرف صغير ورقم.';
 
   @override
-  String get saving => '???? ?????...';
+  String get saving => 'جاري الحفظ...';
+
+  @override
+  String get chat => 'المحادثة';
+
+  @override
+  String get bayadSupport => 'دعم بياض';
+
+  @override
+  String get typeAMessage => 'اكتب رسالة';
+
+  @override
+  String get send => 'إرسال';
+
+  @override
+  String get attachFile => 'إرفاق ملف';
+
+  @override
+  String get chooseImage => 'اختر صورة';
+
+  @override
+  String get choosePdf => 'اختر ملف PDF';
+
+  @override
+  String get shareCustomerCard => 'مشاركة بطاقة العميل';
+
+  @override
+  String get shareCardMessage =>
+      'سيتم إرسال اسم العميل والرمز وبيانات التواصل ونوع الحساب إلى إدارة بياض.';
+
+  @override
+  String get shareCard => 'مشاركة البطاقة';
+
+  @override
+  String get viewAttachment => 'عرض المرفق';
+
+  @override
+  String get downloadAttachment => 'تنزيل المرفق';
+
+  @override
+  String get image => 'صورة';
+
+  @override
+  String get document => 'مستند';
+
+  @override
+  String get sent => 'تم الإرسال';
+
+  @override
+  String get delivered => 'تم التسليم';
+
+  @override
+  String get read => 'مقروءة';
+
+  @override
+  String get failedToSend => 'تعذر الإرسال';
+
+  @override
+  String get noMessagesYet => 'لا توجد رسائل بعد';
+
+  @override
+  String get startConversation => 'ابدأ محادثة مع إدارة بياض.';
+
+  @override
+  String get waitingForAdmin => 'بانتظار الإدارة';
+
+  @override
+  String get waitingForCustomer => 'بانتظار العميل';
+
+  @override
+  String get closed => 'مغلقة';
+
+  @override
+  String get unreadMessages => 'رسائل غير مقروءة';
+
+  @override
+  String get bankCardWarning =>
+      'لا ترسل أرقام البطاقات البنكية أو الأرقام السرية أو كلمات المرور.';
+
+  @override
+  String get noAttachmentSelected => 'لم يتم اختيار مرفق';
+
+  @override
+  String get removeAttachment => 'إزالة المرفق';
+
+  @override
+  String get connectionFallback =>
+      'يتم تحميل الرسائل من السجل الآمن في الخادم.';
+
+  @override
+  String get chooseAttachment => 'اختر مرفقاً';
+
+  @override
+  String get unsupportedFile => 'اختر صورة JPG أو PNG أو WebP أو مستند PDF.';
+
+  @override
+  String get shareCustomerCardTitle => 'مشاركة بطاقة العميل';
 }

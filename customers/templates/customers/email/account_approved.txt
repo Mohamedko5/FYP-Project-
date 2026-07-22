@@ -1,0 +1,5 @@
+Hello {{ customer_name }},
+
+Your Bayad Customer account has been approved. You can now sign in to the Bayad Customer Application.
+
+{{ company_name }}

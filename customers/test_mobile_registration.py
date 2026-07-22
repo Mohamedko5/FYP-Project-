@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import override_settings
@@ -50,11 +52,18 @@ class MobileRegistrationAndResetTests(APITestCase):
     def test_valid_registration_hashes_password_and_code(self):
         response = self.register()
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[-1].to, [self.payload['email']])
+        self.assertTrue(mail.outbox[-1].subject)
+        self.assertTrue(mail.outbox[-1].body)
+        self.assertTrue(mail.outbox[-1].alternatives)
+        self.assertNotIn(self.payload['password'], mail.outbox[-1].body)
         registration = CustomerRegistrationRequest.objects.get(id=response.data['registration_id'])
         self.assertNotEqual(registration.password_hash, self.payload['password'])
         self.assertTrue(registration.check_registration_password(self.payload['password']))
         self.assertNotIn(self.code_from_email(), registration.verification_code_hash)
         self.assertEqual(registration.status, CustomerRegistrationRequest.STATUS_EMAIL_PENDING)
+        self.assertNotIn('verification_code', response.data)
 
     def test_duplicate_active_email_and_pending_email_are_rejected(self):
         self.User.objects.create_user(username='active', email=self.payload['email'], password='StrongPass123!')
@@ -99,6 +108,15 @@ class MobileRegistrationAndResetTests(APITestCase):
         old_verify = self.client.post('/api/mobile/auth/verify-email/', {'registration_id': registration.id, 'verification_code': old_code}, format='json')
         self.assertEqual(old_verify.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_registration_email_delivery_failure_returns_safe_error(self):
+        with patch('customers.email_service.EmailMultiAlternatives.send', side_effect=OSError('ConnectionRefusedError')):
+            response = self.register()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['code'], 'email_delivery_failed')
+        self.assertIn('verification email', response.data['detail'])
+        self.assertNotIn('ConnectionRefusedError', str(response.data))
+        self.assertTrue(CustomerRegistrationRequest.objects.filter(email=self.payload['email']).exists())
+
     def test_unverified_pending_approved_and_rejected_login_behaviors(self):
         response = self.register()
         pending_login = self.client.post('/api/mobile/auth/login/', {'email': self.payload['email'], 'password': self.payload['password']}, format='json')
@@ -131,6 +149,8 @@ class MobileRegistrationAndResetTests(APITestCase):
         registration.refresh_from_db()
         response = self.client.post('/api/mobile/auth/forgot-password/', {'email': self.payload['email']}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(mail.outbox[-1].alternatives)
+        self.assertNotIn(self.payload['password'], mail.outbox[-1].body)
         unknown = self.client.post('/api/mobile/auth/forgot-password/', {'email': 'none@example.com'}, format='json')
         self.assertEqual(unknown.status_code, status.HTTP_200_OK)
         reset = CustomerPasswordResetRequest.objects.get(user=registration.created_user, is_used=False)
@@ -153,3 +173,19 @@ class MobileRegistrationAndResetTests(APITestCase):
         self.assertEqual(reuse.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(self.client.login(username=registration.created_user.username, password=self.payload['password']))
         self.assertTrue(self.client.login(username=registration.created_user.username, password='NewStrongPass123!'))
+
+    def test_forgot_password_email_delivery_failure_returns_safe_error(self):
+        registration = self.verified_registration()
+        approve_registration(registration, self.admin)
+        with patch('customers.email_service.EmailMultiAlternatives.send', side_effect=TimeoutError('socket timeout')):
+            response = self.client.post('/api/mobile/auth/forgot-password/', {'email': self.payload['email']}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['code'], 'email_delivery_failed')
+        self.assertNotIn('socket timeout', str(response.data))
+
+    def test_approval_notification_failure_does_not_block_approval(self):
+        registration = self.verified_registration()
+        with patch('customers.email_service.EmailMultiAlternatives.send', side_effect=OSError('SMTPAuthenticationError')):
+            approve_registration(registration, self.admin)
+        registration.refresh_from_db()
+        self.assertEqual(registration.status, CustomerRegistrationRequest.STATUS_APPROVED)

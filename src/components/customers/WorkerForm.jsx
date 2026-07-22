@@ -3,7 +3,7 @@ import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import { workerTypeLabel, workerTypes } from './workerHelpers.js';
 
 export default function WorkerForm({ form, errors, onChange, onSubmit, onCancel, isSaving = false }) {
-  const { t, isArabic } = useLanguage();
+  const { t } = useLanguage();
   const preview = form.photoPreview
     ? <img src={form.photoPreview} alt={form.name || t('customers.workerName')} />
     : <span>{(form.name || t('customers.workerAvatar')).slice(0, 1).toUpperCase()}</span>;
@@ -19,13 +19,17 @@ export default function WorkerForm({ form, errors, onChange, onSubmit, onCancel,
         </div>
       )}
 
-      <label>
-        {t('customers.photo')}
+      <div className="form-field">
+        <span className="form-field__label">{t('customers.photo')}</span>
         <div className="customer-photo-input">
           <div className="customer-avatar">{preview}</div>
-          <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onChange} />
+          <label className="localized-file-input">
+            <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onChange} aria-label={t('customers.choosePhoto')} />
+            <span className="localized-file-input__button">{t('customers.choosePhoto')}</span>
+            <span className="localized-file-input__name">{form.photo?.name || t('customers.noFileSelected')}</span>
+          </label>
         </div>
-      </label>
+      </div>
       <label>
         {t('customers.workerName')}
         <input name="name" value={form.name} onChange={onChange} placeholder={t('customers.workerNamePlaceholder')} />
@@ -42,7 +46,7 @@ export default function WorkerForm({ form, errors, onChange, onSubmit, onCancel,
         {t('customers.workerType')}
         <select name="workerType" value={form.workerType} onChange={onChange}>
           {workerTypes.map((type) => (
-            <option key={type} value={type}>{workerTypeLabel(type, isArabic)}</option>
+            <option key={type} value={type}>{workerTypeLabel(type, t)}</option>
           ))}
         </select>
       </label>

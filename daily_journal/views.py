@@ -11,6 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from inventory.permissions import IsAdminOrManager
@@ -52,6 +53,7 @@ def quantity(value):
 class JournalTransactionViewSet(viewsets.ModelViewSet):
     serializer_class = JournalTransactionSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
     ordering_fields = {'created_at', 'amount', 'quantity'}
 
     def get_queryset(self):
@@ -80,8 +82,10 @@ class JournalTransactionViewSet(viewsets.ModelViewSet):
 
         payment_method = params.get('payment_method')
         if payment_method:
+            if payment_method == 'online':
+                payment_method = JournalTransaction.PAYMENT_ELECTRONIC
             if payment_method not in dict(JournalTransaction.PAYMENT_METHOD_CHOICES):
-                raise ValidationError({'payment_method': 'Choose cash or online.'})
+                raise ValidationError({'payment_method': 'Choose cash or electronic payment.'})
             queryset = queryset.filter(payment_method=payment_method)
 
         product_name = params.get('product_name')
@@ -156,8 +160,8 @@ class JournalTransactionViewSet(viewsets.ModelViewSet):
         net = total_income - total_expenses
         cash_method_income = current_cash.filter(payment_method=JournalTransaction.PAYMENT_CASH, cash_type=JournalTransaction.CASH_INCOME).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         cash_method_expenses = current_cash.filter(payment_method=JournalTransaction.PAYMENT_CASH, cash_type=JournalTransaction.CASH_EXPENSE).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        online_method_income = current_cash.filter(payment_method=JournalTransaction.PAYMENT_ONLINE, cash_type=JournalTransaction.CASH_INCOME).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        online_method_expenses = current_cash.filter(payment_method=JournalTransaction.PAYMENT_ONLINE, cash_type=JournalTransaction.CASH_EXPENSE).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        electronic_method_income = current_cash.filter(payment_method=JournalTransaction.PAYMENT_ELECTRONIC, cash_type=JournalTransaction.CASH_INCOME).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        electronic_method_expenses = current_cash.filter(payment_method=JournalTransaction.PAYMENT_ELECTRONIC, cash_type=JournalTransaction.CASH_EXPENSE).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
         current_commodity = base.filter(journal_type=JournalTransaction.JOURNAL_COMMODITY, created_at__gte=start, created_at__lte=end)
         estimated_total_value = current_commodity.aggregate(total=Sum('estimated_value'))['total'] or Decimal('0.00')
@@ -180,9 +184,9 @@ class JournalTransactionViewSet(viewsets.ModelViewSet):
                         'income': money(cash_method_income),
                         'expenses': money(cash_method_expenses),
                     },
-                    'online': {
-                        'income': money(online_method_income),
-                        'expenses': money(online_method_expenses),
+                    'electronic': {
+                        'income': money(electronic_method_income),
+                        'expenses': money(electronic_method_expenses),
                     },
                 },
             },

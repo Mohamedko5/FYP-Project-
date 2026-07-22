@@ -29,7 +29,7 @@ export default function CustomerStatement({ customer, cashTransactions, commodit
         <p><strong>{t('common.customerName')}:</strong> {statementCustomer.name}</p>
         <p><strong>{t('common.phone')}:</strong> {statementCustomer.phone}</p>
         <p><strong>{t('customers.address')}:</strong> {statementCustomer.address}</p>
-        <p><strong>{t('customers.customerType')}:</strong> {customerTypeLabel(statementCustomer.customer_type || statementCustomer.customerType, isArabic)}</p>
+        <p><strong>{t('customers.customerType')}:</strong> {customerTypeLabel(statementCustomer.customer_type || statementCustomer.customerType, t)}</p>
         <p><strong>{t('warehouse.admin')}:</strong> {adminName || '-'}</p>
       </div>
 

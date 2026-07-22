@@ -297,4 +297,101 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get saving => 'Saving...';
+
+  @override
+  String get chat => 'Chat';
+
+  @override
+  String get bayadSupport => 'Bayad Support';
+
+  @override
+  String get typeAMessage => 'Type a message';
+
+  @override
+  String get send => 'Send';
+
+  @override
+  String get attachFile => 'Attach File';
+
+  @override
+  String get chooseImage => 'Choose Image';
+
+  @override
+  String get choosePdf => 'Choose PDF';
+
+  @override
+  String get shareCustomerCard => 'Share Customer Card';
+
+  @override
+  String get shareCardMessage =>
+      'Your Customer name, code, contact details and account type will be shared with Bayad Admin.';
+
+  @override
+  String get shareCard => 'Share Card';
+
+  @override
+  String get viewAttachment => 'View Attachment';
+
+  @override
+  String get downloadAttachment => 'Download Attachment';
+
+  @override
+  String get image => 'Image';
+
+  @override
+  String get document => 'Document';
+
+  @override
+  String get sent => 'Sent';
+
+  @override
+  String get delivered => 'Delivered';
+
+  @override
+  String get read => 'Read';
+
+  @override
+  String get failedToSend => 'Failed to Send';
+
+  @override
+  String get noMessagesYet => 'No Messages Yet';
+
+  @override
+  String get startConversation => 'Start a conversation with Bayad Admin.';
+
+  @override
+  String get waitingForAdmin => 'Waiting for Admin';
+
+  @override
+  String get waitingForCustomer => 'Waiting for Customer';
+
+  @override
+  String get closed => 'Closed';
+
+  @override
+  String get unreadMessages => 'Unread Messages';
+
+  @override
+  String get bankCardWarning =>
+      'Do not send bank-card numbers, PINs or passwords.';
+
+  @override
+  String get noAttachmentSelected => 'No attachment selected';
+
+  @override
+  String get removeAttachment => 'Remove Attachment';
+
+  @override
+  String get connectionFallback =>
+      'Messages load through secure server history.';
+
+  @override
+  String get chooseAttachment => 'Choose Attachment';
+
+  @override
+  String get unsupportedFile =>
+      'Choose a JPG, PNG, WebP image or PDF document.';
+
+  @override
+  String get shareCustomerCardTitle => 'Share Customer Card';
 }

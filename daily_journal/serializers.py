@@ -10,6 +10,9 @@ from inventory.serializers import InventoryMovementSerializer, InventorySerializ
 from .models import JournalTransaction
 from .services import record_warehouse_commodity_transaction, warehouse_summary
 
+ALLOWED_RECEIPT_CONTENT_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
+ALLOWED_RECEIPT_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.webp')
+
 
 def parse_decimal(value, field_name, allow_zero=False):
     if value in (None, ''):
@@ -34,6 +37,7 @@ class JournalTransactionSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     warehouse_name = serializers.CharField(source='warehouse.warehouse_name', read_only=True)
     movement_reference = serializers.CharField(source='linked_inventory_movement.source_reference', read_only=True)
+    payment_receipt_url = serializers.SerializerMethodField()
 
     class Meta:
         model = JournalTransaction
@@ -55,6 +59,9 @@ class JournalTransactionSerializer(serializers.ModelSerializer):
             'created_by_name',
             'cash_type',
             'payment_method',
+            'electronic_reference',
+            'payment_receipt',
+            'payment_receipt_url',
             'amount',
             'product_name',
             'quantity',
@@ -108,6 +115,16 @@ class JournalTransactionSerializer(serializers.ModelSerializer):
         user = obj.created_by
         return user.get_full_name() or user.username or user.email
 
+    def get_payment_receipt_url(self, obj):
+        if not obj.payment_receipt:
+            return None
+        try:
+            request = self.context.get('request')
+            url = obj.payment_receipt.url
+            return request.build_absolute_uri(url) if request else url
+        except ValueError:
+            return None
+
     def validate_party(self, value):
         value = value.strip()
         if not value:
@@ -120,8 +137,22 @@ class JournalTransactionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Description is required.')
         return value
 
+    def validate_payment_method(self, value):
+        return JournalTransaction.PAYMENT_ELECTRONIC if value == 'online' else value
+
     def validate_source_reference(self, value):
         return value.strip()
+
+    def validate_payment_receipt(self, value):
+        if value in (None, ''):
+            return value
+        content_type = getattr(value, 'content_type', '')
+        name = getattr(value, 'name', '').lower()
+        if content_type and content_type not in ALLOWED_RECEIPT_CONTENT_TYPES:
+            raise serializers.ValidationError('Upload a JPEG, PNG, or WebP receipt image.')
+        if name and not name.endswith(ALLOWED_RECEIPT_EXTENSIONS):
+            raise serializers.ValidationError('Upload a JPEG, PNG, or WebP receipt image.')
+        return value
 
     def to_internal_value(self, data):
         if 'commodity_direction' in data:
@@ -153,6 +184,8 @@ class JournalTransactionSerializer(serializers.ModelSerializer):
             'description',
             'cash_type',
             'payment_method',
+            'electronic_reference',
+            'payment_receipt',
             'amount',
             'product_name',
             'quantity',
@@ -176,7 +209,17 @@ class JournalTransactionSerializer(serializers.ModelSerializer):
         if not data.get('payment_method'):
             errors['payment_method'] = 'Payment method is required.'
         elif data.get('payment_method') not in dict(JournalTransaction.PAYMENT_METHOD_CHOICES):
-            errors['payment_method'] = 'Choose cash or online.'
+            errors['payment_method'] = 'Choose cash or electronic payment.'
+        elif data.get('payment_method') == JournalTransaction.PAYMENT_CASH:
+            attrs['electronic_reference'] = ''
+            attrs['payment_receipt'] = None
+        elif data.get('payment_method') == JournalTransaction.PAYMENT_ELECTRONIC:
+            if not (data.get('electronic_reference') or '').strip():
+                errors['electronic_reference'] = 'Electronic transaction reference is required.'
+            elif 'electronic_reference' in attrs:
+                attrs['electronic_reference'] = attrs['electronic_reference'].strip()
+            if not data.get('payment_receipt'):
+                errors['payment_receipt'] = 'Payment receipt image is required.'
 
         try:
             amount = parse_decimal(data.get('amount'), 'amount')
@@ -233,7 +276,7 @@ class JournalTransactionSerializer(serializers.ModelSerializer):
             elif 'estimated_value' in attrs:
                 attrs['estimated_value'] = estimated_value
 
-        for field in ('cash_type', 'payment_method', 'amount'):
+        for field in ('cash_type', 'payment_method', 'amount', 'electronic_reference', 'payment_receipt'):
             if data.get(field) not in (None, ''):
                 errors[field] = 'Cash fields are not allowed for commodity transactions.'
 

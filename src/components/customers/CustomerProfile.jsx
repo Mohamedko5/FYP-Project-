@@ -430,7 +430,7 @@ export default function CustomerProfile({
         <div className="detail-panel customer-profile-summary">
           <div>
             <span>{t('customers.customerType')}</span>
-            <strong>{customerTypeLabel(customer.customer_type || customer.customerType, isArabic)}</strong>
+            <strong>{customerTypeLabel(customer.customer_type || customer.customerType, t)}</strong>
           </div>
           <div>
             <span>{t('customers.cashBalance')}</span>

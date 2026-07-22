@@ -37,6 +37,10 @@ function createEmptyCashForm() {
     amount: '',
     description: '',
     party: '',
+    electronicReference: '',
+    paymentReceipt: null,
+    paymentReceiptPreview: '',
+    existingReceiptUrl: '',
   };
 }
 
@@ -75,10 +79,12 @@ function mapCashTransaction(row) {
     date: row.date,
     time: row.time,
     type: uiCashType(row.cash_type),
-    paymentMethod: row.payment_method,
+    paymentMethod: row.payment_method === 'online' ? 'electronic' : row.payment_method,
     amount: decimalNumber(row.amount),
     description: row.description,
     party: row.party,
+    electronicReference: row.electronic_reference || '',
+    paymentReceiptUrl: row.payment_receipt_url || row.payment_receipt || '',
   };
 }
 
@@ -302,8 +308,39 @@ export default function DailyJournal() {
   }
 
   function handleCashChange(event) {
-    const { name, value } = event.target;
+    const { name, value, files, type } = event.target;
+    if (type === 'file') {
+      const file = files?.[0] || null;
+      setCashForm((current) => ({
+        ...current,
+        paymentReceipt: file,
+        paymentReceiptPreview: file ? URL.createObjectURL(file) : '',
+      }));
+      return;
+    }
+    if (name === 'paymentMethod' && value === 'cash') {
+      const hasNewReceipt = Boolean(cashForm.paymentReceipt);
+      if (hasNewReceipt && !window.confirm(t('journal.discardReceiptConfirm'))) return;
+      setCashForm((current) => ({
+        ...current,
+        paymentMethod: 'cash',
+        electronicReference: '',
+        paymentReceipt: null,
+        paymentReceiptPreview: '',
+        existingReceiptUrl: '',
+      }));
+      return;
+    }
     setCashForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function handleRemoveCashReceipt() {
+    setCashForm((current) => ({
+      ...current,
+      paymentReceipt: null,
+      paymentReceiptPreview: '',
+      existingReceiptUrl: '',
+    }));
   }
 
   function handleCommodityChange(event) {
@@ -321,6 +358,14 @@ export default function DailyJournal() {
     }
     if (Number(cashForm.amount) <= 0) {
       nextErrors.push(t('journal.positiveAmountError'));
+    }
+    if (cashForm.paymentMethod === 'electronic') {
+      if (!cashForm.electronicReference.trim()) {
+        nextErrors.push(t('journal.electronicReferenceRequiredError'));
+      }
+      if (!cashForm.paymentReceipt && !cashForm.existingReceiptUrl) {
+        nextErrors.push(t('journal.paymentReceiptRequiredError'));
+      }
     }
     setCashErrors(nextErrors);
     return nextErrors.length === 0;
@@ -348,14 +393,17 @@ export default function DailyJournal() {
     setIsSaving(true);
     setCashErrors([]);
     try {
-      const apiPayload = {
-        journal_type: 'cash',
-        cash_type: apiCashType(payload.type),
-        payment_method: payload.paymentMethod,
-        amount: payload.amount,
-        party: payload.party,
-        description: payload.description,
-      };
+      const apiPayload = new FormData();
+      apiPayload.append('journal_type', 'cash');
+      apiPayload.append('cash_type', apiCashType(payload.type));
+      apiPayload.append('payment_method', payload.paymentMethod);
+      apiPayload.append('amount', payload.amount);
+      apiPayload.append('party', payload.party);
+      apiPayload.append('description', payload.description);
+      apiPayload.append('electronic_reference', payload.paymentMethod === 'electronic' ? payload.electronicReference : '');
+      if (payload.paymentMethod === 'electronic' && payload.paymentReceipt) {
+        apiPayload.append('payment_receipt', payload.paymentReceipt);
+      }
       if (editingCashId) {
         await updateJournalTransaction(editingCashId, apiPayload);
       } else {
@@ -463,13 +511,17 @@ export default function DailyJournal() {
   function handleCashEdit(entry) {
     setEditingCashId(entry.id);
     setShowCashForm(true);
-    setCashForm({
-      type: entry.type,
-      paymentMethod: entry.paymentMethod || 'cash',
-      amount: String(entry.amount),
-      party: entry.party,
-      description: entry.description,
-    });
+      setCashForm({
+        type: entry.type,
+        paymentMethod: entry.paymentMethod || 'cash',
+        amount: String(entry.amount),
+        party: entry.party,
+        description: entry.description,
+        electronicReference: entry.electronicReference || '',
+        paymentReceipt: null,
+        paymentReceiptPreview: '',
+        existingReceiptUrl: entry.paymentReceiptUrl || '',
+      });
     setCashErrors([]);
   }
 
@@ -663,7 +715,7 @@ export default function DailyJournal() {
                 >
                   <option value="">{t('journal.allPaymentMethods')}</option>
                   <option value="cash">{t('journal.paymentMethods.cash')}</option>
-                  <option value="online">{t('journal.paymentMethods.online')}</option>
+                  <option value="electronic">{t('journal.paymentMethods.electronic')}</option>
                 </select>
               </div>
               <Button onClick={handleAddCashTransaction} ref={cashButtonRef}>{t('journal.addTransaction')}</Button>
@@ -703,6 +755,7 @@ export default function DailyJournal() {
                 isEditing={Boolean(editingCashId)}
                 isSaving={isSaving}
                 onChange={handleCashChange}
+                onRemoveReceipt={handleRemoveCashReceipt}
                 onSubmit={handleCashSubmit}
                 onCancel={handleCashCancel}
                 t={t}

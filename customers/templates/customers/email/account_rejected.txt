@@ -1,0 +1,5 @@
+Hello {{ customer_name }},
+
+Your account registration was not approved. Please contact Bayad Commercial Activities Company for more information.
+
+{{ company_name }}

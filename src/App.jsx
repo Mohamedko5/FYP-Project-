@@ -11,6 +11,7 @@ import Orders from './pages/Orders.jsx';
 import WeighingShipment from './pages/WeighingShipment.jsx';
 import Invoices from './pages/Invoices.jsx';
 import Reports from './pages/Reports.jsx';
+import CustomerMessages from './pages/CustomerMessages.jsx';
 import Login from './pages/Login.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="orders" element={<Orders />} />
           <Route path="weighing-shipment" element={<WeighingShipment />} />
           <Route path="invoices" element={<Invoices />} />
+          <Route path="customer-messages" element={<CustomerMessages />} />
           <Route path="reports" element={<Reports />} />
         </Route>
         <Route path="*" element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />} />

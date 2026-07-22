@@ -32,7 +32,8 @@ class AppScaffold extends StatelessWidget {
                   0 => RouteNames.home,
                   1 => RouteNames.products,
                   2 => RouteNames.orders,
-                  _ => RouteNames.profile,
+                  3 => RouteNames.profile,
+                  _ => RouteNames.chat,
                 };
                 context.goNamed(route);
               },

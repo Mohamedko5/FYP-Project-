@@ -10,6 +10,7 @@ import '../../features/auth/presentation/registration_screens.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/cart/presentation/cart_screen.dart';
 import '../../features/cart/presentation/checkout_screen.dart';
+import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/invoices/presentation/invoices_screen.dart';
 import '../../features/orders/presentation/orders_screen.dart';
@@ -59,6 +60,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/reset-password', name: RouteNames.resetPassword, builder: (context, state) => const ResetPasswordScreen()),
       GoRoute(path: '/home', name: RouteNames.home, builder: (context, state) => const HomeScreen()),
       GoRoute(path: '/profile', name: RouteNames.profile, builder: (context, state) => const ProfileScreen()),
+      GoRoute(path: '/chat', name: RouteNames.chat, builder: (context, state) => const ChatScreen()),
       GoRoute(path: '/products', name: RouteNames.products, builder: (context, state) => const ProductsScreen()),
       GoRoute(
         path: '/products/:id',

@@ -32,7 +32,7 @@ export default function CustomerList({ customers, selectedCustomerId, onSelect, 
     {
       key: 'customerType',
       label: t('customers.customerType'),
-      render: (row) => <span className="status-badge status-badge--neutral">{customerTypeLabel(row.customerType, isArabic)}</span>,
+      render: (row) => <span className="status-badge status-badge--neutral">{customerTypeLabel(row.customerType || row.customer_type, t)}</span>,
     },
     { key: 'cashBalance', label: t('customers.cashBalance'), render: (row) => formatCurrency(Math.abs(Number(row.cashBalance ?? row.cash_balance ?? 0))) },
     { key: 'cashStatus', label: t('customers.debtStatus'), render: (row) => <StatusBadge status={row.cashStatus || row.cash_status || 'Balanced'} /> },

@@ -19,10 +19,11 @@ class JournalTransaction(models.Model):
     ]
 
     PAYMENT_CASH = 'cash'
-    PAYMENT_ONLINE = 'online'
+    PAYMENT_ELECTRONIC = 'electronic'
+    PAYMENT_ONLINE = PAYMENT_ELECTRONIC
     PAYMENT_METHOD_CHOICES = [
         (PAYMENT_CASH, 'Cash'),
-        (PAYMENT_ONLINE, 'Online'),
+        (PAYMENT_ELECTRONIC, 'Electronic Payment'),
     ]
 
     SOURCE_MANUAL = 'manual'
@@ -94,6 +95,8 @@ class JournalTransaction(models.Model):
 
     cash_type = models.CharField(max_length=20, choices=CASH_TYPE_CHOICES, null=True, blank=True)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True)
+    electronic_reference = models.CharField(max_length=120, blank=True)
+    payment_receipt = models.FileField(upload_to='daily_journal/receipts/', null=True, blank=True)
     amount = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
 
     product_name = models.CharField(max_length=100, null=True, blank=True)
@@ -147,11 +150,21 @@ class JournalTransaction(models.Model):
         if self.journal_type == self.JOURNAL_CASH:
             if self.payment_method not in dict(self.PAYMENT_METHOD_CHOICES):
                 errors['payment_method'] = 'Payment method is required for cash transactions.'
+            if self.payment_method == self.PAYMENT_CASH:
+                if self.electronic_reference:
+                    errors['electronic_reference'] = 'Electronic reference is not allowed for cash payments.'
+                if self.payment_receipt:
+                    errors['payment_receipt'] = 'Payment receipt is not allowed for cash payments.'
+            elif self.payment_method == self.PAYMENT_ELECTRONIC:
+                if not self.electronic_reference:
+                    errors['electronic_reference'] = 'Electronic transaction reference is required.'
+                if not self.payment_receipt:
+                    errors['payment_receipt'] = 'Payment receipt image is required.'
             for field in ('product_name', 'quantity', 'unit', 'estimated_value'):
                 if getattr(self, field) not in (None, ''):
                     errors[field] = 'Commodity fields are not allowed for cash transactions.'
         elif self.journal_type == self.JOURNAL_COMMODITY:
-            for field in ('cash_type', 'payment_method', 'amount'):
+            for field in ('cash_type', 'payment_method', 'amount', 'electronic_reference', 'payment_receipt'):
                 if getattr(self, field) not in (None, ''):
                     errors[field] = 'Cash fields are not allowed for commodity transactions.'
 

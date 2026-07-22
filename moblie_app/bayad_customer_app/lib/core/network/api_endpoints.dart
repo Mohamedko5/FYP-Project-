@@ -15,6 +15,11 @@ class ApiEndpoints {
   static const orders = '/api/mobile/orders/';
   static const invoices = '/api/mobile/invoices/';
   static const shipments = '/api/mobile/shipments/';
+  static const chatConversation = '/api/chat/mobile/conversation/';
+  static const chatMessages = '/api/chat/mobile/messages/';
+  static const chatCustomerCard = '/api/chat/mobile/customer-card/';
+  static const chatRead = '/api/chat/mobile/messages/read/';
+  static const chatUnreadCount = '/api/chat/mobile/unread-count/';
 
   static String productDetail(int id) => '/api/mobile/products/$id/';
   static String orderDetail(int id) => '/api/mobile/orders/$id/';

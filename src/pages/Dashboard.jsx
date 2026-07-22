@@ -12,6 +12,7 @@ import {
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
+import { productLabel, unitLabel } from '../components/customers/customerHelpers.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getDailyJournalSummary, listJournalTransactions } from '../services/dailyJournalApi.js';
 import { getInventoryMovements, getInventorySummary, getWarehouses } from '../services/inventoryApi.js';
@@ -128,6 +129,10 @@ function money(value, currency = 'SDG') {
 
 function qty(value, unit = '') {
   return `${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ''}`;
+}
+
+function localizedQty(value, unit, isArabic) {
+  return qty(value, unitLabel(unit, isArabic));
 }
 
 function statusText(value, isArabic = false) {
@@ -283,7 +288,7 @@ export default function Dashboard() {
       id: `movement-${row.id}`,
       type: label.inventory,
       title: row.source_reference || row.product_name,
-      description: `${row.warehouse_name || '-'} / ${qty(row.quantity, row.unit)}`,
+      description: `${row.warehouse_name || '-'} / ${localizedQty(row.quantity, row.unit, isArabic)}`,
       date: `${row.date || ''} ${row.time || ''}`.trim(),
       status: row.movement_type,
       path: '/warehouse-inventory',
@@ -295,7 +300,7 @@ export default function Dashboard() {
     ...warehouseAlerts.map((warehouse) => ({
       id: `warehouse-${warehouse.id}`,
       title: warehouse.warehouse_name,
-      description: `${warehouse.usage_percent}% capacity`,
+      description: `${warehouse.usage_percent}% ${t('common.capacity')}`,
       status: warehouse.status,
     })),
     ...(Number(data.inventorySummary?.low_stock_items || 0) > 0 ? [{
@@ -370,8 +375,8 @@ export default function Dashboard() {
           <div className="dashboard-inventory-list">
             {(data.inventorySummary?.inventory_groups || []).length === 0 ? <EmptyState title={t('emptyMessage')} /> : data.inventorySummary.inventory_groups.map((group) => (
               <div key={`${group.product_id}-${group.unit}`}>
-                <span>{group.product_name}</span>
-                <strong>{qty(group.quantity, group.unit)}</strong>
+                <span>{productLabel(group.product_name_ar || group.product_name, isArabic)}</span>
+                <strong>{localizedQty(group.quantity, group.unit, isArabic)}</strong>
               </div>
             ))}
           </div>
@@ -383,7 +388,7 @@ export default function Dashboard() {
               <div key={warehouse.id} className="dashboard-warehouse-row">
                 <div>
                   <strong>{warehouse.warehouse_name}</strong>
-                  <span>{qty(warehouse.used_capacity, warehouse.capacity_unit)} / {qty(warehouse.capacity, warehouse.capacity_unit)}</span>
+                  <span>{localizedQty(warehouse.used_capacity, warehouse.capacity_unit, isArabic)} / {localizedQty(warehouse.capacity, warehouse.capacity_unit, isArabic)}</span>
                 </div>
                 <div className="module-progress" aria-label={`${warehouse.usage_percent}%`}>
                   <span style={{ width: `${Math.min(Number(warehouse.usage_percent || 0), 100)}%` }} />

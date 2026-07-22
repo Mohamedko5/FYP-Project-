@@ -655,6 +655,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Saving...'**
   String get saving;
+
+  /// No description provided for @chat.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get chat;
+
+  /// No description provided for @bayadSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Bayad Support'**
+  String get bayadSupport;
+
+  /// No description provided for @typeAMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a message'**
+  String get typeAMessage;
+
+  /// No description provided for @send.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get send;
+
+  /// No description provided for @attachFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach File'**
+  String get attachFile;
+
+  /// No description provided for @chooseImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Image'**
+  String get chooseImage;
+
+  /// No description provided for @choosePdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose PDF'**
+  String get choosePdf;
+
+  /// No description provided for @shareCustomerCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Customer Card'**
+  String get shareCustomerCard;
+
+  /// No description provided for @shareCardMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Customer name, code, contact details and account type will be shared with Bayad Admin.'**
+  String get shareCardMessage;
+
+  /// No description provided for @shareCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Card'**
+  String get shareCard;
+
+  /// No description provided for @viewAttachment.
+  ///
+  /// In en, this message translates to:
+  /// **'View Attachment'**
+  String get viewAttachment;
+
+  /// No description provided for @downloadAttachment.
+  ///
+  /// In en, this message translates to:
+  /// **'Download Attachment'**
+  String get downloadAttachment;
+
+  /// No description provided for @image.
+  ///
+  /// In en, this message translates to:
+  /// **'Image'**
+  String get image;
+
+  /// No description provided for @document.
+  ///
+  /// In en, this message translates to:
+  /// **'Document'**
+  String get document;
+
+  /// No description provided for @sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get sent;
+
+  /// No description provided for @delivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get delivered;
+
+  /// No description provided for @read.
+  ///
+  /// In en, this message translates to:
+  /// **'Read'**
+  String get read;
+
+  /// No description provided for @failedToSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to Send'**
+  String get failedToSend;
+
+  /// No description provided for @noMessagesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No Messages Yet'**
+  String get noMessagesYet;
+
+  /// No description provided for @startConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a conversation with Bayad Admin.'**
+  String get startConversation;
+
+  /// No description provided for @waitingForAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Admin'**
+  String get waitingForAdmin;
+
+  /// No description provided for @waitingForCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Customer'**
+  String get waitingForCustomer;
+
+  /// No description provided for @closed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get closed;
+
+  /// No description provided for @unreadMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread Messages'**
+  String get unreadMessages;
+
+  /// No description provided for @bankCardWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Do not send bank-card numbers, PINs or passwords.'**
+  String get bankCardWarning;
+
+  /// No description provided for @noAttachmentSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'No attachment selected'**
+  String get noAttachmentSelected;
+
+  /// No description provided for @removeAttachment.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Attachment'**
+  String get removeAttachment;
+
+  /// No description provided for @connectionFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages load through secure server history.'**
+  String get connectionFallback;
+
+  /// No description provided for @chooseAttachment.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Attachment'**
+  String get chooseAttachment;
+
+  /// No description provided for @unsupportedFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a JPG, PNG, WebP image or PDF document.'**
+  String get unsupportedFile;
+
+  /// No description provided for @shareCustomerCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Customer Card'**
+  String get shareCustomerCardTitle;
 }
 
 class _AppLocalizationsDelegate
