@@ -17,6 +17,7 @@ import '../../features/orders/presentation/orders_screen.dart';
 import '../../features/products/presentation/products_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/shipments/presentation/shipments_screen.dart';
+import '../../features/supply_offers/presentation/screens/supply_offers_screen.dart';
 import 'route_names.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -91,6 +92,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/shipments/:id',
         name: RouteNames.shipmentDetail,
         builder: (context, state) => ShipmentDetailScreen(shipmentId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+      ),
+      GoRoute(path: '/supply-offers', name: RouteNames.supplyOffers, builder: (context, state) => const SupplyOffersScreen()),
+      GoRoute(path: '/supply-offers/create', name: RouteNames.createSupplyOffer, builder: (context, state) => const CreateSupplyOfferScreen()),
+      GoRoute(
+        path: '/supply-offers/:id',
+        name: RouteNames.supplyOfferDetail,
+        builder: (context, state) => SupplyOfferDetailScreen(offerId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
       ),
     ],
   );

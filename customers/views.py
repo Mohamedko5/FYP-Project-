@@ -137,7 +137,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
     allowed_ordering = {'name', '-name', 'created_at', '-created_at', 'cash_balance', '-cash_balance'}
 
     def get_queryset(self):
-        return Customer.objects.filter(is_deleted=False).prefetch_related('cash_transactions', 'commodity_transactions__product')
+        queryset = Customer.objects.all() if self.action == 'restore' else Customer.objects.filter(is_deleted=False)
+        return queryset.prefetch_related('cash_transactions', 'commodity_transactions__product')
 
     def filter_queryset(self, queryset):
         params = self.request.query_params
@@ -188,6 +189,20 @@ class CustomerViewSet(viewsets.ModelViewSet):
         customer.deleted_at = timezone.now()
         customer.save(update_fields=['is_deleted', 'is_active', 'deleted_by', 'deleted_at', 'updated_at'])
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'], url_path='restore')
+    def restore(self, request, pk=None):
+        if user_role(request.user) != 'admin':
+            return Response({'detail': 'Only admin users can restore customers.'}, status=status.HTTP_403_FORBIDDEN)
+        customer = self.get_object()
+        customer.is_deleted = False
+        customer.is_active = True
+        customer.deleted_by = None
+        customer.deleted_at = None
+        customer.updated_by = request.user
+        customer.full_clean()
+        customer.save(update_fields=['is_deleted', 'is_active', 'deleted_by', 'deleted_at', 'updated_by', 'updated_at'])
+        return Response(CustomerSerializer(customer, context={'request': request}).data)
 
     @action(detail=False, methods=['get'], url_path='summary')
     def summary(self, request):

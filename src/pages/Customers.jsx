@@ -21,6 +21,7 @@ import {
   getCustomerCommodityTransactions,
   getCustomerStatement,
   getCustomers,
+  restoreCustomer,
 } from '../services/customersApi.js';
 import { getProducts, getWarehouses } from '../services/inventoryApi.js';
 import {
@@ -78,6 +79,15 @@ function storedAdminName() {
   }
 }
 
+function readRole() {
+  try {
+    const user = JSON.parse(localStorage.getItem('bayadUser') || '{}');
+    return user?.profile?.role || user?.role || 'admin';
+  } catch {
+    return 'admin';
+  }
+}
+
 function mapProduct(row) {
   return {
     id: row.id,
@@ -122,12 +132,14 @@ export default function Customers() {
   const [formErrors, setFormErrors] = useState([]);
   const [workerErrors, setWorkerErrors] = useState([]);
   const [apiError, setApiError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isSavingCustomer, setIsSavingCustomer] = useState(false);
   const [isSavingCash, setIsSavingCash] = useState(false);
   const [isSavingCommodity, setIsSavingCommodity] = useState(false);
   const [isSavingPayment, setIsSavingPayment] = useState(false);
+  const [isRestoringCustomer, setIsRestoringCustomer] = useState(false);
   const [isLoadingWorkers, setIsLoadingWorkers] = useState(false);
   const [isLoadingWorkerProfile, setIsLoadingWorkerProfile] = useState(false);
   const [isSavingWorker, setIsSavingWorker] = useState(false);
@@ -138,6 +150,7 @@ export default function Customers() {
   const [workerRecords, setWorkerRecords] = useState([]);
   const [workerStatement, setWorkerStatement] = useState(null);
   const adminName = storedAdminName();
+  const isAdmin = readRole() === 'admin';
   const addCustomerButtonRef = useRef(null);
   const addWorkerButtonRef = useRef(null);
 
@@ -254,6 +267,7 @@ export default function Customers() {
   }, [selectedWorkerId, loadSelectedWorker]);
 
   function switchCustomerTab(tab) {
+    setSuccessMessage('');
     setActiveCustomerTab(tab);
     setSelectedCustomerId('');
     setSelectedCustomer(null);
@@ -399,6 +413,23 @@ export default function Customers() {
     }
   }
 
+  async function handleRestoreCustomer() {
+    if (!selectedCustomerId) return;
+    setApiError('');
+    setSuccessMessage('');
+    setIsRestoringCustomer(true);
+    try {
+      const restored = await restoreCustomer(selectedCustomerId);
+      setSelectedCustomer(restored);
+      await Promise.all([loadCustomers(), loadSelectedCustomer(selectedCustomerId)]);
+      setSuccessMessage(t('customers.restoreSuccess'));
+    } catch (error) {
+      setApiError(formatApiError(error, t));
+    } finally {
+      setIsRestoringCustomer(false);
+    }
+  }
+
   async function handleAddPayment(payload) {
     if (!selectedCustomerId) return;
     setIsSavingPayment(true);
@@ -522,6 +553,7 @@ export default function Customers() {
                 <Button type="button" variant="secondary" onClick={loadCustomers}>{t('retry')}</Button>
               </div>
             )}
+            {successMessage && <div className="form-success" role="status">{successMessage}</div>}
             {isLoadingCustomers ? (
               <p className="muted-text">{t('customers.loadingCustomers')}</p>
             ) : (
@@ -546,11 +578,15 @@ export default function Customers() {
               onAddPayment={handleAddPayment}
               onLoadStatement={handleLoadStatement}
               onPrint={handlePrintStatement}
+              onRestore={handleRestoreCustomer}
               onClose={() => {
                 setSelectedCustomerId('');
                 setSelectedCustomer(null);
+                setSuccessMessage('');
               }}
               adminName={adminName}
+              isAdmin={isAdmin}
+              isRestoringCustomer={isRestoringCustomer}
             />
           )}
 

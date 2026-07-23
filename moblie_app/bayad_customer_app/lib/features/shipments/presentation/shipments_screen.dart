@@ -17,7 +17,7 @@ class ShipmentsScreen extends ConsumerWidget {
     final shipments = ref.watch(shipmentsProvider);
     return AppScaffold(
       title: 'My Shipments',
-      currentIndex: 3,
+      currentIndex: 4,
       child: shipments.when(
         loading: () => const LoadingView(message: 'Loading Shipments...'),
         error: (error, _) => ErrorView(message: 'Unable to load Shipments. Please try again.', retryLabel: 'Retry', onRetry: () => ref.invalidate(shipmentsProvider)),
@@ -45,7 +45,7 @@ class ShipmentDetailScreen extends ConsumerWidget {
     final shipment = ref.watch(shipmentDetailProvider(shipmentId));
     return AppScaffold(
       title: 'Shipment Tracking',
-      currentIndex: 3,
+      currentIndex: 4,
       child: shipment.when(
         loading: () => const LoadingView(message: 'Loading Shipment...'),
         error: (error, _) => ErrorView(message: 'Unable to load Shipment. Please try again.', retryLabel: 'Retry', onRetry: () => ref.invalidate(shipmentDetailProvider(shipmentId))),

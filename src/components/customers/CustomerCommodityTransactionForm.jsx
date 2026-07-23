@@ -37,7 +37,7 @@ export default function CustomerCommodityTransactionForm({
   }, [form.productId, form.unit, selectedUnitOptions]);
 
   return (
-    <form className="form-grid" onSubmit={onSubmit}>
+    <form className="form-grid customer-commodity-transaction-form" onSubmit={onSubmit}>
       {errors.length > 0 && (
         <div className="form-error form-grid__wide">
           {errors.map((error) => <p key={error}>{error}</p>)}
@@ -79,11 +79,11 @@ export default function CustomerCommodityTransactionForm({
         {t('journal.estimatedValue')}
         <input name="estimatedValue" type="number" min="0" step="0.01" value={form.estimatedValue || ''} onChange={onChange} placeholder="0" />
       </label>
-      <label className="form-grid__wide">
+      <label className="form-grid__wide customer-commodity-transaction-form__description">
         {t('common.description')}
         <textarea name="description" value={form.description} onChange={onChange} placeholder={t('journal.descriptionPlaceholder')} />
       </label>
-      <div className="form-grid__actions form-grid__actions--split">
+      <div className="form-grid__actions form-grid__actions--split customer-commodity-transaction-form__actions">
         <Button type="submit" disabled={isSaving}>{isSaving ? t('journal.saving') : t('journal.saveCommodityTransaction')}</Button>
         <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>{t('cancel')}</Button>
       </div>

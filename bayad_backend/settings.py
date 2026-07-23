@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'shipments',
     'reports',
     'communications',
+    'supply_offers',
 ]
 
 MIDDLEWARE = [

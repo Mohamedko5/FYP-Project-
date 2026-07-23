@@ -37,6 +37,10 @@ export function archiveCustomer(id) {
   return apiRequest(`/api/customers/${id}/`, { method: 'DELETE' });
 }
 
+export function restoreCustomer(id) {
+  return apiRequest(`/api/customers/${id}/restore/`, { method: 'POST' });
+}
+
 export function getCustomerSummary() {
   return apiRequest('/api/customers/summary/');
 }

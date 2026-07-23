@@ -12,7 +12,9 @@ import 'package:bayad_customer_app/core/storage/secure_storage_service.dart';
 import 'package:bayad_customer_app/features/auth/data/auth_repository.dart';
 import 'package:bayad_customer_app/features/auth/domain/auth_state.dart';
 import 'package:bayad_customer_app/features/auth/presentation/auth_controller.dart';
+import 'package:bayad_customer_app/features/chat/domain/chat_models.dart';
 import 'package:bayad_customer_app/features/profile/domain/customer.dart';
+import 'package:bayad_customer_app/features/supply_offers/data/models/supply_offer_models.dart';
 import 'package:bayad_customer_app/shared/data/mobile_providers.dart';
 import 'package:bayad_customer_app/shared/models/mobile_models.dart';
 import 'package:bayad_customer_app/shared/models/paged_response.dart';
@@ -43,6 +45,31 @@ final testProduct = Product(
 const testOrder = OrderSummary(id: 1, orderNumber: 'ORD-2026-000001', status: 'pending', itemCount: 1, productSummary: 'White Sesame', totalAmount: 110000, currency: 'SDG', createdAt: null);
 const testInvoice = InvoiceSummary(id: 1, invoiceNumber: 'INV-2026-000001', orderNumber: 'ORD-2026-000001', status: 'issued', paymentStatus: 'unpaid', totalAmount: 110000, currency: 'SDG', issuedAt: null, productSummary: 'White Sesame');
 const testShipment = ShipmentSummary(id: 1, shipmentNumber: 'SHP-2026-000001', orderNumber: 'ORD-2026-000001', invoiceNumber: 'INV-2026-000001', status: 'ready_for_shipment', productSummary: 'White Sesame', driverName: '', vehicleNumber: '', startedAt: null, completedAt: null);
+const testSupplyOffer = SupplyOffer(
+  id: 1,
+  offerNumber: 'SUP-2026-000001',
+  status: 'submitted',
+  productSummary: 'White Sesame',
+  customerReference: 'July offer',
+  region: 'White Nile',
+  city: 'Kosti',
+  area: 'Al Rabwa',
+  detailedAddress: 'Farm near Kosti market',
+  availabilityDate: '2026-07-30',
+  customerNotes: '',
+  adminMessage: '',
+  rejectionReason: '',
+  proposedTotal: 12000000,
+  adminProposedTotal: 0,
+  agreedTotal: 0,
+  currency: 'SDG',
+  createdAt: null,
+  items: [
+    SupplyOfferItem(id: 1, productName: 'White Sesame', unit: 'Qintar', quantity: 100, customerPrice: 120000, lineTotal: 12000000, adminPrice: 0, agreedPrice: 0, qualityGrade: 'Grade A', packagingDetails: 'Sealed bags'),
+  ],
+  attachments: [],
+  timeline: [],
+);
 
 class FakeAuthRepository extends AuthRepository {
   FakeAuthRepository({this.loginError, this.restoreError, this.loginCustomer = testCustomer})
@@ -125,6 +152,10 @@ Future<void> pumpBayadApp(
         invoiceDetailProvider.overrideWith((ref, id) async => const InvoiceDetail(id: 1, invoiceNumber: 'INV-2026-000001', orderNumber: 'ORD-2026-000001', status: 'issued', paymentStatus: 'unpaid', totalAmount: 110000, currency: 'SDG', issuedAt: null, productSummary: 'White Sesame', subtotal: 110000, discountAmount: 0, notes: '', items: [])),
         shipmentsProvider.overrideWith((ref) async => const PagedResponse(count: 1, next: null, previous: null, results: [testShipment])),
         shipmentDetailProvider.overrideWith((ref, id) async => const ShipmentDetail(id: 1, shipmentNumber: 'SHP-2026-000001', orderNumber: 'ORD-2026-000001', invoiceNumber: 'INV-2026-000001', status: 'ready_for_shipment', productSummary: 'White Sesame', driverName: '', vehicleNumber: '', startedAt: null, completedAt: null, notes: '', items: [], workflowSteps: [WorkflowStepModel(key: 'ready_for_shipment', label: 'Ready for Shipment', state: 'current')])),
+        chatUnreadCountProvider.overrideWith((ref) async => 0),
+        chatMessagesProvider.overrideWith((ref) async => const <ChatMessage>[]),
+        supplyOffersProvider.overrideWith((ref) async => const PagedResponse(count: 1, next: null, previous: null, results: [testSupplyOffer])),
+        supplyOfferDetailProvider.overrideWith((ref, id) async => testSupplyOffer),
       ],
       child: const BayadCustomerApp(),
     ),
@@ -228,6 +259,73 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('CUS-0001'), findsWidgets);
+  });
+
+  testWidgets('Chat appears in bottom navigation', (tester) async {
+    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
+    expect(find.text('Chat'), findsOneWidget);
+  });
+
+  testWidgets('Selecting Chat opens ChatScreen with composer', (tester) async {
+    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
+    await tester.tap(find.text('Chat'));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Bayad Support'), findsOneWidget);
+    expect(find.text('No Messages Yet'), findsOneWidget);
+    expect(find.byType(TextField), findsWidgets);
+    expect(find.text('Send'), findsWidgets);
+  });
+
+  testWidgets('Home displays Contact Bayad', (tester) async {
+    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
+    await tester.scrollUntilVisible(find.text('Contact Bayad'), 120, scrollable: find.byType(Scrollable).first);
+    expect(find.text('Contact Bayad'), findsOneWidget);
+  });
+
+  testWidgets('Home displays Sell to Bayad', (tester) async {
+    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
+    await tester.scrollUntilVisible(find.text('Sell to Bayad'), 120, scrollable: find.byType(Scrollable).first);
+    expect(find.text('Sell to Bayad'), findsOneWidget);
+  });
+
+  testWidgets('Home displays My Supply Offers', (tester) async {
+    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
+    await tester.scrollUntilVisible(find.text('My Supply Offers'), 120, scrollable: find.byType(Scrollable).first);
+    expect(find.text('My Supply Offers'), findsOneWidget);
+  });
+
+  testWidgets('My Supply Offers opens Supply Offers list', (tester) async {
+    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
+    await tester.scrollUntilVisible(find.text('My Supply Offers'), 120, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('My Supply Offers'));
+    await tester.pump();
+    await tester.tap(find.text('My Supply Offers'));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Supply Offers'), findsOneWidget);
+    expect(find.text('SUP-2026-000001'), findsOneWidget);
+  });
+
+  testWidgets('Sell to Bayad opens Create Supply Offer', (tester) async {
+    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
+    await tester.scrollUntilVisible(find.text('Sell to Bayad'), 120, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('Sell to Bayad'));
+    await tester.pump();
+    await tester.tap(find.text('Sell to Bayad'));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Create Supply Offer'), findsOneWidget);
+    expect(find.text('Add Offer Items'), findsOneWidget);
+  });
+
+  testWidgets('Arabic message can be entered in Chat', (tester) async {
+    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer), language: 'ar');
+    await tester.tap(find.byIcon(Icons.chat_bubble_outline).last);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.enterText(find.byType(TextField).last, 'أريد معرفة حالة طلبي');
+    expect(find.text('أريد معرفة حالة طلبي'), findsOneWidget);
   });
 
   testWidgets('Server error displays Retry', (tester) async {

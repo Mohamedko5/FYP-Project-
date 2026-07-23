@@ -31,9 +31,9 @@ class AppScaffold extends StatelessWidget {
                 final route = switch (index) {
                   0 => RouteNames.home,
                   1 => RouteNames.products,
-                  2 => RouteNames.orders,
-                  3 => RouteNames.profile,
-                  _ => RouteNames.chat,
+                  2 => RouteNames.chat,
+                  3 => RouteNames.orders,
+                  _ => RouteNames.profile,
                 };
                 context.goNamed(route);
               },

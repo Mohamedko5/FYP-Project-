@@ -1,32 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:bayad_customer_app/l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' as intl;
 
 import '../../core/theme/app_colors.dart';
+import '../data/mobile_providers.dart';
 import '../models/mobile_models.dart';
 
 String formatMoney(double value, [String currency = 'SDG']) => '$currency ${intl.NumberFormat('#,##0.00').format(value)}';
 String formatQuantity(double value, String unit) => '${intl.NumberFormat('#,##0.###').format(value)} $unit';
 String formatDate(DateTime? date) => date == null ? '-' : intl.DateFormat('dd MMM yyyy').format(date.toLocal());
 
-class BayadBottomNavigation extends StatelessWidget {
+class BayadBottomNavigation extends ConsumerWidget {
   const BayadBottomNavigation({super.key, required this.currentIndex, required this.onTap});
 
   final int currentIndex;
   final ValueChanged<int> onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final unreadCount = ref.watch(chatUnreadCountProvider).valueOrNull ?? 0;
+    final chatIcon = unreadCount > 0
+        ? Badge.count(count: unreadCount, child: const Icon(Icons.chat_bubble_outline))
+        : const Icon(Icons.chat_bubble_outline);
+    final selectedChatIcon = unreadCount > 0
+        ? Badge.count(count: unreadCount, child: const Icon(Icons.chat_bubble))
+        : const Icon(Icons.chat_bubble);
     return NavigationBar(
       selectedIndex: currentIndex,
       onDestinationSelected: onTap,
       destinations: [
         NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home), label: l10n.home),
         NavigationDestination(icon: const Icon(Icons.inventory_2_outlined), selectedIcon: const Icon(Icons.inventory_2), label: l10n.products),
+        NavigationDestination(icon: chatIcon, selectedIcon: selectedChatIcon, label: l10n.chat),
         NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), selectedIcon: const Icon(Icons.receipt_long), label: l10n.myOrders),
-        NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: l10n.profile),
-        NavigationDestination(icon: const Icon(Icons.chat_bubble_outline), selectedIcon: const Icon(Icons.chat_bubble), label: l10n.chat),
+        NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: l10n.account),
       ],
     );
   }

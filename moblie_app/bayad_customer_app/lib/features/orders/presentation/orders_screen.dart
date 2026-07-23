@@ -18,7 +18,7 @@ class OrdersScreen extends ConsumerWidget {
     final orders = ref.watch(ordersProvider);
     return AppScaffold(
       title: 'My Orders',
-      currentIndex: 2,
+      currentIndex: 3,
       child: Column(
         children: [
           SizedBox(
@@ -67,7 +67,7 @@ class OrderDetailScreen extends ConsumerWidget {
     final order = ref.watch(orderDetailProvider(orderId));
     return AppScaffold(
       title: 'Order Details',
-      currentIndex: 2,
+      currentIndex: 3,
       child: order.when(
         loading: () => const LoadingView(message: 'Loading Order...'),
         error: (error, _) => ErrorView(message: 'Unable to load Order. Please try again.', retryLabel: 'Retry', onRetry: () => ref.invalidate(orderDetailProvider(orderId))),

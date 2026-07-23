@@ -3223,6 +3223,91 @@ textarea,
   gap: 8px;
 }
 
+.supply-offers-page {
+  align-items: start;
+}
+
+.supply-offers-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(190px, 240px) auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.supply-offers-toolbar input,
+.supply-offers-toolbar select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+}
+
+.supply-offers-toolbar .button {
+  min-height: 42px;
+  white-space: nowrap;
+}
+
+.supply-offers-table {
+  overflow-x: auto;
+}
+
+.supply-offers-table .data-table {
+  min-width: 920px;
+}
+
+.supply-offers-table .data-table th,
+.supply-offers-table .data-table td {
+  white-space: nowrap;
+}
+
+.supply-offers-table .table-empty {
+  white-space: normal;
+}
+
+.offer-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.offer-detail-grid section {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fffdf9;
+}
+
+.offer-detail-grid h3,
+.offer-detail-grid p {
+  margin: 0;
+}
+
+.offer-detail-grid p {
+  margin-top: 8px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+@media (max-width: 760px) {
+  .supply-offers-toolbar,
+  .offer-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .supply-offers-toolbar .button {
+    width: 100%;
+  }
+}
+
 .shipment-tabs {
   margin-bottom: 14px;
 }
@@ -3974,6 +4059,45 @@ textarea,
   white-space: nowrap;
 }
 
+.customer-account-transaction-form,
+.customer-commodity-transaction-form {
+  align-items: start;
+}
+
+.customer-account-transaction-form .customer-account-transaction-form__description,
+.customer-commodity-transaction-form .customer-commodity-transaction-form__description {
+  grid-column: 1 / -1;
+}
+
+.customer-account-transaction-form__description textarea,
+.customer-commodity-transaction-form__description textarea {
+  min-height: 96px;
+}
+
+.customer-account-transaction-form .customer-account-transaction-form__actions,
+.customer-commodity-transaction-form .customer-commodity-transaction-form__actions {
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.app-window__body .customer-account-transaction-form .customer-account-transaction-form__actions,
+.app-window__body .customer-commodity-transaction-form .customer-commodity-transaction-form__actions {
+  position: static;
+  bottom: auto;
+  z-index: auto;
+  margin: 4px 0 0;
+  padding: 14px 0 0;
+  background: transparent;
+}
+
+.customer-account-transaction-form + .table-wrap,
+.customer-commodity-transaction-form + .table-wrap {
+  margin-top: 18px;
+}
+
 .customers-add-new-section {
   display: flex;
   justify-content: flex-end;
@@ -4509,6 +4633,12 @@ textarea,
 .customer-profile-tabs__button.is-active {
   background: var(--green);
   color: #ffffff;
+}
+
+.customer-profile-tabs__button:disabled,
+.customer-profile-tabs__button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .customer-section-header {

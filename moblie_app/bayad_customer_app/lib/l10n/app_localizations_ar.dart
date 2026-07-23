@@ -69,7 +69,51 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profile => 'الملف الشخصي';
 
   @override
+  String get account => 'الحساب';
+
+  @override
   String get home => 'الرئيسية';
+
+  @override
+  String get loadingHome => 'جارٍ تحميل بوابة العميل...';
+
+  @override
+  String get homeLoadError =>
+      'تعذر تحميل الصفحة الرئيسية. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get quickActions => 'الإجراءات السريعة';
+
+  @override
+  String get browseProducts => 'تصفح المنتجات';
+
+  @override
+  String get trackShipments => 'تتبع الشحنات';
+
+  @override
+  String get pendingOrders => 'الطلبات المعلقة';
+
+  @override
+  String get unpaidInvoices => 'الفواتير غير المدفوعة';
+
+  @override
+  String get processingShipments => 'الشحنات قيد المعالجة';
+
+  @override
+  String get completedOrders => 'الطلبات المكتملة';
+
+  @override
+  String get recentOrders => 'أحدث الطلبات';
+
+  @override
+  String get viewAllOrders => 'عرض كل الطلبات';
+
+  @override
+  String get noOrdersFound => 'لا توجد طلبات.';
+
+  @override
+  String get unpaidInvoiceNotice =>
+      'لديك فاتورة غير مدفوعة. يرجى التواصل مع شركة بياض لإكمال الدفع.';
 
   @override
   String get products => 'المنتجات';
@@ -394,4 +438,173 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get shareCustomerCardTitle => 'مشاركة بطاقة العميل';
+
+  @override
+  String get contactBayad => 'تواصل مع بياض';
+
+  @override
+  String get sellToBayad => 'بيع منتجات إلى بياض';
+
+  @override
+  String get supplyOffers => 'عروض التوريد';
+
+  @override
+  String get mySupplyOffers => 'عروض التوريد الخاصة بي';
+
+  @override
+  String get product => 'المنتج';
+
+  @override
+  String get unit => 'الوحدة';
+
+  @override
+  String get quantity => 'الكمية';
+
+  @override
+  String get createSupplyOffer => 'إنشاء عرض توريد';
+
+  @override
+  String get addOfferItems => 'إضافة منتجات العرض';
+
+  @override
+  String get addProduct => 'إضافة منتج';
+
+  @override
+  String get proposedUnitPrice => 'السعر المقترح للوحدة';
+
+  @override
+  String get proposedTotal => 'إجمالي العرض المقترح';
+
+  @override
+  String get productLocation => 'موقع المنتجات';
+
+  @override
+  String get availabilityDate => 'تاريخ توفر المنتجات';
+
+  @override
+  String get qualityGrade => 'درجة الجودة';
+
+  @override
+  String get packagingDetails => 'تفاصيل التعبئة';
+
+  @override
+  String get uploadProductPhotos => 'رفع صور المنتجات';
+
+  @override
+  String get reviewOffer => 'مراجعة العرض';
+
+  @override
+  String get submitOffer => 'إرسال العرض';
+
+  @override
+  String get offerSubmitted => 'تم إرسال العرض';
+
+  @override
+  String get offerDetails => 'تفاصيل العرض';
+
+  @override
+  String get offerStatusTimeline => 'سجل حالة العرض';
+
+  @override
+  String get adminProposedPrice => 'السعر المقترح من الإدارة';
+
+  @override
+  String get acceptPrice => 'قبول السعر';
+
+  @override
+  String get declinePrice => 'رفض السعر';
+
+  @override
+  String get chatAboutThisOffer => 'محادثة حول هذا العرض';
+
+  @override
+  String get receivingWarehouse => 'مخزن الاستلام';
+
+  @override
+  String get regionState => 'الولاية أو المنطقة';
+
+  @override
+  String get city => 'المدينة';
+
+  @override
+  String get area => 'المنطقة';
+
+  @override
+  String get detailedAddress => 'العنوان التفصيلي';
+
+  @override
+  String get customerReference => 'مرجع العميل';
+
+  @override
+  String get customerNotes => 'ملاحظات العميل';
+
+  @override
+  String get loadingSupplyOffers => 'جاري تحميل عروض التوريد...';
+
+  @override
+  String get loadingProducts => 'جاري تحميل المنتجات...';
+
+  @override
+  String get supplyOfferLoadError => 'تعذر تحميل عروض التوريد.';
+
+  @override
+  String get supplyOfferSaveError => 'تعذر حفظ عرض التوريد.';
+
+  @override
+  String get noSupplyOffers => 'لا توجد عروض توريد بعد.';
+
+  @override
+  String get requiredField => 'هذا الحقل مطلوب.';
+
+  @override
+  String get positiveNumberRequired => 'أدخل رقماً أكبر من صفر.';
+
+  @override
+  String get productRequired => 'يرجى اختيار المنتج والوحدة.';
+
+  @override
+  String get duplicateProductUnit => 'لا يسمح بتكرار نفس المنتج والوحدة.';
+
+  @override
+  String get saved => 'تم الحفظ.';
+
+  @override
+  String get remove => 'إزالة';
+
+  @override
+  String get supplyOfferNotice =>
+      'إرسال العرض لا يعني إتمام الشراء. ستقوم إدارة بياض بمراجعة المنتجات والسعر والموقع.';
+
+  @override
+  String get draft => 'مسودة';
+
+  @override
+  String get submitted => 'تم الإرسال';
+
+  @override
+  String get underReview => 'قيد المراجعة';
+
+  @override
+  String get newPriceProposed => 'تم اقتراح سعر جديد';
+
+  @override
+  String get customerAccepted => 'وافق العميل';
+
+  @override
+  String get customerDeclined => 'رفض العميل';
+
+  @override
+  String get approved => 'تمت الموافقة';
+
+  @override
+  String get rejected => 'مرفوض';
+
+  @override
+  String get awaitingProductReceipt => 'بانتظار استلام المنتجات';
+
+  @override
+  String get received => 'تم الاستلام';
+
+  @override
+  String get completed => 'مكتمل';
 }

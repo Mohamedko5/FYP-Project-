@@ -19,7 +19,7 @@ export default function CustomerPaymentForm({
   const isInvoicePayment = form.paymentPurpose === 'invoice_payment';
 
   return (
-    <form className="form-grid" onSubmit={onSubmit}>
+    <form className="form-grid customer-account-transaction-form" onSubmit={onSubmit}>
       {errors.length > 0 && (
         <div className="form-error form-grid__wide">
           {errors.map((error) => <p key={error}>{error}</p>)}
@@ -70,11 +70,11 @@ export default function CustomerPaymentForm({
         {t('common.amount')}
         <input name="amount" type="number" min="0" step="0.01" value={form.amount} onChange={onChange} readOnly={isInvoicePayment} disabled={isSaving} placeholder="0" />
       </label>
-      <label className="form-grid__wide">
+      <label className="form-grid__wide customer-account-transaction-form__description">
         {t('common.description')}
         <textarea name="description" value={form.description} onChange={onChange} disabled={isSaving} placeholder={t('journal.descriptionPlaceholder')} />
       </label>
-      <div className="form-grid__actions form-grid__actions--split">
+      <div className="form-grid__actions form-grid__actions--split customer-account-transaction-form__actions">
         <Button type="submit" disabled={isSaving}>{isSaving ? t('journal.saving') : t('customers.savePayment')}</Button>
         <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>{t('cancel')}</Button>
       </div>

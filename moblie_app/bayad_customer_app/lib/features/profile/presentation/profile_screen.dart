@@ -38,7 +38,7 @@ class ProfileScreen extends ConsumerWidget {
     final customer = ref.watch(authControllerProvider).customer;
     return AppScaffold(
       title: l10n.profile,
-      currentIndex: 3,
+      currentIndex: 4,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [

@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import { getAdminChatUnreadCount } from '../../services/chatApi.js';
+import { getAdminSupplyOfferPendingCount } from '../../services/supplyOffersApi.js';
 
 const navigationItems = [
   { path: '/', labelKey: 'routes.dashboard' },
@@ -12,6 +13,7 @@ const navigationItems = [
   { path: '/orders', labelKey: 'routes.orders' },
   { path: '/invoices', labelKey: 'routes.invoices' },
   { path: '/customer-messages', labelKey: 'routes.customerMessages', badge: 'chat' },
+  { path: '/supply-offers', labelKey: 'routes.supplyOffers', badge: 'supplyOffers' },
   { path: '/weighing-shipment', labelKey: 'routes.weighingShipment' },
   { path: '/reports', labelKey: 'routes.reports' },
 ];
@@ -19,6 +21,7 @@ const navigationItems = [
 export default function Sidebar({ onLogout, onModuleNavigate, isOpen = false }) {
   const { t } = useLanguage();
   const [chatUnread, setChatUnread] = useState(0);
+  const [supplyOfferPending, setSupplyOfferPending] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -28,6 +31,12 @@ export default function Sidebar({ onLogout, onModuleNavigate, isOpen = false }) 
         if (active) setChatUnread(Number(response.unread_count || 0));
       } catch {
         if (active) setChatUnread(0);
+      }
+      try {
+        const response = await getAdminSupplyOfferPendingCount();
+        if (active) setSupplyOfferPending(Number(response.pending_count || 0));
+      } catch {
+        if (active) setSupplyOfferPending(0);
       }
     }
     loadUnread();
@@ -59,6 +68,7 @@ export default function Sidebar({ onLogout, onModuleNavigate, isOpen = false }) 
           >
             <span>{t(item.labelKey)}</span>
             {item.badge === 'chat' && chatUnread > 0 && <span className="sidebar__badge">{chatUnread}</span>}
+            {item.badge === 'supplyOffers' && supplyOfferPending > 0 && <span className="sidebar__badge">{supplyOfferPending}</span>}
           </NavLink>
         ))}
       </nav>

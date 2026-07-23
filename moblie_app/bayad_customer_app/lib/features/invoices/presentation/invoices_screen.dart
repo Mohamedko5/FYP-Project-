@@ -17,7 +17,7 @@ class InvoicesScreen extends ConsumerWidget {
     final invoices = ref.watch(invoicesProvider);
     return AppScaffold(
       title: 'My Invoices',
-      currentIndex: 3,
+      currentIndex: 4,
       child: invoices.when(
         loading: () => const LoadingView(message: 'Loading Invoices...'),
         error: (error, _) => ErrorView(message: 'Unable to load Invoices. Please try again.', retryLabel: 'Retry', onRetry: () => ref.invalidate(invoicesProvider)),
@@ -45,7 +45,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
     final invoice = ref.watch(invoiceDetailProvider(invoiceId));
     return AppScaffold(
       title: 'Invoice Details',
-      currentIndex: 3,
+      currentIndex: 4,
       child: invoice.when(
         loading: () => const LoadingView(message: 'Loading Invoice...'),
         error: (error, _) => ErrorView(message: 'Unable to load Invoice. Please try again.', retryLabel: 'Retry', onRetry: () => ref.invalidate(invoiceDetailProvider(invoiceId))),

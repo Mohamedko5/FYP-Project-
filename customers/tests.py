@@ -4,12 +4,14 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 from daily_journal.models import JournalTransaction
 from inventory.models import Inventory, InventoryMovement, Product, Warehouse
+from orders.models import Order
 
 from .models import Customer, CustomerCashTransaction, CustomerCommodityTransaction
 from .services import customer_cash_balance, customer_commodity_balances
@@ -76,6 +78,9 @@ class CustomerAPITests(APITestCase):
 
     def commodity_url(self, customer):
         return reverse('customer-commodity-transactions', args=[customer.id])
+
+    def restore_url(self, customer):
+        return reverse('customer-restore', args=[customer.id])
 
     def test_unauthenticated_customer_list_returns_401(self):
         self.client.force_authenticate(None)
@@ -371,6 +376,70 @@ class CustomerAPITests(APITestCase):
         self.client.force_authenticate(self.manager)
         response = self.client.delete(self.customer_url(customer))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_restore_archived_customer(self):
+        customer = self.create_customer()
+        customer.is_active = False
+        customer.is_deleted = True
+        customer.deleted_by = self.admin
+        customer.deleted_at = timezone.now()
+        customer.save(update_fields=['is_active', 'is_deleted', 'deleted_by', 'deleted_at'])
+
+        response = self.client.post(self.restore_url(customer), {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        customer.refresh_from_db()
+        self.assertTrue(customer.is_active)
+        self.assertFalse(customer.is_deleted)
+        self.assertIsNone(customer.deleted_by)
+        self.assertIsNone(customer.deleted_at)
+        self.assertEqual(response.data['id'], customer.id)
+
+    def test_manager_cannot_restore_customer(self):
+        customer = self.create_customer()
+        customer.is_active = False
+        customer.is_deleted = True
+        customer.save(update_fields=['is_active', 'is_deleted'])
+        self.client.force_authenticate(self.manager)
+
+        response = self.client.post(self.restore_url(customer), {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        customer.refresh_from_db()
+        self.assertFalse(customer.is_active)
+        self.assertTrue(customer.is_deleted)
+
+    def test_restore_preserves_transaction_history_and_does_not_duplicate_customer(self):
+        customer = self.create_customer()
+        CustomerCashTransaction.objects.create(customer=customer, transaction_type='payment_owed', amount='100.00', description='Debt', created_by=self.admin)
+        CustomerCommodityTransaction.objects.create(customer=customer, transaction_type='product_received', product=self.product, quantity='2.000', unit='Qintar', description='Product', created_by=self.admin)
+        Order.objects.create(customer=customer, subtotal='100.00', total_amount='100.00', created_by=self.admin)
+        original_id = customer.id
+        original_count = Customer.objects.count()
+        customer.is_active = False
+        customer.is_deleted = True
+        customer.save(update_fields=['is_active', 'is_deleted'])
+
+        response = self.client.post(self.restore_url(customer), {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Customer.objects.count(), original_count)
+        self.assertTrue(Customer.objects.filter(id=original_id).exists())
+        self.assertEqual(CustomerCashTransaction.objects.filter(customer=customer, is_deleted=False).count(), 1)
+        self.assertEqual(CustomerCommodityTransaction.objects.filter(customer=customer, is_deleted=False).count(), 1)
+        self.assertEqual(Order.objects.filter(customer=customer).count(), 1)
+
+    def test_restored_customer_can_receive_transactions(self):
+        customer = self.create_customer()
+        customer.is_active = False
+        customer.is_deleted = True
+        customer.save(update_fields=['is_active', 'is_deleted'])
+
+        restore_response = self.client.post(self.restore_url(customer), {}, format='json')
+        transaction_response = self.client.post(self.cash_url(customer), self.cash_payload(), format='json')
+
+        self.assertEqual(restore_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(transaction_response.status_code, status.HTTP_201_CREATED)
 
     def test_search_works(self):
         self.create_customer(name='Search Target', phone='+249900000001')

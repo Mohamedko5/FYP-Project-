@@ -12,6 +12,7 @@ import WeighingShipment from './pages/WeighingShipment.jsx';
 import Invoices from './pages/Invoices.jsx';
 import Reports from './pages/Reports.jsx';
 import CustomerMessages from './pages/CustomerMessages.jsx';
+import SupplyOffers from './pages/SupplyOffers.jsx';
 import Login from './pages/Login.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="weighing-shipment" element={<WeighingShipment />} />
           <Route path="invoices" element={<Invoices />} />
           <Route path="customer-messages" element={<CustomerMessages />} />
+          <Route path="supply-offers" element={<SupplyOffers />} />
           <Route path="reports" element={<Reports />} />
         </Route>
         <Route path="*" element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />} />

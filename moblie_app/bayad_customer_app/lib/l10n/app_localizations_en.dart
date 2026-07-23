@@ -69,7 +69,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profile => 'Profile';
 
   @override
+  String get account => 'Account';
+
+  @override
   String get home => 'Home';
+
+  @override
+  String get loadingHome => 'Loading your customer portal...';
+
+  @override
+  String get homeLoadError => 'Unable to load Home. Please try again.';
+
+  @override
+  String get quickActions => 'Quick Actions';
+
+  @override
+  String get browseProducts => 'Browse Products';
+
+  @override
+  String get trackShipments => 'Track Shipments';
+
+  @override
+  String get pendingOrders => 'Pending Orders';
+
+  @override
+  String get unpaidInvoices => 'Unpaid Invoices';
+
+  @override
+  String get processingShipments => 'Processing Shipments';
+
+  @override
+  String get completedOrders => 'Completed Orders';
+
+  @override
+  String get recentOrders => 'Recent Orders';
+
+  @override
+  String get viewAllOrders => 'View All Orders';
+
+  @override
+  String get noOrdersFound => 'No Orders found.';
+
+  @override
+  String get unpaidInvoiceNotice =>
+      'You have an unpaid Invoice. Please contact Bayad Company to complete payment.';
 
   @override
   String get products => 'Products';
@@ -394,4 +437,174 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareCustomerCardTitle => 'Share Customer Card';
+
+  @override
+  String get contactBayad => 'Contact Bayad';
+
+  @override
+  String get sellToBayad => 'Sell to Bayad';
+
+  @override
+  String get supplyOffers => 'Supply Offers';
+
+  @override
+  String get mySupplyOffers => 'My Supply Offers';
+
+  @override
+  String get product => 'Product';
+
+  @override
+  String get unit => 'Unit';
+
+  @override
+  String get quantity => 'Quantity';
+
+  @override
+  String get createSupplyOffer => 'Create Supply Offer';
+
+  @override
+  String get addOfferItems => 'Add Offer Items';
+
+  @override
+  String get addProduct => 'Add Product';
+
+  @override
+  String get proposedUnitPrice => 'Proposed Unit Price';
+
+  @override
+  String get proposedTotal => 'Proposed Total';
+
+  @override
+  String get productLocation => 'Product Location';
+
+  @override
+  String get availabilityDate => 'Availability Date';
+
+  @override
+  String get qualityGrade => 'Quality Grade';
+
+  @override
+  String get packagingDetails => 'Packaging Details';
+
+  @override
+  String get uploadProductPhotos => 'Upload Product Photos';
+
+  @override
+  String get reviewOffer => 'Review Offer';
+
+  @override
+  String get submitOffer => 'Submit Offer';
+
+  @override
+  String get offerSubmitted => 'Offer Submitted';
+
+  @override
+  String get offerDetails => 'Offer Details';
+
+  @override
+  String get offerStatusTimeline => 'Offer Status Timeline';
+
+  @override
+  String get adminProposedPrice => 'Admin Proposed Price';
+
+  @override
+  String get acceptPrice => 'Accept Price';
+
+  @override
+  String get declinePrice => 'Decline Price';
+
+  @override
+  String get chatAboutThisOffer => 'Chat About This Offer';
+
+  @override
+  String get receivingWarehouse => 'Receiving Warehouse';
+
+  @override
+  String get regionState => 'Region or State';
+
+  @override
+  String get city => 'City';
+
+  @override
+  String get area => 'Area';
+
+  @override
+  String get detailedAddress => 'Detailed Address';
+
+  @override
+  String get customerReference => 'Customer Reference';
+
+  @override
+  String get customerNotes => 'Customer Notes';
+
+  @override
+  String get loadingSupplyOffers => 'Loading supply offers...';
+
+  @override
+  String get loadingProducts => 'Loading products...';
+
+  @override
+  String get supplyOfferLoadError => 'Unable to load supply offers.';
+
+  @override
+  String get supplyOfferSaveError => 'Unable to save supply offer.';
+
+  @override
+  String get noSupplyOffers => 'No supply offers yet.';
+
+  @override
+  String get requiredField => 'This field is required.';
+
+  @override
+  String get positiveNumberRequired => 'Enter a number greater than zero.';
+
+  @override
+  String get productRequired => 'Please select a product and unit.';
+
+  @override
+  String get duplicateProductUnit =>
+      'Duplicate product and unit lines are not allowed.';
+
+  @override
+  String get saved => 'Saved.';
+
+  @override
+  String get remove => 'Remove';
+
+  @override
+  String get supplyOfferNotice =>
+      'Submitting this offer does not guarantee purchase. Bayad Admin will review the products, price and location.';
+
+  @override
+  String get draft => 'Draft';
+
+  @override
+  String get submitted => 'Submitted';
+
+  @override
+  String get underReview => 'Under Review';
+
+  @override
+  String get newPriceProposed => 'New Price Proposed';
+
+  @override
+  String get customerAccepted => 'Customer Accepted';
+
+  @override
+  String get customerDeclined => 'Customer Declined';
+
+  @override
+  String get approved => 'Approved';
+
+  @override
+  String get rejected => 'Rejected';
+
+  @override
+  String get awaitingProductReceipt => 'Awaiting Product Receipt';
+
+  @override
+  String get received => 'Received';
+
+  @override
+  String get completed => 'Completed';
 }

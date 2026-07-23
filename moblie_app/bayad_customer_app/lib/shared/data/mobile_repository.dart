@@ -5,6 +5,7 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 import '../../core/network/api_exception.dart';
 import '../../features/chat/domain/chat_models.dart';
+import '../../features/supply_offers/data/models/supply_offer_models.dart';
 import '../models/mobile_models.dart';
 import '../models/paged_response.dart';
 
@@ -153,6 +154,54 @@ class MobileRepository {
         data: {'client_message_id': clientMessageId},
       );
       return ChatMessage.fromJson(response.data ?? const {});
+    } on DioException catch (error) {
+      throw _mapDioError(error);
+    }
+  }
+
+  Future<PagedResponse<SupplyOffer>> supplyOffers({String? status}) async {
+    final response = await _getMap(ApiEndpoints.supplyOffers, queryParameters: {
+      if (status != null && status.isNotEmpty) 'status': status,
+      'page_size': 50,
+    });
+    return PagedResponse.fromJson(response, SupplyOffer.fromJson);
+  }
+
+  Future<SupplyOffer> supplyOffer(int id) async => SupplyOffer.fromJson(await _getMap(ApiEndpoints.supplyOfferDetail(id)));
+
+  Future<SupplyOffer> createSupplyOffer({required String idempotencyKey, required Map<String, dynamic> data}) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.supplyOffers,
+        data: data,
+        options: Options(headers: {'Idempotency-Key': idempotencyKey}),
+      );
+      return SupplyOffer.fromJson(response.data ?? const {});
+    } on DioException catch (error) {
+      throw _mapDioError(error);
+    }
+  }
+
+  Future<SupplyOffer> supplyOfferAction(int id, String action) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(ApiEndpoints.supplyOfferAction(id, action));
+      return SupplyOffer.fromJson(response.data ?? const {});
+    } on DioException catch (error) {
+      throw _mapDioError(error);
+    }
+  }
+
+  Future<void> uploadSupplyOfferAttachment(int id, String path, String filename) async {
+    try {
+      final formData = FormData.fromMap({
+        'attachment_type': filename.toLowerCase().endsWith('.pdf') ? 'quality_document' : 'product_image',
+        'file': await MultipartFile.fromFile(path, filename: filename),
+      });
+      await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.supplyOfferAttachments(id),
+        data: formData,
+        options: Options(contentType: Headers.multipartFormDataContentType),
+      );
     } on DioException catch (error) {
       throw _mapDioError(error);
     }

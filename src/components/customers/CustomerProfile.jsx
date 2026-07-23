@@ -74,11 +74,15 @@ export default function CustomerProfile({
   onAddPayment,
   onLoadStatement,
   onPrint,
+  onRestore,
   onClose,
   adminName,
+  isAdmin = false,
+  isRestoringCustomer = false,
 }) {
   const { t, isArabic } = useLanguage();
   const [activeSection, setActiveSection] = useState('');
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [cashForm, setCashForm] = useState(createCashForm(customer?.name));
   const [paymentForm, setPaymentForm] = useState(createPaymentForm());
   const [commodityForm, setCommodityForm] = useState(createCommodityForm(customer?.name, products));
@@ -107,6 +111,9 @@ export default function CustomerProfile({
 
   if (!customer) return null;
 
+  const isArchived = Boolean(customer.is_deleted || !customer.is_active);
+  const canRestore = isAdmin && isArchived;
+  const transactionSections = new Set(['payment', 'cash', 'commodity']);
   const paymentColumns = [
     { key: 'date', label: t('common.date') },
     { key: 'amount', label: t('common.amount'), render: (row) => formatCurrency(row.amount) },
@@ -140,6 +147,7 @@ export default function CustomerProfile({
   const commodityDirty = activeSection === 'commodity' && JSON.stringify(commodityForm) !== JSON.stringify(createCommodityForm(customer.name, products));
 
   function openSection(section) {
+    if (isArchived && transactionSections.has(section)) return;
     setActiveSection(section);
     setCashErrors([]);
     setPaymentErrors([]);
@@ -153,6 +161,11 @@ export default function CustomerProfile({
     if (section === 'commodity') setCommodityForm(createCommodityForm(customer.name, products));
     if (section === 'orders') loadCustomerOrders();
     if (section === 'statement') onLoadStatement?.();
+  }
+
+  async function confirmRestore() {
+    await onRestore?.();
+    setShowRestoreConfirm(false);
   }
 
   async function loadUnpaidInvoices() {
@@ -423,6 +436,8 @@ export default function CustomerProfile({
             </div>
           </div>
           <div className="customer-profile-header__actions">
+            {isArchived && <StatusBadge status={t('customers.archivedCustomer')} />}
+            {canRestore && <Button type="button" onClick={() => setShowRestoreConfirm(true)} disabled={isRestoringCustomer}>{t('customers.restoreCustomer')}</Button>}
             <Button variant="secondary" onClick={onClose}>{t('customers.closeProfile')}</Button>
           </div>
         </div>
@@ -474,6 +489,8 @@ export default function CustomerProfile({
                 type="button"
                 className={`customer-profile-tabs__button ${activeSection === section.key ? 'is-active' : ''}`}
                 onClick={() => openSection(section.key)}
+                disabled={isArchived && transactionSections.has(section.key)}
+                aria-disabled={isArchived && transactionSections.has(section.key)}
                 ref={['payment', 'cash', 'commodity'].includes(section.key) ? activeSectionButtonRef : undefined}
               >
                 {section.label}
@@ -508,6 +525,20 @@ export default function CustomerProfile({
         statement={statement}
         adminName={adminName}
       />
+      {showRestoreConfirm && (
+        <div className="confirmation-overlay" role="presentation" dir={isArabic ? 'rtl' : 'ltr'}>
+          <section className="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="restore-customer-title">
+            <h3 id="restore-customer-title">{t('customers.restoreCustomer')}</h3>
+            <p>{t('customers.restoreConfirmMessage')}</p>
+            <div className="confirmation-dialog__actions">
+              <Button type="button" variant="secondary" onClick={() => setShowRestoreConfirm(false)} disabled={isRestoringCustomer}>{t('cancel')}</Button>
+              <Button type="button" onClick={confirmRestore} disabled={isRestoringCustomer}>
+                {isRestoringCustomer ? t('journal.saving') : t('customers.restoreCustomer')}
+              </Button>
+            </div>
+          </section>
+        </div>
+      )}
     </>
   );
 }

@@ -218,11 +218,95 @@ abstract class AppLocalizations {
   /// **'Profile'**
   String get profile;
 
+  /// No description provided for @account.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get account;
+
   /// No description provided for @home.
   ///
   /// In en, this message translates to:
   /// **'Home'**
   String get home;
+
+  /// No description provided for @loadingHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your customer portal...'**
+  String get loadingHome;
+
+  /// No description provided for @homeLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load Home. Please try again.'**
+  String get homeLoadError;
+
+  /// No description provided for @quickActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Actions'**
+  String get quickActions;
+
+  /// No description provided for @browseProducts.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Products'**
+  String get browseProducts;
+
+  /// No description provided for @trackShipments.
+  ///
+  /// In en, this message translates to:
+  /// **'Track Shipments'**
+  String get trackShipments;
+
+  /// No description provided for @pendingOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Orders'**
+  String get pendingOrders;
+
+  /// No description provided for @unpaidInvoices.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid Invoices'**
+  String get unpaidInvoices;
+
+  /// No description provided for @processingShipments.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing Shipments'**
+  String get processingShipments;
+
+  /// No description provided for @completedOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed Orders'**
+  String get completedOrders;
+
+  /// No description provided for @recentOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Orders'**
+  String get recentOrders;
+
+  /// No description provided for @viewAllOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'View All Orders'**
+  String get viewAllOrders;
+
+  /// No description provided for @noOrdersFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No Orders found.'**
+  String get noOrdersFound;
+
+  /// No description provided for @unpaidInvoiceNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'You have an unpaid Invoice. Please contact Bayad Company to complete payment.'**
+  String get unpaidInvoiceNotice;
 
   /// No description provided for @products.
   ///
@@ -841,6 +925,342 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share Customer Card'**
   String get shareCustomerCardTitle;
+
+  /// No description provided for @contactBayad.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Bayad'**
+  String get contactBayad;
+
+  /// No description provided for @sellToBayad.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell to Bayad'**
+  String get sellToBayad;
+
+  /// No description provided for @supplyOffers.
+  ///
+  /// In en, this message translates to:
+  /// **'Supply Offers'**
+  String get supplyOffers;
+
+  /// No description provided for @mySupplyOffers.
+  ///
+  /// In en, this message translates to:
+  /// **'My Supply Offers'**
+  String get mySupplyOffers;
+
+  /// No description provided for @product.
+  ///
+  /// In en, this message translates to:
+  /// **'Product'**
+  String get product;
+
+  /// No description provided for @unit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get unit;
+
+  /// No description provided for @quantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity'**
+  String get quantity;
+
+  /// No description provided for @createSupplyOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Supply Offer'**
+  String get createSupplyOffer;
+
+  /// No description provided for @addOfferItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Offer Items'**
+  String get addOfferItems;
+
+  /// No description provided for @addProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Product'**
+  String get addProduct;
+
+  /// No description provided for @proposedUnitPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposed Unit Price'**
+  String get proposedUnitPrice;
+
+  /// No description provided for @proposedTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposed Total'**
+  String get proposedTotal;
+
+  /// No description provided for @productLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Product Location'**
+  String get productLocation;
+
+  /// No description provided for @availabilityDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability Date'**
+  String get availabilityDate;
+
+  /// No description provided for @qualityGrade.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality Grade'**
+  String get qualityGrade;
+
+  /// No description provided for @packagingDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Packaging Details'**
+  String get packagingDetails;
+
+  /// No description provided for @uploadProductPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Product Photos'**
+  String get uploadProductPhotos;
+
+  /// No description provided for @reviewOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Review Offer'**
+  String get reviewOffer;
+
+  /// No description provided for @submitOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Offer'**
+  String get submitOffer;
+
+  /// No description provided for @offerSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Offer Submitted'**
+  String get offerSubmitted;
+
+  /// No description provided for @offerDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Offer Details'**
+  String get offerDetails;
+
+  /// No description provided for @offerStatusTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offer Status Timeline'**
+  String get offerStatusTimeline;
+
+  /// No description provided for @adminProposedPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Proposed Price'**
+  String get adminProposedPrice;
+
+  /// No description provided for @acceptPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept Price'**
+  String get acceptPrice;
+
+  /// No description provided for @declinePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline Price'**
+  String get declinePrice;
+
+  /// No description provided for @chatAboutThisOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat About This Offer'**
+  String get chatAboutThisOffer;
+
+  /// No description provided for @receivingWarehouse.
+  ///
+  /// In en, this message translates to:
+  /// **'Receiving Warehouse'**
+  String get receivingWarehouse;
+
+  /// No description provided for @regionState.
+  ///
+  /// In en, this message translates to:
+  /// **'Region or State'**
+  String get regionState;
+
+  /// No description provided for @city.
+  ///
+  /// In en, this message translates to:
+  /// **'City'**
+  String get city;
+
+  /// No description provided for @area.
+  ///
+  /// In en, this message translates to:
+  /// **'Area'**
+  String get area;
+
+  /// No description provided for @detailedAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed Address'**
+  String get detailedAddress;
+
+  /// No description provided for @customerReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Reference'**
+  String get customerReference;
+
+  /// No description provided for @customerNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Notes'**
+  String get customerNotes;
+
+  /// No description provided for @loadingSupplyOffers.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading supply offers...'**
+  String get loadingSupplyOffers;
+
+  /// No description provided for @loadingProducts.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading products...'**
+  String get loadingProducts;
+
+  /// No description provided for @supplyOfferLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load supply offers.'**
+  String get supplyOfferLoadError;
+
+  /// No description provided for @supplyOfferSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to save supply offer.'**
+  String get supplyOfferSaveError;
+
+  /// No description provided for @noSupplyOffers.
+  ///
+  /// In en, this message translates to:
+  /// **'No supply offers yet.'**
+  String get noSupplyOffers;
+
+  /// No description provided for @requiredField.
+  ///
+  /// In en, this message translates to:
+  /// **'This field is required.'**
+  String get requiredField;
+
+  /// No description provided for @positiveNumberRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number greater than zero.'**
+  String get positiveNumberRequired;
+
+  /// No description provided for @productRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a product and unit.'**
+  String get productRequired;
+
+  /// No description provided for @duplicateProductUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate product and unit lines are not allowed.'**
+  String get duplicateProductUnit;
+
+  /// No description provided for @saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved.'**
+  String get saved;
+
+  /// No description provided for @remove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get remove;
+
+  /// No description provided for @supplyOfferNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitting this offer does not guarantee purchase. Bayad Admin will review the products, price and location.'**
+  String get supplyOfferNotice;
+
+  /// No description provided for @draft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get draft;
+
+  /// No description provided for @submitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted'**
+  String get submitted;
+
+  /// No description provided for @underReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under Review'**
+  String get underReview;
+
+  /// No description provided for @newPriceProposed.
+  ///
+  /// In en, this message translates to:
+  /// **'New Price Proposed'**
+  String get newPriceProposed;
+
+  /// No description provided for @customerAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Accepted'**
+  String get customerAccepted;
+
+  /// No description provided for @customerDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Declined'**
+  String get customerDeclined;
+
+  /// No description provided for @approved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get approved;
+
+  /// No description provided for @rejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rejected;
+
+  /// No description provided for @awaitingProductReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting Product Receipt'**
+  String get awaitingProductReceipt;
+
+  /// No description provided for @received.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get received;
+
+  /// No description provided for @completed.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get completed;
 }
 
 class _AppLocalizationsDelegate

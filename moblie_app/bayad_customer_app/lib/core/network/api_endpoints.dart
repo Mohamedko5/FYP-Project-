@@ -20,9 +20,13 @@ class ApiEndpoints {
   static const chatCustomerCard = '/api/chat/mobile/customer-card/';
   static const chatRead = '/api/chat/mobile/messages/read/';
   static const chatUnreadCount = '/api/chat/mobile/unread-count/';
+  static const supplyOffers = '/api/supply-offers/mobile/supply-offers/';
 
   static String productDetail(int id) => '/api/mobile/products/$id/';
   static String orderDetail(int id) => '/api/mobile/orders/$id/';
   static String invoiceDetail(int id) => '/api/mobile/invoices/$id/';
   static String shipmentDetail(int id) => '/api/mobile/shipments/$id/';
+  static String supplyOfferDetail(int id) => '/api/supply-offers/mobile/supply-offers/$id/';
+  static String supplyOfferAction(int id, String action) => '/api/supply-offers/mobile/supply-offers/$id/$action/';
+  static String supplyOfferAttachments(int id) => '/api/supply-offers/mobile/supply-offers/$id/attachments/';
 }

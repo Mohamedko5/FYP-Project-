@@ -92,7 +92,7 @@ class OrderSuccessScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'Order Submitted',
-      currentIndex: 2,
+      currentIndex: 3,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

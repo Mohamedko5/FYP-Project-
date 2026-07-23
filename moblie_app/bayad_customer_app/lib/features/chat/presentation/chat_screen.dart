@@ -142,7 +142,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final messages = ref.watch(chatMessagesProvider);
     return AppScaffold(
       title: l10n.bayadSupport,
-      currentIndex: 4,
+      currentIndex: 2,
       child: Column(
         children: [
           MaterialBanner(
@@ -317,7 +317,11 @@ class _Composer extends StatelessWidget {
                 IconButton(onPressed: isSending ? null : onPickAttachment, icon: const Icon(Icons.attach_file), tooltip: l10n.attachFile),
                 IconButton(onPressed: isSending ? null : onShareCard, icon: const Icon(Icons.badge_outlined), tooltip: l10n.shareCustomerCard),
                 const Spacer(),
-                FilledButton(onPressed: isSending ? null : onSend, child: Text(isSending ? l10n.sending : l10n.send)),
+                FilledButton(
+                  style: FilledButton.styleFrom(minimumSize: const Size(88, 44)),
+                  onPressed: isSending ? null : onSend,
+                  child: Text(isSending ? l10n.sending : l10n.send),
+                ),
               ],
             ),
           ],

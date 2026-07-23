@@ -22,4 +22,7 @@ class RouteNames {
   static const invoiceDetail = 'invoiceDetail';
   static const shipments = 'shipments';
   static const shipmentDetail = 'shipmentDetail';
+  static const supplyOffers = 'supplyOffers';
+  static const createSupplyOffer = 'createSupplyOffer';
+  static const supplyOfferDetail = 'supplyOfferDetail';
 }
