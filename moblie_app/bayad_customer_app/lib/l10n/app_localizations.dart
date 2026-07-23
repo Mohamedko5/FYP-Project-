@@ -128,6 +128,12 @@ abstract class AppLocalizations {
   /// **'Retry'**
   String get retry;
 
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
   /// No description provided for @loginTitle.
   ///
   /// In en, this message translates to:
@@ -307,6 +313,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You have an unpaid Invoice. Please contact Bayad Company to complete payment.'**
   String get unpaidInvoiceNotice;
+
+  /// No description provided for @adminOfferResponses.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Offer Responses'**
+  String get adminOfferResponses;
+
+  /// No description provided for @offerResponseNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Bayad Admin has responded to your Offer.'**
+  String get offerResponseNotice;
 
   /// No description provided for @products.
   ///
@@ -941,13 +959,13 @@ abstract class AppLocalizations {
   /// No description provided for @supplyOffers.
   ///
   /// In en, this message translates to:
-  /// **'Supply Offers'**
+  /// **'Offers'**
   String get supplyOffers;
 
   /// No description provided for @mySupplyOffers.
   ///
   /// In en, this message translates to:
-  /// **'My Supply Offers'**
+  /// **'My Offers'**
   String get mySupplyOffers;
 
   /// No description provided for @product.
@@ -971,7 +989,7 @@ abstract class AppLocalizations {
   /// No description provided for @createSupplyOffer.
   ///
   /// In en, this message translates to:
-  /// **'Create Supply Offer'**
+  /// **'Create Offer'**
   String get createSupplyOffer;
 
   /// No description provided for @addOfferItems.
@@ -1064,6 +1082,108 @@ abstract class AppLocalizations {
   /// **'Admin Proposed Price'**
   String get adminProposedPrice;
 
+  /// No description provided for @adminResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Response'**
+  String get adminResponse;
+
+  /// No description provided for @adminResponded.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Responded'**
+  String get adminResponded;
+
+  /// No description provided for @newAdminResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'New Admin Response'**
+  String get newAdminResponse;
+
+  /// No description provided for @reviewAdminOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Review Admin Offer'**
+  String get reviewAdminOffer;
+
+  /// No description provided for @customerQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Quantity'**
+  String get customerQuantity;
+
+  /// No description provided for @adminQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Quantity'**
+  String get adminQuantity;
+
+  /// No description provided for @customerPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Price'**
+  String get customerPrice;
+
+  /// No description provided for @adminPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Price'**
+  String get adminPrice;
+
+  /// No description provided for @originalTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original Total'**
+  String get originalTotal;
+
+  /// No description provided for @responseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Response Date'**
+  String get responseDate;
+
+  /// No description provided for @responseExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'Response Expiry'**
+  String get responseExpiry;
+
+  /// No description provided for @customerTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Total'**
+  String get customerTotal;
+
+  /// No description provided for @adminProposedTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Proposed Total'**
+  String get adminProposedTotal;
+
+  /// No description provided for @paymentStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Status'**
+  String get paymentStatus;
+
+  /// No description provided for @paidAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid Amount'**
+  String get paidAmount;
+
+  /// No description provided for @waitingFinalApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Final Approval'**
+  String get waitingFinalApproval;
+
+  /// No description provided for @paymentCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Completed'**
+  String get paymentCompleted;
+
   /// No description provided for @acceptPrice.
   ///
   /// In en, this message translates to:
@@ -1075,6 +1195,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Decline Price'**
   String get declinePrice;
+
+  /// No description provided for @reasonForRejection.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason for Rejection'**
+  String get reasonForRejection;
 
   /// No description provided for @chatAboutThisOffer.
   ///
@@ -1127,7 +1253,7 @@ abstract class AppLocalizations {
   /// No description provided for @loadingSupplyOffers.
   ///
   /// In en, this message translates to:
-  /// **'Loading supply offers...'**
+  /// **'Loading offers...'**
   String get loadingSupplyOffers;
 
   /// No description provided for @loadingProducts.
@@ -1139,19 +1265,19 @@ abstract class AppLocalizations {
   /// No description provided for @supplyOfferLoadError.
   ///
   /// In en, this message translates to:
-  /// **'Unable to load supply offers.'**
+  /// **'Unable to load offers.'**
   String get supplyOfferLoadError;
 
   /// No description provided for @supplyOfferSaveError.
   ///
   /// In en, this message translates to:
-  /// **'Unable to save supply offer.'**
+  /// **'Unable to save offer.'**
   String get supplyOfferSaveError;
 
   /// No description provided for @noSupplyOffers.
   ///
   /// In en, this message translates to:
-  /// **'No supply offers yet.'**
+  /// **'No offers yet.'**
   String get noSupplyOffers;
 
   /// No description provided for @requiredField.

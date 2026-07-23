@@ -28,5 +28,6 @@ class ApiEndpoints {
   static String shipmentDetail(int id) => '/api/mobile/shipments/$id/';
   static String supplyOfferDetail(int id) => '/api/supply-offers/mobile/supply-offers/$id/';
   static String supplyOfferAction(int id, String action) => '/api/supply-offers/mobile/supply-offers/$id/$action/';
+  static String supplyOfferResponseAction(int offerId, int responseId, String action) => '/api/supply-offers/mobile/supply-offers/$offerId/responses/$responseId/$action/';
   static String supplyOfferAttachments(int id) => '/api/supply-offers/mobile/supply-offers/$id/attachments/';
 }

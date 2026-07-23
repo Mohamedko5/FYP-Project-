@@ -229,7 +229,6 @@ export default function DailyJournal() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [apiError, setApiError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [cashFilters, setCashFilters] = useState({ payment_method: '' });
   const [commodityFilters, setCommodityFilters] = useState({ product_name: '', unit: '' });
   const cashButtonRef = useRef(null);
   const newWarehouseButtonRef = useRef(null);
@@ -242,7 +241,7 @@ export default function DailyJournal() {
     try {
       const commonParams = { date: selectedDate, ordering: '-created_at' };
       const [cashRows, commodityRows, summaryData] = await Promise.all([
-        listJournalTransactions({ ...commonParams, journal_type: 'cash', ...cashFilters }),
+        listJournalTransactions({ ...commonParams, journal_type: 'cash' }),
         listJournalTransactions({ ...commonParams, journal_type: 'commodity', ...commodityFilters }),
         getDailyJournalSummary({ date: selectedDate }),
       ]);
@@ -254,7 +253,7 @@ export default function DailyJournal() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDate, cashFilters, commodityFilters]);
+  }, [selectedDate, commodityFilters]);
 
   const loadInventoryChoices = useCallback(async () => {
     try {
@@ -708,16 +707,6 @@ export default function DailyJournal() {
 
           <Card title={t('journal.endOfDaySummary')} subtitle={t('journal.historySubtitle')}>
             <div className="journal-table-toolbar journal-table-toolbar--filters">
-              <div className="journal-filter-group">
-                <select
-                  value={cashFilters.payment_method}
-                  onChange={(event) => setCashFilters((current) => ({ ...current, payment_method: event.target.value }))}
-                >
-                  <option value="">{t('journal.allPaymentMethods')}</option>
-                  <option value="cash">{t('journal.paymentMethods.cash')}</option>
-                  <option value="electronic">{t('journal.paymentMethods.electronic')}</option>
-                </select>
-              </div>
               <Button onClick={handleAddCashTransaction} ref={cashButtonRef}>{t('journal.addTransaction')}</Button>
             </div>
             {isLoading ? (

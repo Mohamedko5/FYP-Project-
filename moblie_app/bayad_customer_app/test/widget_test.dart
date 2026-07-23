@@ -45,6 +45,20 @@ final testProduct = Product(
 const testOrder = OrderSummary(id: 1, orderNumber: 'ORD-2026-000001', status: 'pending', itemCount: 1, productSummary: 'White Sesame', totalAmount: 110000, currency: 'SDG', createdAt: null);
 const testInvoice = InvoiceSummary(id: 1, invoiceNumber: 'INV-2026-000001', orderNumber: 'ORD-2026-000001', status: 'issued', paymentStatus: 'unpaid', totalAmount: 110000, currency: 'SDG', issuedAt: null, productSummary: 'White Sesame');
 const testShipment = ShipmentSummary(id: 1, shipmentNumber: 'SHP-2026-000001', orderNumber: 'ORD-2026-000001', invoiceNumber: 'INV-2026-000001', status: 'ready_for_shipment', productSummary: 'White Sesame', driverName: '', vehicleNumber: '', startedAt: null, completedAt: null);
+const testOfferResponse = OfferResponse(
+  id: 5,
+  responseNumber: 'SUP-2026-000001-R1',
+  status: 'pending_customer',
+  message: 'Bayad proposes a different price.',
+  proposedTotal: 4900000,
+  proposedReceiptDate: '2026-08-05',
+  warehouseName: 'Main Warehouse',
+  expiresAt: '',
+  createdAt: '2026-07-24T10:00:00Z',
+  items: [
+    OfferResponseItem(productName: 'White Sesame', unit: 'Qintar', customerQuantity: 100, adminQuantity: 70, customerPrice: 120000, adminPrice: 70000, customerTotal: 12000000, adminTotal: 4900000),
+  ],
+);
 const testSupplyOffer = SupplyOffer(
   id: 1,
   offerNumber: 'SUP-2026-000001',
@@ -69,6 +83,51 @@ const testSupplyOffer = SupplyOffer(
   ],
   attachments: [],
   timeline: [],
+  currentResponse: null,
+  paymentStatus: 'not_paid',
+  paidAmount: 0,
+  latestAdminMessage: '',
+  currentResponseId: 0,
+  currentResponseStatus: '',
+  hasUnreadResponse: false,
+  unreadResponseCount: 0,
+  requiresCustomerAction: false,
+  allowedActions: {},
+);
+const testCounterOffer = SupplyOffer(
+  id: 1,
+  offerNumber: 'SUP-2026-000001',
+  status: 'counter_offered',
+  productSummary: 'White Sesame',
+  customerReference: 'July offer',
+  region: 'White Nile',
+  city: 'Kosti',
+  area: 'Al Rabwa',
+  detailedAddress: 'Farm near Kosti market',
+  availabilityDate: '2026-07-30',
+  customerNotes: '',
+  adminMessage: 'Bayad proposes a different price.',
+  rejectionReason: '',
+  proposedTotal: 12000000,
+  adminProposedTotal: 4900000,
+  agreedTotal: 0,
+  currency: 'SDG',
+  createdAt: null,
+  items: [
+    SupplyOfferItem(id: 1, productName: 'White Sesame', unit: 'Qintar', quantity: 100, customerPrice: 120000, lineTotal: 12000000, adminPrice: 70000, agreedPrice: 0, qualityGrade: 'Grade A', packagingDetails: 'Sealed bags'),
+  ],
+  attachments: [],
+  timeline: [],
+  currentResponse: testOfferResponse,
+  paymentStatus: 'not_paid',
+  paidAmount: 0,
+  latestAdminMessage: 'Bayad proposes a different price.',
+  currentResponseId: 5,
+  currentResponseStatus: 'pending_customer',
+  hasUnreadResponse: true,
+  unreadResponseCount: 1,
+  requiresCustomerAction: true,
+  allowedActions: {'can_accept_response': true, 'can_reject_response': true, 'can_withdraw_offer': false},
 );
 
 class FakeAuthRepository extends AuthRepository {
@@ -106,6 +165,8 @@ Future<void> pumpBayadApp(
   AuthState initialState = const AuthState.unauthenticated(),
   FakeAuthRepository? repository,
   String language = 'en',
+  Map<String, dynamic> offersSummary = const {'total': 1, 'unread_responses': 0, 'requires_customer_action': 0},
+  List<SupplyOffer> offerResults = const [testSupplyOffer],
 }) async {
   SharedPreferences.setMockInitialValues({PreferencesService.languageKey: language});
   FlutterSecureStorage.setMockInitialValues({});
@@ -122,12 +183,13 @@ Future<void> pumpBayadApp(
           controller.setStateForTesting(initialState);
           return controller;
         }),
-        homeSummaryProvider.overrideWith((ref) async => const HomeSummary(
+        homeSummaryProvider.overrideWith((ref) async => HomeSummary(
               customer: testCustomer,
-              orders: {'total': 1, 'pending': 1, 'completed': 0},
-              invoices: {'total': 1, 'unpaid': 1, 'paid': 0, 'outstanding_value': '110000.00'},
-              shipments: {'ready': 1, 'processing': 0, 'completed': 0},
-              recentOrders: [testOrder],
+              orders: const {'total': 1, 'pending': 1, 'completed': 0},
+              invoices: const {'total': 1, 'unpaid': 1, 'paid': 0, 'outstanding_value': '110000.00'},
+              shipments: const {'ready': 1, 'processing': 0, 'completed': 0},
+              offers: offersSummary,
+              recentOrders: const [testOrder],
             )),
         productsProvider.overrideWith((ref) async => PagedResponse(count: 1, next: null, previous: null, results: [testProduct])),
         productDetailProvider.overrideWith((ref, id) async => testProduct),
@@ -154,8 +216,8 @@ Future<void> pumpBayadApp(
         shipmentDetailProvider.overrideWith((ref, id) async => const ShipmentDetail(id: 1, shipmentNumber: 'SHP-2026-000001', orderNumber: 'ORD-2026-000001', invoiceNumber: 'INV-2026-000001', status: 'ready_for_shipment', productSummary: 'White Sesame', driverName: '', vehicleNumber: '', startedAt: null, completedAt: null, notes: '', items: [], workflowSteps: [WorkflowStepModel(key: 'ready_for_shipment', label: 'Ready for Shipment', state: 'current')])),
         chatUnreadCountProvider.overrideWith((ref) async => 0),
         chatMessagesProvider.overrideWith((ref) async => const <ChatMessage>[]),
-        supplyOffersProvider.overrideWith((ref) async => const PagedResponse(count: 1, next: null, previous: null, results: [testSupplyOffer])),
-        supplyOfferDetailProvider.overrideWith((ref, id) async => testSupplyOffer),
+        supplyOffersProvider.overrideWith((ref) async => PagedResponse(count: offerResults.length, next: null, previous: null, results: offerResults)),
+        supplyOfferDetailProvider.overrideWith((ref, id) async => offerResults.first),
       ],
       child: const BayadCustomerApp(),
     ),
@@ -289,25 +351,51 @@ void main() {
     expect(find.text('Sell to Bayad'), findsOneWidget);
   });
 
-  testWidgets('Home displays My Supply Offers', (tester) async {
+  testWidgets('Home displays My Offers', (tester) async {
     await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
-    await tester.scrollUntilVisible(find.text('My Supply Offers'), 120, scrollable: find.byType(Scrollable).first);
-    expect(find.text('My Supply Offers'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('My Offers'), 120, scrollable: find.byType(Scrollable).first);
+    expect(find.text('My Offers'), findsOneWidget);
   });
 
-  testWidgets('My Supply Offers opens Supply Offers list', (tester) async {
+  testWidgets('My Offers opens Offers list', (tester) async {
     await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
-    await tester.scrollUntilVisible(find.text('My Supply Offers'), 120, scrollable: find.byType(Scrollable).first);
-    await tester.ensureVisible(find.text('My Supply Offers'));
+    await tester.scrollUntilVisible(find.text('My Offers'), 120, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('My Offers'));
     await tester.pump();
-    await tester.tap(find.text('My Supply Offers'));
-    await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('Supply Offers'), findsOneWidget);
+    await tester.tap(find.text('My Offers'));
+    await tester.pumpAndSettle();
+    expect(find.text('Offers'), findsOneWidget);
     expect(find.text('SUP-2026-000001'), findsOneWidget);
   });
 
-  testWidgets('Sell to Bayad opens Create Supply Offer', (tester) async {
+  testWidgets('Home displays unread Offer response count from API summary', (tester) async {
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+      offersSummary: const {'total': 1, 'unread_responses': 1, 'requires_customer_action': 1},
+      offerResults: const [testCounterOffer],
+    );
+    expect(find.text('Admin Offer Responses'), findsOneWidget);
+    expect(find.text('1'), findsWidgets);
+    await tester.scrollUntilVisible(find.text('Bayad Admin has responded to your Offer.'), 120, scrollable: find.byType(Scrollable).first);
+    expect(find.text('Bayad Admin has responded to your Offer.'), findsOneWidget);
+  });
+
+  testWidgets('Counter-offered Offer shows Admin response badge and translated status', (tester) async {
+    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer), offerResults: const [testCounterOffer]);
+    await tester.scrollUntilVisible(find.text('My Offers'), 120, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('My Offers'));
+    await tester.pump();
+    await tester.tap(find.text('My Offers'));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('Admin Responded'), findsOneWidget);
+    expect(find.text('New Admin Response'), findsOneWidget);
+    expect(find.text('Review Admin Offer'), findsOneWidget);
+    expect(find.textContaining('SDG 4,900,000.00'), findsOneWidget);
+  });
+
+  testWidgets('Sell to Bayad opens Create Offer', (tester) async {
     await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
     await tester.scrollUntilVisible(find.text('Sell to Bayad'), 120, scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(find.text('Sell to Bayad'));
@@ -315,7 +403,7 @@ void main() {
     await tester.tap(find.text('Sell to Bayad'));
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('Create Supply Offer'), findsOneWidget);
+    expect(find.text('Create Offer'), findsOneWidget);
     expect(find.text('Add Offer Items'), findsOneWidget);
   });
 

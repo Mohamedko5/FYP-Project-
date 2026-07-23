@@ -24,6 +24,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get retry => 'إعادة المحاولة';
 
   @override
+  String get cancel => 'إلغاء';
+
+  @override
   String get loginTitle => 'دخول العملاء';
 
   @override
@@ -114,6 +117,12 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get unpaidInvoiceNotice =>
       'لديك فاتورة غير مدفوعة. يرجى التواصل مع شركة بياض لإكمال الدفع.';
+
+  @override
+  String get adminOfferResponses => 'ردود العروض غير المقروءة';
+
+  @override
+  String get offerResponseNotice => 'ردت إدارة بياض على عرضك.';
 
   @override
   String get products => 'المنتجات';
@@ -446,10 +455,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sellToBayad => 'بيع منتجات إلى بياض';
 
   @override
-  String get supplyOffers => 'عروض التوريد';
+  String get supplyOffers => 'العروض';
 
   @override
-  String get mySupplyOffers => 'عروض التوريد الخاصة بي';
+  String get mySupplyOffers => 'عروضي';
 
   @override
   String get product => 'المنتج';
@@ -461,7 +470,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get quantity => 'الكمية';
 
   @override
-  String get createSupplyOffer => 'إنشاء عرض توريد';
+  String get createSupplyOffer => 'إنشاء عرض';
 
   @override
   String get addOfferItems => 'إضافة منتجات العرض';
@@ -509,10 +518,64 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminProposedPrice => 'السعر المقترح من الإدارة';
 
   @override
+  String get adminResponse => 'رد الإدارة';
+
+  @override
+  String get adminResponded => 'تم الرد من الإدارة';
+
+  @override
+  String get newAdminResponse => 'رد جديد من الإدارة';
+
+  @override
+  String get reviewAdminOffer => 'مراجعة عرض الإدارة';
+
+  @override
+  String get customerQuantity => 'كمية العميل';
+
+  @override
+  String get adminQuantity => 'كمية الإدارة';
+
+  @override
+  String get customerPrice => 'سعر العميل';
+
+  @override
+  String get adminPrice => 'سعر الإدارة';
+
+  @override
+  String get originalTotal => 'الإجمالي الأصلي';
+
+  @override
+  String get responseDate => 'تاريخ الرد';
+
+  @override
+  String get responseExpiry => 'انتهاء صلاحية الرد';
+
+  @override
+  String get customerTotal => 'إجمالي العميل';
+
+  @override
+  String get adminProposedTotal => 'الإجمالي المقترح من الإدارة';
+
+  @override
+  String get paymentStatus => 'حالة الدفع';
+
+  @override
+  String get paidAmount => 'المبلغ المدفوع';
+
+  @override
+  String get waitingFinalApproval => 'بانتظار الموافقة النهائية';
+
+  @override
+  String get paymentCompleted => 'تم الدفع';
+
+  @override
   String get acceptPrice => 'قبول السعر';
 
   @override
   String get declinePrice => 'رفض السعر';
+
+  @override
+  String get reasonForRejection => 'سبب رفض العرض';
 
   @override
   String get chatAboutThisOffer => 'محادثة حول هذا العرض';
@@ -539,19 +602,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get customerNotes => 'ملاحظات العميل';
 
   @override
-  String get loadingSupplyOffers => 'جاري تحميل عروض التوريد...';
+  String get loadingSupplyOffers => 'جارٍ تحميل العروض...';
 
   @override
   String get loadingProducts => 'جاري تحميل المنتجات...';
 
   @override
-  String get supplyOfferLoadError => 'تعذر تحميل عروض التوريد.';
+  String get supplyOfferLoadError => 'تعذر تحميل العروض.';
 
   @override
-  String get supplyOfferSaveError => 'تعذر حفظ عرض التوريد.';
+  String get supplyOfferSaveError => 'تعذر حفظ العرض.';
 
   @override
-  String get noSupplyOffers => 'لا توجد عروض توريد بعد.';
+  String get noSupplyOffers => 'لا توجد عروض بعد.';
 
   @override
   String get requiredField => 'هذا الحقل مطلوب.';

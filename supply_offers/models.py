@@ -26,6 +26,7 @@ class SupplyOffer(models.Model):
     STATUS_WITHDRAWN = 'withdrawn'
     STATUS_EXPIRED = 'expired'
     STATUS_AWAITING_RECEIPT = 'awaiting_receipt'
+    STATUS_PAID = 'paid'
     STATUS_RECEIVED = 'received'
     STATUS_COMPLETED = 'completed'
     STATUS_CANCELLED = 'cancelled'
@@ -41,6 +42,7 @@ class SupplyOffer(models.Model):
         (STATUS_WITHDRAWN, 'Withdrawn'),
         (STATUS_EXPIRED, 'Expired'),
         (STATUS_AWAITING_RECEIPT, 'Awaiting Product Receipt'),
+        (STATUS_PAID, 'Paid'),
         (STATUS_RECEIVED, 'Received'),
         (STATUS_COMPLETED, 'Completed'),
         (STATUS_CANCELLED, 'Cancelled'),
@@ -81,6 +83,9 @@ class SupplyOffer(models.Model):
     payment_recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='paid_supply_offers')
     linked_payment = models.ForeignKey('customers.CustomerCashTransaction', on_delete=models.PROTECT, null=True, blank=True, related_name='supply_offer_payments')
     linked_journal = models.ForeignKey('daily_journal.JournalTransaction', on_delete=models.PROTECT, null=True, blank=True, related_name='supply_offer_payments')
+    paid_amount = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    payment_status = models.CharField(max_length=30, default='not_paid')
+    latest_response_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -242,3 +247,151 @@ class SupplyOfferStatusHistory(models.Model):
     class Meta:
         ordering = ['created_at']
         indexes = [models.Index(fields=['offer', 'created_at']), models.Index(fields=['new_status'])]
+
+
+class OfferResponse(models.Model):
+    STATUS_PENDING_CUSTOMER = 'pending_customer'
+    STATUS_ACCEPTED_BY_CUSTOMER = 'accepted_by_customer'
+    STATUS_REJECTED_BY_CUSTOMER = 'rejected_by_customer'
+    STATUS_WITHDRAWN_BY_ADMIN = 'withdrawn_by_admin'
+    STATUS_EXPIRED = 'expired'
+    STATUS_SUPERSEDED = 'superseded'
+    STATUS_FINAL_APPROVED = 'final_approved'
+    STATUS_CHOICES = [
+        (STATUS_PENDING_CUSTOMER, 'Pending Customer'),
+        (STATUS_ACCEPTED_BY_CUSTOMER, 'Accepted by Customer'),
+        (STATUS_REJECTED_BY_CUSTOMER, 'Rejected by Customer'),
+        (STATUS_WITHDRAWN_BY_ADMIN, 'Withdrawn by Admin'),
+        (STATUS_EXPIRED, 'Expired'),
+        (STATUS_SUPERSEDED, 'Superseded'),
+        (STATUS_FINAL_APPROVED, 'Final Approved'),
+    ]
+
+    offer = models.ForeignKey(SupplyOffer, on_delete=models.CASCADE, related_name='responses')
+    response_number = models.CharField(max_length=40, unique=True, blank=True)
+    response_version = models.PositiveIntegerField()
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_PENDING_CUSTOMER)
+    customer_safe_message = models.TextField(blank=True)
+    proposed_receipt_date = models.DateField(null=True, blank=True)
+    proposed_receiving_warehouse = models.ForeignKey('inventory.Warehouse', on_delete=models.PROTECT, null=True, blank=True, related_name='supply_offer_responses')
+    expires_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='created_offer_responses')
+    customer_responded_at = models.DateTimeField(null=True, blank=True)
+    customer_read_at = models.DateTimeField(null=True, blank=True)
+    customer_rejection_reason = models.TextField(blank=True)
+    is_current = models.BooleanField(default=True)
+    idempotency_key = models.CharField(max_length=120, blank=True)
+    proposed_total = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-response_version']
+        indexes = [
+            models.Index(fields=['offer', 'is_current']),
+            models.Index(fields=['status']),
+            models.Index(fields=['idempotency_key']),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['offer', 'response_version'], name='unique_offer_response_version'),
+            models.UniqueConstraint(fields=['offer', 'idempotency_key'], condition=~Q(idempotency_key=''), name='unique_offer_response_idempotency'),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.response_version:
+            last_version = OfferResponse.objects.filter(offer=self.offer).order_by('-response_version').values_list('response_version', flat=True).first()
+            self.response_version = (last_version or 0) + 1
+        if not self.response_number:
+            self.response_number = f'{self.offer.offer_number}-R{self.response_version}'
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.response_number
+
+
+class OfferResponseItem(models.Model):
+    response = models.ForeignKey(OfferResponse, on_delete=models.CASCADE, related_name='items')
+    offer_item = models.ForeignKey(SupplyOfferItem, on_delete=models.PROTECT, related_name='response_items')
+    admin_proposed_quantity = models.DecimalField(max_digits=18, decimal_places=3)
+    admin_proposed_unit_price = models.DecimalField(max_digits=18, decimal_places=2)
+    admin_proposed_line_total = models.DecimalField(max_digits=18, decimal_places=2)
+    admin_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['id']
+        constraints = [
+            models.UniqueConstraint(fields=['response', 'offer_item'], name='unique_response_offer_item'),
+            models.CheckConstraint(condition=Q(admin_proposed_quantity__gt=0), name='offer_response_item_quantity_positive'),
+            models.CheckConstraint(condition=Q(admin_proposed_unit_price__gt=0), name='offer_response_item_price_positive'),
+        ]
+
+
+class OfferPayment(models.Model):
+    METHOD_CASH = 'cash'
+    METHOD_BANK_OF_KHARTOUM = 'bank_of_khartoum'
+    METHOD_VISA = 'visa'
+    METHOD_MASTERCARD = 'mastercard'
+    METHOD_CHOICES = [
+        (METHOD_CASH, 'Cash'),
+        (METHOD_BANK_OF_KHARTOUM, 'Bank of Khartoum Transfer'),
+        (METHOD_VISA, 'Visa'),
+        (METHOD_MASTERCARD, 'Mastercard'),
+    ]
+
+    STATUS_RECORDED = 'recorded'
+    STATUS_CONFIRMED = 'confirmed'
+    STATUS_REVERSED = 'reversed'
+    STATUS_FAILED = 'failed'
+    STATUS_CHOICES = [
+        (STATUS_RECORDED, 'Recorded'),
+        (STATUS_CONFIRMED, 'Confirmed'),
+        (STATUS_REVERSED, 'Reversed'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
+    payment_number = models.CharField(max_length=40, unique=True, blank=True)
+    offer = models.ForeignKey(SupplyOffer, on_delete=models.PROTECT, related_name='offer_payments')
+    customer = models.ForeignKey('customers.Customer', on_delete=models.PROTECT, related_name='offer_payments')
+    amount = models.DecimalField(max_digits=18, decimal_places=2)
+    payment_method = models.CharField(max_length=30, choices=METHOD_CHOICES)
+    payment_date = models.DateField()
+    transaction_reference = models.CharField(max_length=120, blank=True)
+    paying_bank = models.CharField(max_length=120, blank=True)
+    card_last_four = models.CharField(max_length=4, blank=True)
+    payment_receipt = models.FileField(upload_to=supply_offer_attachment_path, null=True, blank=True)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_RECORDED)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='created_offer_payments')
+    created_at = models.DateTimeField(auto_now_add=True)
+    linked_customer_transaction = models.ForeignKey('customers.CustomerCashTransaction', on_delete=models.PROTECT, null=True, blank=True, related_name='offer_payments')
+    linked_journal_transaction = models.ForeignKey('daily_journal.JournalTransaction', on_delete=models.PROTECT, null=True, blank=True, related_name='offer_payments')
+    idempotency_key = models.CharField(max_length=120, blank=True)
+    is_reversed = models.BooleanField(default=False)
+    reversed_at = models.DateTimeField(null=True, blank=True)
+    reversed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='reversed_offer_payments', null=True, blank=True)
+    reversal_reason = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['payment_number']),
+            models.Index(fields=['offer']),
+            models.Index(fields=['customer']),
+            models.Index(fields=['payment_method']),
+            models.Index(fields=['idempotency_key']),
+        ]
+        constraints = [
+            models.CheckConstraint(condition=Q(amount__gt=0), name='offer_payment_amount_positive'),
+            models.UniqueConstraint(fields=['offer', 'idempotency_key'], condition=~Q(idempotency_key=''), name='unique_offer_payment_idempotency'),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.payment_number:
+            year = timezone.localdate().year
+            prefix = f'OFF-PAY-{year}-'
+            last = OfferPayment.objects.filter(payment_number__startswith=prefix).order_by('-payment_number').values_list('payment_number', flat=True).first()
+            next_number = int(last.rsplit('-', 1)[1]) + 1 if last else 1
+            self.payment_number = f'{prefix}{next_number:06d}'
+        super().save(*args, **kwargs)

@@ -24,6 +24,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retry => 'Retry';
 
   @override
+  String get cancel => 'Cancel';
+
+  @override
   String get loginTitle => 'Customer Login';
 
   @override
@@ -113,6 +116,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get unpaidInvoiceNotice =>
       'You have an unpaid Invoice. Please contact Bayad Company to complete payment.';
+
+  @override
+  String get adminOfferResponses => 'Admin Offer Responses';
+
+  @override
+  String get offerResponseNotice => 'Bayad Admin has responded to your Offer.';
 
   @override
   String get products => 'Products';
@@ -445,10 +454,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sellToBayad => 'Sell to Bayad';
 
   @override
-  String get supplyOffers => 'Supply Offers';
+  String get supplyOffers => 'Offers';
 
   @override
-  String get mySupplyOffers => 'My Supply Offers';
+  String get mySupplyOffers => 'My Offers';
 
   @override
   String get product => 'Product';
@@ -460,7 +469,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quantity => 'Quantity';
 
   @override
-  String get createSupplyOffer => 'Create Supply Offer';
+  String get createSupplyOffer => 'Create Offer';
 
   @override
   String get addOfferItems => 'Add Offer Items';
@@ -508,10 +517,64 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminProposedPrice => 'Admin Proposed Price';
 
   @override
+  String get adminResponse => 'Admin Response';
+
+  @override
+  String get adminResponded => 'Admin Responded';
+
+  @override
+  String get newAdminResponse => 'New Admin Response';
+
+  @override
+  String get reviewAdminOffer => 'Review Admin Offer';
+
+  @override
+  String get customerQuantity => 'Customer Quantity';
+
+  @override
+  String get adminQuantity => 'Admin Quantity';
+
+  @override
+  String get customerPrice => 'Customer Price';
+
+  @override
+  String get adminPrice => 'Admin Price';
+
+  @override
+  String get originalTotal => 'Original Total';
+
+  @override
+  String get responseDate => 'Response Date';
+
+  @override
+  String get responseExpiry => 'Response Expiry';
+
+  @override
+  String get customerTotal => 'Customer Total';
+
+  @override
+  String get adminProposedTotal => 'Admin Proposed Total';
+
+  @override
+  String get paymentStatus => 'Payment Status';
+
+  @override
+  String get paidAmount => 'Paid Amount';
+
+  @override
+  String get waitingFinalApproval => 'Waiting for Final Approval';
+
+  @override
+  String get paymentCompleted => 'Payment Completed';
+
+  @override
   String get acceptPrice => 'Accept Price';
 
   @override
   String get declinePrice => 'Decline Price';
+
+  @override
+  String get reasonForRejection => 'Reason for Rejection';
 
   @override
   String get chatAboutThisOffer => 'Chat About This Offer';
@@ -538,19 +601,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customerNotes => 'Customer Notes';
 
   @override
-  String get loadingSupplyOffers => 'Loading supply offers...';
+  String get loadingSupplyOffers => 'Loading offers...';
 
   @override
   String get loadingProducts => 'Loading products...';
 
   @override
-  String get supplyOfferLoadError => 'Unable to load supply offers.';
+  String get supplyOfferLoadError => 'Unable to load offers.';
 
   @override
-  String get supplyOfferSaveError => 'Unable to save supply offer.';
+  String get supplyOfferSaveError => 'Unable to save offer.';
 
   @override
-  String get noSupplyOffers => 'No supply offers yet.';
+  String get noSupplyOffers => 'No offers yet.';
 
   @override
   String get requiredField => 'This field is required.';

@@ -368,11 +368,13 @@ class CustomerCashTransaction(models.Model):
     SOURCE_CUSTOMER = 'customer'
     SOURCE_INVOICE = 'invoice'
     SOURCE_SYSTEM = 'system'
+    SOURCE_OFFER_PAYMENT = 'offer_payment'
     SOURCE_TYPE_CHOICES = [
         (SOURCE_MANUAL, 'Manual'),
         (SOURCE_CUSTOMER, 'Customer'),
         (SOURCE_INVOICE, 'Invoice'),
         (SOURCE_SYSTEM, 'System'),
+        (SOURCE_OFFER_PAYMENT, 'Offer Payment'),
     ]
 
     reference_number = models.CharField(max_length=30, unique=True, null=True, blank=True)

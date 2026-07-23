@@ -31,7 +31,10 @@ class HomeScreen extends ConsumerWidget {
         loading: () => LoadingView(message: l10n.loadingHome),
         error: (error, _) => ErrorView(message: l10n.homeLoadError, retryLabel: l10n.retry, onRetry: () => ref.invalidate(homeSummaryProvider)),
         data: (data) => RefreshIndicator(
-          onRefresh: () async => ref.refresh(homeSummaryProvider.future),
+          onRefresh: () async {
+            ref.invalidate(supplyOffersProvider);
+            return ref.refresh(homeSummaryProvider.future);
+          },
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -47,10 +50,21 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   SummaryCard(label: l10n.pendingOrders, value: '${data.orders['pending'] ?? 0}', icon: Icons.pending_actions),
                   SummaryCard(label: l10n.unpaidInvoices, value: '${data.invoices['unpaid'] ?? 0}', icon: Icons.request_quote_outlined),
+                  SummaryCard(label: l10n.adminOfferResponses, value: '${data.offers['unread_responses'] ?? 0}', icon: Icons.mark_email_unread_outlined),
                   SummaryCard(label: l10n.processingShipments, value: '${data.shipments['processing'] ?? 0}', icon: Icons.local_shipping_outlined),
                   SummaryCard(label: l10n.completedOrders, value: '${data.orders['completed'] ?? 0}', icon: Icons.task_alt),
                 ],
               ),
+              if ((data.offers['requires_customer_action'] ?? 0) != 0) ...[
+                const SizedBox(height: 16),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.assignment_turned_in_outlined),
+                    title: Text(l10n.offerResponseNotice),
+                    trailing: TextButton(onPressed: () => context.goNamed(RouteNames.supplyOffers), child: Text(l10n.reviewOffer)),
+                  ),
+                ),
+              ],
               if ((data.invoices['unpaid'] ?? 0) != 0) ...[
                 const SizedBox(height: 16),
                 Card(child: Padding(padding: const EdgeInsets.all(16), child: Text(l10n.unpaidInvoiceNotice))),

@@ -32,6 +32,7 @@ class JournalTransaction(models.Model):
     SOURCE_WAREHOUSE = 'warehouse'
     SOURCE_CUSTOMER = 'customer'
     SOURCE_WORKER = 'worker'
+    SOURCE_OFFER_PAYMENT = 'offer_payment'
     SOURCE_TYPE_CHOICES = [
         (SOURCE_MANUAL, 'Manual'),
         (SOURCE_INVOICE, 'Invoice'),
@@ -39,6 +40,7 @@ class JournalTransaction(models.Model):
         (SOURCE_WAREHOUSE, 'Warehouse'),
         (SOURCE_CUSTOMER, 'Customer'),
         (SOURCE_WORKER, 'Worker'),
+        (SOURCE_OFFER_PAYMENT, 'Offer Payment'),
     ]
 
     WAREHOUSE_STOCK_IN = 'stock_in'

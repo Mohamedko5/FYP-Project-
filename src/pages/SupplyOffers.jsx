@@ -18,7 +18,7 @@ import {
 } from '../services/supplyOffersApi.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 
-const filters = ['', 'submitted', 'under_review', 'counter_offered', 'approved', 'awaiting_receipt', 'received', 'completed', 'rejected'];
+const filters = ['', 'submitted', 'under_review', 'counter_offered', 'customer_accepted', 'approved', 'paid', 'awaiting_receipt', 'received', 'completed', 'rejected'];
 
 function money(value, currency = 'SDG') {
   return `${currency} ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -158,11 +158,11 @@ export default function SupplyOffers() {
           </div>
           <div className="button-row">
             {activeOffer.status === 'submitted' && <Button type="button" onClick={() => setAction('review')}>{t('supplyOffers.startReview')}</Button>}
-            {['under_review', 'customer_accepted'].includes(activeOffer.status) && <Button type="button" onClick={() => setAction('approve')}>{t('supplyOffers.approve')}</Button>}
-            {activeOffer.status === 'under_review' && <Button type="button" variant="secondary" onClick={() => setAction('counter')}>{t('supplyOffers.counterOffer')}</Button>}
-            {activeOffer.status === 'under_review' && <Button type="button" variant="danger" onClick={() => setAction('reject')}>{t('supplyOffers.reject')}</Button>}
-            {['approved', 'awaiting_receipt'].includes(activeOffer.status) && <Button type="button" onClick={() => setAction('receipt')}>{t('supplyOffers.recordReceipt')}</Button>}
-            {activeOffer.status === 'received' && <Button type="button" onClick={() => setAction('payment')}>{t('supplyOffers.recordPayment')}</Button>}
+            {['submitted', 'under_review', 'counter_offered', 'customer_declined'].includes(activeOffer.status) && <Button type="button" variant="secondary" onClick={() => setAction('counter')}>{t('supplyOffers.counterOffer')}</Button>}
+            {activeOffer.status === 'customer_accepted' && <Button type="button" onClick={() => setAction('approve')}>{t('supplyOffers.approve')}</Button>}
+            {['submitted', 'under_review', 'customer_declined'].includes(activeOffer.status) && <Button type="button" variant="danger" onClick={() => setAction('reject')}>{t('supplyOffers.reject')}</Button>}
+            {['approved', 'paid', 'awaiting_receipt'].includes(activeOffer.status) && <Button type="button" onClick={() => setAction('receipt')}>{t('supplyOffers.recordReceipt')}</Button>}
+            {['approved', 'awaiting_receipt'].includes(activeOffer.status) && activeOffer.payment_status !== 'paid' && <Button type="button" onClick={() => setAction('payment')}>{t('supplyOffers.recordPayment')}</Button>}
             <Button type="button" variant="secondary" onClick={() => navigate(`/customer-messages?customer=${activeOffer.customer_code}`)}>{t('supplyOffers.chatWithCustomer')}</Button>
           </div>
         </Card>
@@ -187,6 +187,9 @@ function OfferActionWindow({ action, offer, warehouses, onClose, onDone }) {
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [electronicReference, setElectronicReference] = useState('');
+  const [payingBank, setPayingBank] = useState('');
+  const [cardLastFour, setCardLastFour] = useState('');
+  const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [paymentReceipt, setPaymentReceipt] = useState(null);
   const [prices, setPrices] = useState({});
   const [quantities, setQuantities] = useState({});
@@ -205,7 +208,14 @@ function OfferActionWindow({ action, offer, warehouses, onClose, onDone }) {
         if (warehouseId) await selectSupplyOfferWarehouse(offer.id, { receiving_warehouse_id: warehouseId });
       }
       if (action === 'counter') {
-        await counterSupplyOffer(offer.id, { message, items: offer.items.map((item) => ({ offer_item_id: item.id, admin_proposed_unit_price: prices[item.id] || item.customer_proposed_unit_price })) });
+        await counterSupplyOffer(offer.id, {
+          message,
+          items: offer.items.map((item) => ({
+            offer_item_id: item.id,
+            admin_proposed_quantity: quantities[item.id] || item.quantity,
+            admin_proposed_unit_price: prices[item.id] || item.customer_proposed_unit_price,
+          })),
+        });
       }
       if (action === 'reject') await rejectSupplyOffer(offer.id, { rejection_reason: reason });
       if (action === 'receipt') {
@@ -215,16 +225,19 @@ function OfferActionWindow({ action, offer, warehouses, onClose, onDone }) {
         });
       }
       if (action === 'payment') {
-        if (paymentMethod === 'electronic') {
+        if (paymentMethod !== 'cash') {
           const formData = new FormData();
           formData.append('amount', amount);
           formData.append('payment_method', paymentMethod);
-          formData.append('electronic_reference', electronicReference);
+          formData.append('payment_date', paymentDate);
+          formData.append('transaction_reference', electronicReference);
+          formData.append('paying_bank', payingBank);
+          formData.append('card_last_four', cardLastFour);
           formData.append('description', message);
           if (paymentReceipt) formData.append('payment_receipt', paymentReceipt);
           await recordSupplyOfferPayment(offer.id, formData);
         } else {
-          await recordSupplyOfferPayment(offer.id, { amount, payment_method: paymentMethod, description: message });
+          await recordSupplyOfferPayment(offer.id, { amount, payment_method: paymentMethod, payment_date: paymentDate, description: message });
         }
       }
       onDone();
@@ -248,9 +261,14 @@ function OfferActionWindow({ action, offer, warehouses, onClose, onDone }) {
           </label>
         )}
         {action === 'counter' && (offer.items || []).map((item) => (
-          <label key={item.id}>{item.product_name_snapshot} - {item.unit_snapshot}
-            <input value={prices[item.id] || ''} onChange={(event) => setPrices((current) => ({ ...current, [item.id]: event.target.value }))} placeholder={item.customer_proposed_unit_price} required />
-          </label>
+          <div key={item.id} className="form-grid two-columns">
+            <label>{item.product_name_snapshot} - {item.unit_snapshot}
+              <input value={quantities[item.id] || ''} onChange={(event) => setQuantities((current) => ({ ...current, [item.id]: event.target.value }))} placeholder={item.quantity} required />
+            </label>
+            <label>{t('supplyOffers.adminPrice')}
+              <input value={prices[item.id] || ''} onChange={(event) => setPrices((current) => ({ ...current, [item.id]: event.target.value }))} placeholder={item.customer_proposed_unit_price} required />
+            </label>
+          </div>
         ))}
         {action === 'receipt' && (offer.items || []).map((item) => (
           <label key={item.id}>{item.product_name_snapshot} - {t('supplyOffers.acceptedQuantity')}
@@ -261,12 +279,20 @@ function OfferActionWindow({ action, offer, warehouses, onClose, onDone }) {
         {action === 'payment' && (
           <>
             <label>{t('common.amount')}<input value={amount} onChange={(event) => setAmount(event.target.value)} required /></label>
-            <label>{t('journal.paymentMethod')}<select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option value="cash">{t('journal.paymentMethods.cash')}</option><option value="electronic">{t('journal.paymentMethods.electronic')}</option></select></label>
-            {paymentMethod === 'electronic' && (
+            <label>{t('common.date')}<input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} required /></label>
+            <label>{t('journal.paymentMethod')}<select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}>
+              <option value="cash">{t('journal.paymentMethods.cash')}</option>
+              <option value="bank_of_khartoum">{t('supplyOffers.bankOfKhartoum')}</option>
+              <option value="visa">{t('supplyOffers.visa')}</option>
+              <option value="mastercard">{t('supplyOffers.mastercard')}</option>
+            </select></label>
+            {paymentMethod !== 'cash' && (
               <>
                 <label>{t('journal.electronicReference')}<input value={electronicReference} onChange={(event) => setElectronicReference(event.target.value)} required /></label>
+                {paymentMethod === 'bank_of_khartoum' && <label>{t('supplyOffers.payingBank')}<input value={payingBank} onChange={(event) => setPayingBank(event.target.value)} /></label>}
+                {['visa', 'mastercard'].includes(paymentMethod) && <label>{t('supplyOffers.lastFourDigits')}<input value={cardLastFour} onChange={(event) => setCardLastFour(event.target.value)} maxLength="4" inputMode="numeric" /></label>}
                 <label className="localized-file-input">
-                  <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPaymentReceipt(event.target.files?.[0] || null)} required />
+                  <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => setPaymentReceipt(event.target.files?.[0] || null)} required />
                   <span className="localized-file-input__button">{t('journal.chooseReceiptImage')}</span>
                   <span className="localized-file-input__name">{paymentReceipt?.name || t('journal.noReceiptSelected')}</span>
                 </label>

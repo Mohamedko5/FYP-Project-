@@ -13,12 +13,14 @@ from rest_framework.views import APIView
 
 from inventory.models import Inventory, InventoryMovement
 
-from .models import SupplyOffer, SupplyOfferAttachment, SupplyOfferStatusHistory
+from .models import OfferResponse, SupplyOffer, SupplyOfferAttachment, SupplyOfferStatusHistory
 from .permissions import IsAdminOrManager, IsMobileCustomer, is_admin_or_manager
 from .serializers import (
     AdminApproveSerializer,
     AdminCounterOfferSerializer,
+    AdminOfferResponseSerializer,
     AdminRejectSerializer,
+    CustomerResponseRejectSerializer,
     PaymentSerializer,
     ReceiptSerializer,
     SupplyOfferAttachmentSerializer,
@@ -26,7 +28,7 @@ from .serializers import (
     SupplyOfferSerializer,
     SupplyOfferTimelineSerializer,
 )
-from .services import create_offer_card_message, customer_for_request, record_payment, record_receipt, set_status
+from .services import accept_offer_response, create_offer_card_message, customer_for_request, final_approve_offer, record_offer_payment, record_payment, record_receipt, reject_offer_response, respond_to_offer, set_status
 
 
 class SupplyOfferPagination(PageNumberPagination):
@@ -99,13 +101,20 @@ class MobileOfferActionView(APIView):
         elif action == 'accept-counter-offer':
             if offer.status != SupplyOffer.STATUS_COUNTER_OFFERED:
                 raise ValidationError({'status': 'No counter-offer is available.'})
-            for item in offer.items.all():
-                item.agreed_unit_price = item.admin_proposed_unit_price
-                item.agreed_line_total = Decimal(str(item.quantity)) * Decimal(str(item.agreed_unit_price))
-                item.save(update_fields=['agreed_unit_price', 'agreed_line_total', 'updated_at'])
-            offer.recalculate_totals()
-            offer.save(update_fields=['proposed_total', 'admin_proposed_total', 'agreed_total', 'updated_at'])
-            set_status(offer, SupplyOffer.STATUS_CUSTOMER_ACCEPTED, request.user, SupplyOfferStatusHistory.ACTOR_CUSTOMER, 'Customer accepted the counter-offer.')
+            response = offer.responses.filter(is_current=True).first()
+            if response:
+                try:
+                    accept_offer_response(offer=offer, response_id=response.id, user=request.user)
+                except DjangoValidationError as exc:
+                    raise ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc
+            else:
+                for item in offer.items.all():
+                    item.agreed_unit_price = item.admin_proposed_unit_price
+                    item.agreed_line_total = Decimal(str(item.quantity)) * Decimal(str(item.agreed_unit_price))
+                    item.save(update_fields=['agreed_unit_price', 'agreed_line_total', 'updated_at'])
+                offer.recalculate_totals()
+                offer.save(update_fields=['proposed_total', 'admin_proposed_total', 'agreed_total', 'updated_at'])
+                set_status(offer, SupplyOffer.STATUS_CUSTOMER_ACCEPTED, request.user, SupplyOfferStatusHistory.ACTOR_CUSTOMER, 'Customer accepted the counter-offer.')
         elif action == 'decline-counter-offer':
             if offer.status != SupplyOffer.STATUS_COUNTER_OFFERED:
                 raise ValidationError({'status': 'No counter-offer is available.'})
@@ -114,6 +123,31 @@ class MobileOfferActionView(APIView):
             create_offer_card_message(offer, request.user, f'Supply offer reference: {offer.offer_number}')
         else:
             raise ValidationError({'action': 'Unsupported action.'})
+        return Response(SupplyOfferSerializer(offer, context={'request': request, 'viewer': 'customer'}).data)
+
+
+class MobileOfferResponseActionView(APIView):
+    permission_classes = [IsMobileCustomer]
+
+    def post(self, request, offer_id, response_id, action):
+        offer = get_object_or_404(SupplyOffer.objects.prefetch_related('responses__items__offer_item', 'items'), pk=offer_id, customer=customer_for_request(request))
+        try:
+            if action == 'accept':
+                accept_offer_response(offer=offer, response_id=response_id, user=request.user)
+            elif action == 'reject':
+                serializer = CustomerResponseRejectSerializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                reject_offer_response(offer=offer, response_id=response_id, user=request.user, reason=serializer.validated_data['reason'])
+            elif action == 'read':
+                response = get_object_or_404(OfferResponse, pk=response_id, offer=offer, is_current=True)
+                if response.customer_read_at is None:
+                    response.customer_read_at = timezone.now()
+                    response.save(update_fields=['customer_read_at', 'updated_at'])
+            else:
+                raise ValidationError({'action': 'Unsupported action.'})
+        except DjangoValidationError as exc:
+            raise ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc
+        offer.refresh_from_db()
         return Response(SupplyOfferSerializer(offer, context={'request': request, 'viewer': 'customer'}).data)
 
 
@@ -190,6 +224,18 @@ class AdminOfferActionView(APIView):
         elif action == 'approve':
             serializer = AdminApproveSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
+            if offer.status == SupplyOffer.STATUS_CUSTOMER_ACCEPTED:
+                try:
+                    final_approve_offer(
+                        offer=offer,
+                        user=request.user,
+                        customer_safe_message=serializer.validated_data.get('customer_safe_message') or '',
+                        receiving_warehouse=serializer.validated_data.get('receiving_warehouse_id'),
+                    )
+                except DjangoValidationError as exc:
+                    raise ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc
+                offer.refresh_from_db()
+                return Response(SupplyOfferSerializer(offer, context={'request': request, 'viewer': 'admin'}).data)
             warehouse = serializer.validated_data.get('receiving_warehouse_id')
             for item in offer.items.all():
                 item.agreed_unit_price = item.admin_proposed_unit_price or item.customer_proposed_unit_price
@@ -204,19 +250,38 @@ class AdminOfferActionView(APIView):
         elif action == 'counter-offer':
             serializer = AdminCounterOfferSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            items = {item.id: item for item in offer.items.all()}
+            items = []
+            offer_items = {item.id: item for item in offer.items.all()}
             for row in serializer.validated_data['items']:
-                item = items.get(int(row.get('offer_item_id') or 0))
+                item = offer_items.get(int(row.get('offer_item_id') or 0))
                 if not item:
                     raise ValidationError({'items': 'Offer item was not found.'})
-                price = row.get('admin_proposed_unit_price')
-                if price is None or float(price) <= 0:
-                    raise ValidationError({'admin_proposed_unit_price': 'Price must be greater than zero.'})
-                item.admin_proposed_unit_price = price
-                item.save(update_fields=['admin_proposed_unit_price', 'updated_at'])
-            offer.recalculate_totals()
-            offer.save(update_fields=['proposed_total', 'admin_proposed_total', 'updated_at'])
-            set_status(offer, SupplyOffer.STATUS_COUNTER_OFFERED, request.user, SupplyOfferStatusHistory.ACTOR_ADMIN, serializer.validated_data.get('message', 'Bayad proposed a new price.'))
+                items.append({
+                    'offer_item_id': item.id,
+                    'admin_proposed_quantity': row.get('admin_proposed_quantity') or item.quantity,
+                    'admin_proposed_unit_price': row.get('admin_proposed_unit_price'),
+                })
+            try:
+                respond_to_offer(offer=offer, items=items, user=request.user, customer_safe_message=serializer.validated_data.get('message', 'Bayad proposed a new price.'))
+            except DjangoValidationError as exc:
+                raise ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc
+        elif action == 'respond':
+            serializer = AdminOfferResponseSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            try:
+                respond_to_offer(
+                    offer=offer,
+                    items=serializer.validated_data['items'],
+                    user=request.user,
+                    customer_safe_message=serializer.validated_data.get('customer_safe_message') or '',
+                    proposed_receipt_date=serializer.validated_data.get('proposed_receipt_date'),
+                    proposed_receiving_warehouse=serializer.validated_data.get('proposed_receiving_warehouse_id'),
+                    expires_at=serializer.validated_data.get('expires_at'),
+                    response_notes=serializer.validated_data.get('response_notes') or '',
+                    idempotency_key=serializer.validated_data.get('idempotency_key') or '',
+                )
+            except DjangoValidationError as exc:
+                raise ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc
         elif action == 'reject':
             serializer = AdminRejectSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
@@ -243,10 +308,10 @@ class AdminOfferActionView(APIView):
             serializer = PaymentSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             try:
-                payment, journal = record_payment(offer=offer, user=request.user, **serializer.validated_data)
+                payment = record_offer_payment(offer=offer, user=request.user, **serializer.validated_data)
             except DjangoValidationError as exc:
                 raise ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc
-            return Response({'payment_id': payment.id, 'journal_id': journal.id, 'status': offer.status}, status=status.HTTP_201_CREATED)
+            return Response({'payment_id': payment.id, 'journal_id': payment.linked_journal_transaction_id, 'status': offer.status}, status=status.HTTP_201_CREATED)
         else:
             raise ValidationError({'action': 'Unsupported action.'})
         offer.refresh_from_db()

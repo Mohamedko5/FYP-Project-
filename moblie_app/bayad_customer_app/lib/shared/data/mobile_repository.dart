@@ -167,7 +167,14 @@ class MobileRepository {
     return PagedResponse.fromJson(response, SupplyOffer.fromJson);
   }
 
-  Future<SupplyOffer> supplyOffer(int id) async => SupplyOffer.fromJson(await _getMap(ApiEndpoints.supplyOfferDetail(id)));
+  Future<SupplyOffer> supplyOffer(int id) async {
+    final offer = SupplyOffer.fromJson(await _getMap(ApiEndpoints.supplyOfferDetail(id)));
+    if (offer.hasUnreadResponse && offer.currentResponseId > 0) {
+      await supplyOfferResponseAction(offer.id, offer.currentResponseId, 'read');
+      return SupplyOffer.fromJson(await _getMap(ApiEndpoints.supplyOfferDetail(id)));
+    }
+    return offer;
+  }
 
   Future<SupplyOffer> createSupplyOffer({required String idempotencyKey, required Map<String, dynamic> data}) async {
     try {
@@ -185,6 +192,15 @@ class MobileRepository {
   Future<SupplyOffer> supplyOfferAction(int id, String action) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(ApiEndpoints.supplyOfferAction(id, action));
+      return SupplyOffer.fromJson(response.data ?? const {});
+    } on DioException catch (error) {
+      throw _mapDioError(error);
+    }
+  }
+
+  Future<SupplyOffer> supplyOfferResponseAction(int offerId, int responseId, String action, {Map<String, dynamic>? data}) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(ApiEndpoints.supplyOfferResponseAction(offerId, responseId, action), data: data);
       return SupplyOffer.fromJson(response.data ?? const {});
     } on DioException catch (error) {
       throw _mapDioError(error);

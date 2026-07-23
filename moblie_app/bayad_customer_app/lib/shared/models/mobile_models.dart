@@ -351,6 +351,7 @@ class HomeSummary {
     required this.orders,
     required this.invoices,
     required this.shipments,
+    required this.offers,
     required this.recentOrders,
   });
 
@@ -358,6 +359,7 @@ class HomeSummary {
   final Map<String, dynamic> orders;
   final Map<String, dynamic> invoices;
   final Map<String, dynamic> shipments;
+  final Map<String, dynamic> offers;
   final List<OrderSummary> recentOrders;
 
   factory HomeSummary.fromJson(Map<String, dynamic> json) => HomeSummary(
@@ -365,6 +367,7 @@ class HomeSummary {
         orders: json['orders'] as Map<String, dynamic>? ?? const {},
         invoices: json['invoices'] as Map<String, dynamic>? ?? const {},
         shipments: json['shipments'] as Map<String, dynamic>? ?? const {},
+        offers: json['offers'] as Map<String, dynamic>? ?? const {},
         recentOrders: (json['recent_orders'] as List<dynamic>? ?? const []).whereType<Map<String, dynamic>>().map(OrderSummary.fromJson).toList(),
       );
 }

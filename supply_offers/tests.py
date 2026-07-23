@@ -12,7 +12,7 @@ from customers.models import Customer, CustomerAccount, CustomerCashTransaction
 from daily_journal.models import JournalTransaction
 from inventory.models import Inventory, InventoryMovement, Product, ProductUnit, Warehouse
 
-from .models import SupplyOffer, SupplyOfferAttachment
+from .models import OfferPayment, OfferResponse, SupplyOffer, SupplyOfferAttachment
 
 
 @override_settings(MEDIA_ROOT='test_media')
@@ -199,6 +199,161 @@ class SupplyOfferAPITests(APITestCase):
         self.auth_customer()
         declined = self.client.post(f'/api/supply-offers/mobile/supply-offers/{second.id}/decline-counter-offer/')
         self.assertEqual(declined.status_code, status.HTTP_200_OK, declined.data)
+
+    def test_admin_response_preserves_customer_offer_and_backend_calculates_totals(self):
+        offer = self.submit_and_review()
+        item = offer.items.first()
+        original_quantity = item.quantity
+        original_price = item.customer_proposed_unit_price
+        response = self.client.post(
+            f'/api/supply-offers/admin/supply-offers/{offer.id}/respond/',
+            {
+                'customer_safe_message': 'Bayad can purchase part of this offer.',
+                'items': [{'offer_item_id': item.id, 'admin_proposed_quantity': '70.000', 'admin_proposed_unit_price': '70000.00'}],
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        item.refresh_from_db()
+        offer.refresh_from_db()
+        offer_response = offer.responses.get()
+        self.assertEqual(item.quantity, original_quantity)
+        self.assertEqual(item.customer_proposed_unit_price, original_price)
+        self.assertEqual(offer_response.proposed_total, Decimal('4900000.00'))
+        self.assertEqual(offer_response.items.first().admin_proposed_line_total, Decimal('4900000.00'))
+        self.assertEqual(InventoryMovement.objects.count(), 0)
+
+    def test_admin_response_is_visible_in_mobile_list_detail_and_home_unread(self):
+        offer = self.submit_and_review()
+        item = offer.items.first()
+        self.client.post(
+            f'/api/supply-offers/admin/supply-offers/{offer.id}/respond/',
+            {
+                'customer_safe_message': 'Bayad proposes a different price.',
+                'items': [{'offer_item_id': item.id, 'admin_proposed_quantity': '70.000', 'admin_proposed_unit_price': '70000.00'}],
+            },
+            format='json',
+        )
+        offer.refresh_from_db()
+        response_obj = offer.responses.get()
+        self.assertEqual(offer.status, SupplyOffer.STATUS_COUNTER_OFFERED)
+        self.assertIsNone(response_obj.customer_read_at)
+
+        self.auth_customer()
+        home = self.client.get('/api/mobile/home-summary/')
+        self.assertEqual(home.status_code, status.HTTP_200_OK, home.data)
+        self.assertEqual(home.data['offers']['unread_responses'], 1)
+        self.assertEqual(home.data['offers']['requires_customer_action'], 1)
+
+        listing = self.client.get('/api/supply-offers/mobile/supply-offers/')
+        self.assertEqual(listing.status_code, status.HTTP_200_OK, listing.data)
+        row = listing.data['results'][0]
+        self.assertEqual(row['status'], SupplyOffer.STATUS_COUNTER_OFFERED)
+        self.assertEqual(row['current_response_id'], response_obj.id)
+        self.assertTrue(row['has_unread_response'])
+        self.assertTrue(row['requires_customer_action'])
+        self.assertEqual(row['admin_proposed_total'], '4900000.00')
+        self.assertEqual(row['latest_admin_message'], 'Bayad proposes a different price.')
+
+        detail = self.client.get(f'/api/supply-offers/mobile/supply-offers/{offer.id}/')
+        self.assertEqual(detail.status_code, status.HTTP_200_OK, detail.data)
+        self.assertEqual(detail.data['current_response']['id'], response_obj.id)
+        self.assertEqual(detail.data['current_response']['items'][0]['admin_proposed_quantity'], '70.000')
+        self.assertEqual(detail.data['current_response']['items'][0]['admin_proposed_unit_price'], '70000.00')
+        self.assertTrue(detail.data['allowed_actions']['can_accept_response'])
+
+    def test_reading_response_clears_unread_without_home_marking_read(self):
+        offer = self.submit_and_review()
+        item = offer.items.first()
+        self.client.post(f'/api/supply-offers/admin/supply-offers/{offer.id}/respond/', {'items': [{'offer_item_id': item.id, 'admin_proposed_quantity': '70', 'admin_proposed_unit_price': '70000'}]}, format='json')
+        response_obj = offer.responses.get()
+        self.auth_customer()
+        first_home = self.client.get('/api/mobile/home-summary/')
+        self.assertEqual(first_home.data['offers']['unread_responses'], 1)
+        response_obj.refresh_from_db()
+        self.assertIsNone(response_obj.customer_read_at)
+
+        read = self.client.post(f'/api/supply-offers/mobile/supply-offers/{offer.id}/responses/{response_obj.id}/read/')
+        self.assertEqual(read.status_code, status.HTTP_200_OK, read.data)
+        response_obj.refresh_from_db()
+        self.assertIsNotNone(response_obj.customer_read_at)
+        second_home = self.client.get('/api/mobile/home-summary/')
+        self.assertEqual(second_home.data['offers']['unread_responses'], 0)
+
+    def test_duplicate_admin_response_idempotency_does_not_duplicate_unread(self):
+        offer = self.submit_and_review()
+        item = offer.items.first()
+        payload = {
+            'idempotency_key': 'respond-once',
+            'items': [{'offer_item_id': item.id, 'admin_proposed_quantity': '70', 'admin_proposed_unit_price': '70000'}],
+        }
+        first = self.client.post(f'/api/supply-offers/admin/supply-offers/{offer.id}/respond/', payload, format='json')
+        second = self.client.post(f'/api/supply-offers/admin/supply-offers/{offer.id}/respond/', payload, format='json')
+        self.assertEqual(first.status_code, status.HTTP_200_OK, first.data)
+        self.assertEqual(second.status_code, status.HTTP_200_OK, second.data)
+        self.assertEqual(OfferResponse.objects.filter(offer=offer).count(), 1)
+
+    def test_response_version_history_is_preserved_after_rejection(self):
+        offer = self.submit_and_review()
+        item = offer.items.first()
+        self.client.post(f'/api/supply-offers/admin/supply-offers/{offer.id}/respond/', {'items': [{'offer_item_id': item.id, 'admin_proposed_quantity': '70', 'admin_proposed_unit_price': '70000'}]}, format='json')
+        first = OfferResponse.objects.get(offer=offer)
+        self.auth_customer()
+        rejected = self.client.post(f'/api/supply-offers/mobile/supply-offers/{offer.id}/responses/{first.id}/reject/', {'reason': 'Need better price'}, format='json')
+        self.assertEqual(rejected.status_code, status.HTTP_200_OK, rejected.data)
+        self.auth_admin()
+        second_response = self.client.post(f'/api/supply-offers/admin/supply-offers/{offer.id}/respond/', {'items': [{'offer_item_id': item.id, 'admin_proposed_quantity': '80', 'admin_proposed_unit_price': '75000'}]}, format='json')
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK, second_response.data)
+        first.refresh_from_db()
+        self.assertEqual(first.status, OfferResponse.STATUS_REJECTED_BY_CUSTOMER)
+        self.assertEqual(OfferResponse.objects.filter(offer=offer).count(), 2)
+        self.assertEqual(OfferResponse.objects.get(offer=offer, is_current=True).response_version, 2)
+
+    def accepted_final_approved_offer(self):
+        offer = self.submit_and_review()
+        item = offer.items.first()
+        self.client.post(f'/api/supply-offers/admin/supply-offers/{offer.id}/respond/', {'items': [{'offer_item_id': item.id, 'admin_proposed_quantity': '100', 'admin_proposed_unit_price': '120000'}]}, format='json')
+        response = OfferResponse.objects.get(offer=offer)
+        self.auth_customer()
+        accepted = self.client.post(f'/api/supply-offers/mobile/supply-offers/{offer.id}/responses/{response.id}/accept/')
+        self.assertEqual(accepted.status_code, status.HTTP_200_OK, accepted.data)
+        self.auth_admin()
+        approved = self.client.post(f'/api/supply-offers/admin/supply-offers/{offer.id}/approve/', {'receiving_warehouse_id': self.warehouse.id}, format='json')
+        self.assertEqual(approved.status_code, status.HTTP_200_OK, approved.data)
+        offer.refresh_from_db()
+        return offer
+
+    def test_payment_after_final_approval_creates_financial_records_without_inventory(self):
+        offer = self.accepted_final_approved_offer()
+        before_inventory = InventoryMovement.objects.count()
+        response = self.client.post(
+            f'/api/supply-offers/admin/supply-offers/{offer.id}/record-payment/',
+            {'amount': '12000000.00', 'payment_method': 'cash', 'payment_date': '2026-08-05', 'description': 'Full payment'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        offer.refresh_from_db()
+        self.assertEqual(OfferPayment.objects.filter(offer=offer).count(), 1)
+        self.assertEqual(JournalTransaction.objects.filter(cash_type=JournalTransaction.CASH_EXPENSE, source_type=JournalTransaction.SOURCE_OFFER_PAYMENT).count(), 1)
+        self.assertEqual(CustomerCashTransaction.objects.filter(source_type=CustomerCashTransaction.SOURCE_OFFER_PAYMENT).count(), 1)
+        self.assertEqual(InventoryMovement.objects.count(), before_inventory)
+        self.assertEqual(offer.payment_status, 'paid')
+
+    def test_card_payment_rejects_full_card_number_and_cvv(self):
+        offer = self.accepted_final_approved_offer()
+        response = self.client.post(
+            f'/api/supply-offers/admin/supply-offers/{offer.id}/record-payment/',
+            {
+                'amount': '12000000.00',
+                'payment_method': 'visa',
+                'payment_date': '2026-08-05',
+                'transaction_reference': 'VISA-1',
+                'card_number': '4111111111111111',
+                'cvv': '123',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_admin_can_reject_with_customer_safe_reason(self):
         offer = self.submit_and_review()

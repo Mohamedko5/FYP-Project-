@@ -20,6 +20,7 @@ from inventory.models import Product
 from invoices.models import Invoice
 from orders.models import Order
 from shipments.models import Shipment
+from supply_offers.models import OfferResponse, SupplyOffer
 
 from .mobile_serializers import (
     GENERIC_RESET_MESSAGE,
@@ -408,6 +409,18 @@ class MobileHomeSummaryView(APIView):
         orders = Order.objects.filter(customer=customer)
         invoices = Invoice.objects.filter(customer=customer)
         shipments = Shipment.objects.filter(customer=customer)
+        offers = SupplyOffer.objects.filter(customer=customer)
+        unread_offer_responses = OfferResponse.objects.filter(
+            offer__customer=customer,
+            is_current=True,
+            status=OfferResponse.STATUS_PENDING_CUSTOMER,
+            customer_read_at__isnull=True,
+        )
+        action_required_responses = OfferResponse.objects.filter(
+            offer__customer=customer,
+            is_current=True,
+            status=OfferResponse.STATUS_PENDING_CUSTOMER,
+        )
         outstanding = invoices.filter(payment_status=Invoice.PAYMENT_UNPAID, status=Invoice.STATUS_ISSUED).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
         recent_orders = orders.prefetch_related('items', 'invoices', 'shipments').order_by('-created_at')[:3]
         return Response({
@@ -433,6 +446,17 @@ class MobileHomeSummaryView(APIView):
                 'processing': shipments.filter(status=Shipment.STATUS_PROCESSING).count(),
                 'completed': shipments.filter(status=Shipment.STATUS_COMPLETED).count(),
                 'cancelled': shipments.filter(status=Shipment.STATUS_CANCELLED).count(),
+            },
+            'offers': {
+                'total': offers.count(),
+                'submitted': offers.filter(status=SupplyOffer.STATUS_SUBMITTED).count(),
+                'under_review': offers.filter(status=SupplyOffer.STATUS_UNDER_REVIEW).count(),
+                'counter_offered': offers.filter(status=SupplyOffer.STATUS_COUNTER_OFFERED).count(),
+                'approved': offers.filter(status=SupplyOffer.STATUS_APPROVED).count(),
+                'rejected': offers.filter(status=SupplyOffer.STATUS_REJECTED).count(),
+                'completed': offers.filter(status=SupplyOffer.STATUS_COMPLETED).count(),
+                'unread_responses': unread_offer_responses.count(),
+                'requires_customer_action': action_required_responses.count(),
             },
             'recent_orders': MobileOrderListSerializer(recent_orders, many=True, context={'request': request}).data,
         })

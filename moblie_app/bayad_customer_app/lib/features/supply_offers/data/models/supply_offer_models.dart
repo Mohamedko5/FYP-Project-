@@ -69,6 +69,78 @@ class SupplyOfferTimelineEntry {
       );
 }
 
+class OfferResponseItem {
+  const OfferResponseItem({
+    required this.productName,
+    required this.unit,
+    required this.customerQuantity,
+    required this.adminQuantity,
+    required this.customerPrice,
+    required this.adminPrice,
+    required this.customerTotal,
+    required this.adminTotal,
+  });
+
+  final String productName;
+  final String unit;
+  final double customerQuantity;
+  final double adminQuantity;
+  final double customerPrice;
+  final double adminPrice;
+  final double customerTotal;
+  final double adminTotal;
+
+  factory OfferResponseItem.fromJson(Map<String, dynamic> json) => OfferResponseItem(
+        productName: readString(json, 'product_name'),
+        unit: readString(json, 'unit'),
+        customerQuantity: readDouble(json, 'customer_quantity'),
+        adminQuantity: readDouble(json, 'admin_proposed_quantity'),
+        customerPrice: readDouble(json, 'customer_unit_price'),
+        adminPrice: readDouble(json, 'admin_proposed_unit_price'),
+        customerTotal: readDouble(json, 'customer_line_total'),
+        adminTotal: readDouble(json, 'admin_proposed_line_total'),
+      );
+}
+
+class OfferResponse {
+  const OfferResponse({
+    required this.id,
+    required this.responseNumber,
+    required this.status,
+    required this.message,
+    required this.proposedTotal,
+    required this.proposedReceiptDate,
+    required this.warehouseName,
+    required this.expiresAt,
+    required this.createdAt,
+    required this.items,
+  });
+
+  final int id;
+  final String responseNumber;
+  final String status;
+  final String message;
+  final double proposedTotal;
+  final String proposedReceiptDate;
+  final String warehouseName;
+  final String expiresAt;
+  final String createdAt;
+  final List<OfferResponseItem> items;
+
+  factory OfferResponse.fromJson(Map<String, dynamic> json) => OfferResponse(
+        id: readInt(json, 'id'),
+        responseNumber: readString(json, 'response_number'),
+        status: readString(json, 'status'),
+        message: readString(json, 'customer_safe_message'),
+        proposedTotal: readDouble(json, 'proposed_total'),
+        proposedReceiptDate: readString(json, 'proposed_receipt_date'),
+        warehouseName: readString(json, 'proposed_receiving_warehouse_name'),
+        expiresAt: readString(json, 'expires_at'),
+        createdAt: readString(json, 'created_at'),
+        items: (json['items'] as List<dynamic>? ?? const []).whereType<Map<String, dynamic>>().map(OfferResponseItem.fromJson).toList(),
+      );
+}
+
 class SupplyOffer {
   const SupplyOffer({
     required this.id,
@@ -92,6 +164,16 @@ class SupplyOffer {
     required this.items,
     required this.attachments,
     required this.timeline,
+    required this.currentResponse,
+    required this.paymentStatus,
+    required this.paidAmount,
+    required this.latestAdminMessage,
+    required this.currentResponseId,
+    required this.currentResponseStatus,
+    required this.hasUnreadResponse,
+    required this.unreadResponseCount,
+    required this.requiresCustomerAction,
+    required this.allowedActions,
   });
 
   final int id;
@@ -115,6 +197,16 @@ class SupplyOffer {
   final List<SupplyOfferItem> items;
   final List<SupplyOfferAttachment> attachments;
   final List<SupplyOfferTimelineEntry> timeline;
+  final OfferResponse? currentResponse;
+  final String paymentStatus;
+  final double paidAmount;
+  final String latestAdminMessage;
+  final int currentResponseId;
+  final String currentResponseStatus;
+  final bool hasUnreadResponse;
+  final int unreadResponseCount;
+  final bool requiresCustomerAction;
+  final Map<String, dynamic> allowedActions;
 
   factory SupplyOffer.fromJson(Map<String, dynamic> json) => SupplyOffer(
         id: readInt(json, 'id'),
@@ -138,5 +230,18 @@ class SupplyOffer {
         items: (json['items'] as List<dynamic>? ?? const []).whereType<Map<String, dynamic>>().map(SupplyOfferItem.fromJson).toList(),
         attachments: (json['attachments'] as List<dynamic>? ?? const []).whereType<Map<String, dynamic>>().map(SupplyOfferAttachment.fromJson).toList(),
         timeline: (json['timeline'] as List<dynamic>? ?? const []).whereType<Map<String, dynamic>>().map(SupplyOfferTimelineEntry.fromJson).toList(),
+        currentResponse: json['current_response'] is Map<String, dynamic> ? OfferResponse.fromJson(json['current_response'] as Map<String, dynamic>) : null,
+        paymentStatus: readString(json, 'payment_status'),
+        paidAmount: readDouble(json, 'paid_amount'),
+        latestAdminMessage: readString(json, 'latest_admin_message'),
+        currentResponseId: readInt(json, 'current_response_id'),
+        currentResponseStatus: readString(json, 'current_response_status'),
+        hasUnreadResponse: json['has_unread_response'] == true,
+        unreadResponseCount: readInt(json, 'unread_response_count'),
+        requiresCustomerAction: json['requires_customer_action'] == true,
+        allowedActions: json['allowed_actions'] as Map<String, dynamic>? ?? const {},
       );
+
+  bool get canAcceptResponse => allowedActions['can_accept_response'] == true;
+  bool get canRejectResponse => allowedActions['can_reject_response'] == true;
 }

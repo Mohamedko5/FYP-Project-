@@ -13,6 +13,7 @@ import '../../../../shared/widgets/empty_view.dart';
 import '../../../../shared/widgets/error_view.dart';
 import '../../../../shared/widgets/loading_view.dart';
 import '../../../../shared/widgets/customer_widgets.dart';
+import '../../data/models/supply_offer_models.dart';
 
 class SupplyOffersScreen extends ConsumerWidget {
   const SupplyOffersScreen({super.key});
@@ -44,7 +45,10 @@ class SupplyOffersScreen extends ConsumerWidget {
               data: (page) {
                 if (page.results.isEmpty) return EmptyView(message: l10n.noSupplyOffers);
                 return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(supplyOffersProvider),
+                  onRefresh: () async {
+                    ref.invalidate(homeSummaryProvider);
+                    return ref.refresh(supplyOffersProvider.future);
+                  },
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: page.results.length,
@@ -52,12 +56,35 @@ class SupplyOffersScreen extends ConsumerWidget {
                     itemBuilder: (context, index) {
                       final offer = page.results[index];
                       return Card(
-                        child: ListTile(
-                          title: Text(offer.offerNumber.isEmpty ? l10n.draft : offer.offerNumber, style: const TextStyle(fontWeight: FontWeight.w900)),
-                          subtitle: Text('${offer.productSummary}\n${offer.city} - ${offer.region}\n${_statusLabel(l10n, offer.status)}'),
-                          isThreeLine: true,
-                          trailing: Text(formatMoney(offer.proposedTotal, offer.currency), style: const TextStyle(fontWeight: FontWeight.w900)),
+                        child: InkWell(
                           onTap: () => context.goNamed(RouteNames.supplyOfferDetail, pathParameters: {'id': offer.id.toString()}),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(child: Text(offer.offerNumber.isEmpty ? l10n.draft : offer.offerNumber, style: const TextStyle(fontWeight: FontWeight.w900))),
+                                    if (offer.hasUnreadResponse) Chip(label: Text(l10n.newAdminResponse)),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text('${offer.productSummary}\n${offer.city} - ${offer.region}\n${_statusLabel(l10n, offer.status)}'),
+                                const SizedBox(height: 8),
+                                Text('${l10n.originalTotal}: ${formatMoney(offer.proposedTotal, offer.currency)}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                if (offer.currentResponse != null) ...[
+                                  Text('${l10n.adminProposedTotal}: ${formatMoney(offer.currentResponse!.proposedTotal, offer.currency)}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  if (offer.latestAdminMessage.isNotEmpty) Text(offer.latestAdminMessage),
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: AlignmentDirectional.centerEnd,
+                                    child: OutlinedButton(onPressed: () => context.goNamed(RouteNames.supplyOfferDetail, pathParameters: {'id': offer.id.toString()}), child: Text(l10n.reviewAdminOffer)),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -87,14 +114,33 @@ class SupplyOfferDetailScreen extends ConsumerWidget {
       child: offer.when(
         loading: () => LoadingView(message: l10n.loadingSupplyOffers),
         error: (error, _) => ErrorView(message: l10n.supplyOfferLoadError, retryLabel: l10n.retry, onRetry: () => ref.invalidate(supplyOfferDetailProvider(offerId))),
-        data: (offer) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+        data: (offer) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.invalidate(homeSummaryProvider);
+            ref.invalidate(supplyOffersProvider);
+          });
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(homeSummaryProvider);
+              ref.invalidate(supplyOffersProvider);
+              return ref.refresh(supplyOfferDetailProvider(offerId).future);
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
             Text(offer.offerNumber, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
             const SizedBox(height: 6),
             Chip(label: Text(_statusLabel(l10n, offer.status))),
             if (offer.adminMessage.isNotEmpty) Card(child: Padding(padding: const EdgeInsets.all(16), child: Text(offer.adminMessage))),
             if (offer.rejectionReason.isNotEmpty) Card(child: Padding(padding: const EdgeInsets.all(16), child: Text(offer.rejectionReason))),
+            if (offer.currentResponse != null) _AdminResponseCard(offer: offer),
+            Card(
+              child: ListTile(
+                title: Text(l10n.paymentStatus),
+                subtitle: Text(offer.paymentStatus == 'paid' ? l10n.paymentCompleted : offer.status == 'customer_accepted' ? l10n.waitingFinalApproval : offer.paymentStatus),
+                trailing: Text(formatMoney(offer.paidAmount, offer.currency), style: const TextStyle(fontWeight: FontWeight.w900)),
+              ),
+            ),
             const SizedBox(height: 12),
             Text(l10n.products, style: Theme.of(context).textTheme.titleLarge),
             ...offer.items.map((item) => Card(
@@ -121,13 +167,70 @@ class SupplyOfferDetailScreen extends ConsumerWidget {
             ),
             if (offer.status == 'counter_offered') ...[
               const SizedBox(height: 8),
-              FilledButton(onPressed: () => _offerAction(context, ref, offer.id, 'accept-counter-offer'), child: Text(l10n.acceptPrice)),
-              TextButton(onPressed: () => _offerAction(context, ref, offer.id, 'decline-counter-offer'), child: Text(l10n.declinePrice)),
+              FilledButton(onPressed: () => _acceptOffer(context, ref, offer), child: Text(l10n.acceptPrice)),
+              TextButton(onPressed: () => _rejectOffer(context, ref, offer), child: Text(l10n.declinePrice)),
             ],
-          ],
-        ),
+              ],
+            ),
+          );
+        },
       ),
     );
+  }
+
+  Future<void> _acceptOffer(BuildContext context, WidgetRef ref, SupplyOffer offer) async {
+    final response = offer.currentResponse;
+    if (response == null) return _offerAction(context, ref, offer.id, 'accept-counter-offer');
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.acceptPrice),
+        content: Text(l10n.reviewAdminOffer),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l10n.cancel)),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.acceptPrice)),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+    await _responseAction(context, ref, offer.id, response.id, 'accept');
+  }
+
+  Future<void> _rejectOffer(BuildContext context, WidgetRef ref, SupplyOffer offer) async {
+    final response = offer.currentResponse;
+    if (response == null) return _offerAction(context, ref, offer.id, 'decline-counter-offer');
+    final controller = TextEditingController();
+    final l10n = AppLocalizations.of(context);
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.declinePrice),
+        content: TextField(controller: controller, decoration: InputDecoration(labelText: l10n.reasonForRejection), maxLines: 3),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
+          FilledButton(onPressed: () => Navigator.of(context).pop(controller.text.trim()), child: Text(l10n.declinePrice)),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (reason == null || reason.isEmpty) return;
+    if (!context.mounted) return;
+    await _responseAction(context, ref, offer.id, response.id, 'reject', data: {'reason': reason});
+  }
+
+  Future<void> _responseAction(BuildContext context, WidgetRef ref, int offerId, int responseId, String action, {Map<String, dynamic>? data}) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    try {
+      await ref.read(mobileRepositoryProvider).supplyOfferResponseAction(offerId, responseId, action, data: data);
+      ref.invalidate(supplyOfferDetailProvider(offerId));
+      ref.invalidate(supplyOffersProvider);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.saved)));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.supplyOfferSaveError)));
+    }
   }
 
   Future<void> _offerAction(BuildContext context, WidgetRef ref, int id, String action) async {
@@ -141,6 +244,43 @@ class SupplyOfferDetailScreen extends ConsumerWidget {
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.supplyOfferSaveError)));
     }
+  }
+}
+
+class _AdminResponseCard extends StatelessWidget {
+  const _AdminResponseCard({required this.offer});
+
+  final SupplyOffer offer;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final response = offer.currentResponse!;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.adminResponse, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            if (response.message.isNotEmpty) Text(response.message),
+            const SizedBox(height: 8),
+            Text('${l10n.originalTotal}: ${formatMoney(offer.proposedTotal, offer.currency)}'),
+            Text('${l10n.adminProposedTotal}: ${formatMoney(response.proposedTotal, offer.currency)}'),
+            if (response.createdAt.isNotEmpty) Text('${l10n.responseDate}: ${response.createdAt}'),
+            if (response.expiresAt.isNotEmpty) Text('${l10n.responseExpiry}: ${response.expiresAt}'),
+            if (response.proposedReceiptDate.isNotEmpty) Text('${l10n.availabilityDate}: ${response.proposedReceiptDate}'),
+            if (response.warehouseName.isNotEmpty) Text('${l10n.receivingWarehouse}: ${response.warehouseName}'),
+            const Divider(),
+            ...response.items.map((item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text('${item.productName} - ${item.unit}\n${l10n.customerQuantity}: ${item.customerQuantity}\n${l10n.adminQuantity}: ${item.adminQuantity}\n${l10n.customerPrice}: ${formatMoney(item.customerPrice)}\n${l10n.adminPrice}: ${formatMoney(item.adminPrice)}'),
+                )),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -427,12 +567,13 @@ String _statusLabel(AppLocalizations l10n, String status) {
     'draft' => l10n.draft,
     'submitted' => l10n.submitted,
     'under_review' => l10n.underReview,
-    'counter_offered' => l10n.newPriceProposed,
+    'counter_offered' => l10n.adminResponded,
     'customer_accepted' => l10n.customerAccepted,
     'customer_declined' => l10n.customerDeclined,
     'approved' => l10n.approved,
     'rejected' => l10n.rejected,
     'awaiting_receipt' => l10n.awaitingProductReceipt,
+    'paid' => l10n.paymentCompleted,
     'received' => l10n.received,
     'completed' => l10n.completed,
     _ => status,
