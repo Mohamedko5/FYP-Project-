@@ -7442,29 +7442,6 @@ textarea:focus-visible {
   }
 }
 
-.app-window-backdrop {
-  position: fixed;
-  z-index: 1700;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  padding: clamp(12px, 2vw, 24px);
-  background: rgba(31, 34, 29, 0.42);
-  backdrop-filter: blur(2px);
-}
-
-.app-window {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  width: min(calc(100vw - 32px), 900px);
-  max-height: calc(100vh - 36px);
-  overflow: hidden;
-  border: 1px solid #d6d1c7;
-  border-radius: 10px;
-  background: #fffdf9;
-  box-shadow: 0 26px 70px rgba(30, 32, 28, 0.28);
-}
 
 .app-window--small {
   width: min(calc(100vw - 32px), 520px);
@@ -7485,7 +7462,9 @@ textarea:focus-visible {
 .app-window.is-maximized {
   width: calc(100vw - 28px);
   height: calc(100vh - 28px);
+  height: calc(100dvh - 28px);
   max-height: calc(100vh - 28px);
+  max-height: calc(100dvh - 28px);
   border-radius: 6px;
 }
 
@@ -7660,7 +7639,9 @@ textarea:focus-visible {
   .app-window.is-maximized {
     width: calc(100vw - 16px);
     height: calc(100vh - 16px);
+    height: calc(100dvh - 16px);
     max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
     border-radius: 8px;
   }
 
@@ -7695,3 +7676,1420 @@ textarea:focus-visible {
     padding: 12px 14px;
   }
 }
+
+/* ==========================================================================
+   CASH DAILY JOURNAL TRANSACTION WINDOW POLISH SYSTEM
+   ========================================================================== */
+
+.app-window-backdrop {
+  position: fixed;
+  z-index: 1700;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: clamp(12px, 2.5vw, 24px);
+  background: rgba(24, 27, 22, 0.48);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.app-window {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(calc(100vw - 32px), 760px);
+  max-height: min(86vh, 760px);
+  max-height: min(86dvh, 760px);
+  overflow: hidden;
+  border: 1px solid rgba(214, 209, 199, 0.85);
+  border-radius: 12px;
+  background: #fffdf9;
+  box-shadow: 0 24px 60px rgba(24, 27, 22, 0.24), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.app-window--medium {
+  width: min(calc(100vw - 32px), 760px);
+}
+
+.app-window__titlebar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 22px;
+  border-bottom: 1px solid #e6e1d7;
+  background: linear-gradient(180deg, #ffffff, #f8f6f1);
+}
+
+.app-window__title h2 {
+  margin: 0;
+  color: #2b2e2a;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.app-window__title p {
+  margin: 2px 0 0;
+  color: #646158;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.app-window__control {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #d4cebe;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #363630;
+  cursor: pointer;
+  transition: all 160ms ease-out;
+}
+
+.app-window__control:hover:not(:disabled),
+.app-window__control:focus-visible {
+  border-color: var(--green);
+  background: #eef4ed;
+  color: var(--green-dark);
+  box-shadow: 0 0 0 3px rgba(77, 107, 74, 0.16);
+  outline: none;
+}
+
+/* Cash Transaction Form Layout Grid */
+.cash-transaction-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 16px;
+  padding: 4px 0 0;
+}
+
+.cash-form-error {
+  grid-column: 1 / -1;
+  margin-bottom: 4px;
+}
+
+.cash-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.cash-form-field > span,
+.cash-form-field__label {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.cash-form-field--type {
+  grid-column: span 1;
+}
+
+.cash-form-field--payment {
+  grid-column: span 1;
+}
+
+.cash-form-field--party {
+  grid-column: span 1;
+}
+
+.cash-form-field--amount {
+  grid-column: span 1;
+}
+
+.cash-form-field--description {
+  grid-column: span 2;
+}
+
+/* Form Controls Styling */
+.cash-transaction-form input:not([type="radio"]):not([type="file"]),
+.cash-transaction-form select {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 0.95rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.cash-transaction-form textarea {
+  min-height: 84px;
+  max-height: 160px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.cash-transaction-form input:hover,
+.cash-transaction-form select:hover,
+.cash-transaction-form textarea:hover {
+  border-color: rgba(77, 107, 74, 0.45);
+}
+
+.cash-transaction-form input:focus,
+.cash-transaction-form select:focus,
+.cash-transaction-form textarea:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(77, 107, 74, 0.18);
+  outline: none;
+}
+
+/* Payment Method Segmented Control */
+.payment-method-segment {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  width: 100%;
+  height: 44px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.payment-method-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 700;
+  user-select: none;
+  transition: all 180ms ease-out;
+}
+
+.payment-method-option:hover:not(.is-selected) {
+  background: rgba(77, 107, 74, 0.08);
+  color: var(--text);
+}
+
+.payment-method-option.is-selected {
+  border-color: var(--green-dark);
+  background: var(--green);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(77, 107, 74, 0.28);
+}
+
+.payment-method-option svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+.payment-method-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+}
+
+.payment-method-option:focus-within {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+
+/* Conditional Electronic Payment Fields */
+.cash-electronic-fields {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(77, 107, 74, 0.22);
+  border-radius: 8px;
+  background: rgba(238, 244, 237, 0.45);
+  animation: cashElectronicFadeIn 200ms ease-out forwards;
+}
+
+@keyframes cashElectronicFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sticky Action Footer */
+.app-window__body .cash-form-actions {
+  position: sticky;
+  bottom: -18px;
+  z-index: 10;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 18px -18px -18px;
+  padding: 14px 22px;
+  border-top: 1px solid #e6e1d7;
+  background: linear-gradient(180deg, rgba(255, 253, 249, 0.95), #fffdf9);
+  backdrop-filter: blur(8px);
+}
+
+[dir="rtl"] .app-window__body .cash-form-actions {
+  justify-content: flex-start;
+}
+
+/* Tablet & Mobile Responsiveness */
+@media screen and (max-width: 720px) {
+  .cash-transaction-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cash-form-field--type { grid-column: span 1; }
+  .cash-form-field--payment { grid-column: span 1; }
+  .cash-form-field--party { grid-column: span 2; }
+  .cash-form-field--amount { grid-column: span 1; }
+  .cash-form-field--description { grid-column: span 2; }
+  .cash-electronic-fields { grid-template-columns: 1fr; }
+}
+
+@media screen and (max-width: 480px) {
+  .cash-transaction-form {
+    grid-template-columns: 1fr;
+  }
+  .cash-form-field--type,
+  .cash-form-field--payment,
+  .cash-form-field--party,
+  .cash-form-field--amount,
+  .cash-form-field--description {
+    grid-column: span 1;
+  }
+}
+
+/* ==========================================================================
+   SHARED MODAL DIALOGS & CONFIRMATION OVERLAYS POLISH
+   ========================================================================== */
+
+.module-dialog-backdrop,
+.confirmation-overlay,
+.app-window-confirm {
+  position: fixed;
+  z-index: 1850;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: clamp(12px, 2.5vw, 24px);
+  background: rgba(24, 27, 22, 0.48);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: bayadBackdropIn var(--transition-base) both;
+}
+
+.module-dialog,
+.confirmation-dialog,
+.app-window-confirm__dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(calc(100vw - 32px), 480px);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid rgba(214, 209, 199, 0.85);
+  border-radius: 12px;
+  background: #fffdf9;
+  box-shadow: 0 24px 60px rgba(24, 27, 22, 0.24);
+  animation: bayadScaleIn var(--transition-base) both;
+}
+
+.confirmation-dialog h3,
+.module-dialog header h2 {
+  margin: 0;
+  color: #2b2e2a;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.confirmation-dialog p,
+.module-dialog header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+.confirmation-dialog__actions,
+.module-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid #e6e1d7;
+  margin-top: 4px;
+}
+
+[dir="rtl"] .confirmation-dialog__actions,
+[dir="rtl"] .module-dialog footer {
+  justify-content: flex-start;
+}
+
+/* ==========================================================================
+   BAYAD ERP — MODAL VISUAL SYSTEM v2
+   Covers ALL AppWindows, confirmation dialogs, payment dialogs, upload
+   dialogs across every module. Cascades over earlier rule sets.
+   ========================================================================== */
+
+/* ------------------------------------------------------------------
+   1. AppWindow backdrop — ensure full-viewport coverage
+   ------------------------------------------------------------------ */
+.app-window-backdrop {
+  position: fixed;
+  z-index: 1700;
+  inset: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow: hidden auto;
+  padding: clamp(16px, 2.5vw, 28px);
+  background: rgba(20, 24, 18, 0.52);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+/* ------------------------------------------------------------------
+   2. AppWindow size variants
+   Default (no modifier) → medium form window ≈ 820px
+   ------------------------------------------------------------------ */
+.app-window {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: clamp(560px, 80vw, 820px);
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+  border: 1px solid rgba(210, 205, 194, 0.9);
+  border-radius: 14px;
+  background: #fffdf9;
+  box-shadow:
+    0 28px 72px rgba(20, 24, 18, 0.26),
+    0 4px 18px rgba(0, 0, 0, 0.06);
+}
+
+/* small: ~500px — confirmation-style forms, simple actions */
+.app-window--small {
+  width: clamp(420px, 50vw, 520px);
+  max-width: calc(100vw - 48px);
+}
+
+/* medium: ~820px — most standard forms (Cash Journal, Invoices, etc.) */
+.app-window--medium {
+  width: clamp(680px, 72vw, 860px);
+  max-width: calc(100vw - 48px);
+}
+
+/* large: ~1000px — complex forms (Warehouse, Customers, Workers) */
+.app-window--large {
+  width: clamp(820px, 82vw, 1020px);
+  max-width: calc(100vw - 48px);
+}
+
+/* xlarge: ~1160px — data-heavy windows (Products, Orders, Shipments) */
+.app-window--xlarge {
+  width: clamp(920px, 88vw, 1180px);
+  max-width: calc(100vw - 48px);
+}
+
+/* Maximized */
+.app-window.is-maximized {
+  width: calc(100vw - 32px);
+  height: calc(100vh - 32px);
+  height: calc(100dvh - 32px);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  max-width: calc(100vw - 32px);
+  border-radius: 8px;
+}
+
+/* ------------------------------------------------------------------
+   3. Titlebar — larger, cleaner, well-padded
+   ------------------------------------------------------------------ */
+.app-window__titlebar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 24px;
+  border-bottom: 1px solid #e4dfd5;
+  background: linear-gradient(180deg, #ffffff 0%, #f9f7f2 100%);
+  flex-shrink: 0;
+}
+
+.app-window__title {
+  min-width: 0;
+  flex: 1;
+}
+
+.app-window__title h2 {
+  margin: 0;
+  color: #24261f;
+  font-size: clamp(1.2rem, 1.5vw, 1.375rem);
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.app-window__title p {
+  margin: 3px 0 0;
+  color: #5f5d55;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Window-control buttons */
+.app-window__controls {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.app-window__control {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #d0c9bd;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #3a3831;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease,
+    color 150ms ease;
+}
+
+.app-window__control:hover:not(:disabled) {
+  border-color: var(--green);
+  background: #eef4ed;
+  color: var(--green-dark);
+  box-shadow: 0 0 0 3px rgba(77, 107, 74, 0.18);
+  outline: none;
+}
+
+.app-window__control:focus-visible {
+  border-color: var(--green);
+  background: #eef4ed;
+  color: var(--green-dark);
+  box-shadow: 0 0 0 3px rgba(77, 107, 74, 0.22);
+  outline: none;
+}
+
+.app-window__control:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.app-window__control svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+/* ------------------------------------------------------------------
+   4. Scrollable body
+   ------------------------------------------------------------------ */
+.app-window__body {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px;
+  background: #fffdf9;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(77, 107, 74, 0.38) rgba(220, 217, 208, 0.35);
+}
+
+.app-window__body > .card,
+.app-window__body > .section-panel,
+.app-window__body > form {
+  margin: 0;
+  box-shadow: none;
+}
+
+/* Sticky action footer inside body */
+.app-window__body .workflow-actions,
+.app-window__body .form-grid__actions,
+.app-window__body .warehouse-transaction-actions,
+.app-window__body .cash-form-actions {
+  position: sticky;
+  bottom: -24px;
+  z-index: 10;
+  margin: 24px -24px -24px;
+  padding: 16px 24px;
+  border-top: 1px solid #e4dfd5;
+  background: linear-gradient(180deg, rgba(255, 253, 249, 0.96), #fffdf9);
+  backdrop-filter: blur(8px);
+}
+
+/* ------------------------------------------------------------------
+   5. Confirmation overlays & simple dialogs (module-dialog, confirmation-dialog)
+   ------------------------------------------------------------------ */
+.module-dialog-backdrop,
+.confirmation-overlay,
+.app-window-confirm {
+  position: fixed;
+  z-index: 1850;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden auto;
+  padding: clamp(16px, 2.5vw, 28px);
+  background: rgba(20, 24, 18, 0.52);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  animation: bayadBackdropIn var(--transition-base) both;
+}
+
+.module-dialog,
+.confirmation-dialog,
+.app-window-confirm__dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: min(calc(100vw - 40px), 520px);
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  border: 1px solid rgba(210, 205, 194, 0.9);
+  border-radius: 14px;
+  background: #fffdf9;
+  box-shadow:
+    0 24px 64px rgba(20, 24, 18, 0.26),
+    0 4px 16px rgba(0, 0, 0, 0.05);
+  animation: bayadScaleIn var(--transition-base) both;
+}
+
+/* Dialog header */
+.confirmation-dialog {
+  padding: 28px;
+}
+
+.module-dialog header {
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid #e8e3d8;
+}
+
+.module-dialog__body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.module-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid #e8e3d8;
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .module-dialog footer {
+  justify-content: flex-start;
+}
+
+/* Dialog typography */
+.confirmation-dialog h3,
+.module-dialog header h2 {
+  margin: 0;
+  color: #24261f;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.confirmation-dialog p,
+.module-dialog header p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+/* Confirmation dialog actions */
+.confirmation-dialog__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e8e3d8;
+}
+
+[dir="rtl"] .confirmation-dialog__actions {
+  justify-content: flex-start;
+}
+
+/* Unsaved-changes sub-dialog (appears on top of AppWindow) */
+.app-window-confirm {
+  z-index: 1900;
+  background: rgba(20, 24, 18, 0.28);
+}
+
+.app-window-confirm__dialog {
+  width: min(calc(100vw - 40px), 460px);
+}
+
+/* ------------------------------------------------------------------
+   6. Global button improvements — inside modals
+   ------------------------------------------------------------------ */
+.app-window .button,
+.app-window footer .button,
+.module-dialog .button,
+.module-dialog footer .button,
+.confirmation-dialog .button,
+.confirmation-dialog__actions .button {
+  min-height: 46px;
+  padding: 0 22px;
+  border-radius: 9px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    filter 160ms ease;
+}
+
+/* Primary (green save) button inside modals */
+.app-window .button--primary,
+.module-dialog .button--primary,
+.confirmation-dialog .button--primary {
+  background: var(--green);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(77, 107, 74, 0.22);
+}
+
+.app-window .button--primary:hover:not(:disabled),
+.module-dialog .button--primary:hover:not(:disabled),
+.confirmation-dialog .button--primary:hover:not(:disabled) {
+  background: var(--green-dark);
+  box-shadow: 0 4px 14px rgba(77, 107, 74, 0.30);
+  filter: none;
+}
+
+/* Secondary (cancel) button inside modals */
+.app-window .button--secondary,
+.module-dialog .button--secondary,
+.confirmation-dialog .button--secondary {
+  background: #f4f2ec;
+  border: 1px solid #cdc8bd;
+  color: var(--text);
+  box-shadow: none;
+}
+
+.app-window .button--secondary:hover:not(:disabled),
+.module-dialog .button--secondary:hover:not(:disabled),
+.confirmation-dialog .button--secondary:hover:not(:disabled) {
+  background: #ece9e1;
+  border-color: #b8b2a8;
+  filter: none;
+}
+
+/* Disabled state */
+.app-window .button:disabled,
+.module-dialog .button:disabled,
+.confirmation-dialog .button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------------
+   7. Form inputs inside modals — standardized height, padding, focus
+   ------------------------------------------------------------------ */
+.app-window input:not([type="radio"]):not([type="checkbox"]):not([type="file"]),
+.app-window select,
+.module-dialog input:not([type="radio"]):not([type="checkbox"]):not([type="file"]),
+.module-dialog select {
+  width: 100%;
+  min-height: 50px;
+  height: 50px;
+  padding: 0 15px;
+  border: 1.5px solid #d5d0c6;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.app-window textarea,
+.module-dialog textarea {
+  width: 100%;
+  min-height: 104px;
+  padding: 12px 15px;
+  border: 1.5px solid #d5d0c6;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  resize: vertical;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+/* Select arrow */
+.app-window select,
+.module-dialog select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%236d6b63' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+[dir="rtl"] .app-window select,
+[dir="rtl"] .module-dialog select {
+  background-position: left 12px center;
+  padding-right: 15px;
+  padding-left: 36px;
+}
+
+/* Hover */
+.app-window input:not([type="radio"]):not([type="checkbox"]):not([type="file"]):hover,
+.app-window select:hover,
+.app-window textarea:hover,
+.module-dialog input:not([type="radio"]):not([type="file"]):hover,
+.module-dialog select:hover,
+.module-dialog textarea:hover {
+  border-color: rgba(77, 107, 74, 0.48);
+}
+
+/* Focus */
+.app-window input:not([type="radio"]):not([type="checkbox"]):not([type="file"]):focus,
+.app-window select:focus,
+.app-window textarea:focus,
+.module-dialog input:not([type="radio"]):not([type="file"]):focus,
+.module-dialog select:focus,
+.module-dialog textarea:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(77, 107, 74, 0.18);
+  outline: none;
+}
+
+/* Placeholder */
+.app-window input::placeholder,
+.app-window textarea::placeholder,
+.module-dialog input::placeholder,
+.module-dialog textarea::placeholder {
+  color: #a09c94;
+  font-size: 0.875rem;
+}
+
+/* Form labels inside modals */
+.app-window label > span:first-child,
+.app-window .cash-form-field > span,
+.app-window .cash-form-field__label,
+.app-window .form-field__label,
+.module-dialog label > span:first-child,
+.module-dialog .module-dialog-field {
+  display: block;
+  margin-bottom: 8px;
+  color: #3a3831;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* ------------------------------------------------------------------
+   8. Cash Journal form — layout and controls
+   ------------------------------------------------------------------ */
+
+/* Outer grid: 3 balanced columns on desktop */
+.cash-transaction-form {
+  display: grid;
+  grid-template-columns:
+    minmax(160px, 0.9fr)
+    minmax(240px, 1.2fr)
+    minmax(200px, 1fr);
+  gap: 20px 18px;
+  padding: 4px 0 0;
+}
+
+.cash-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cash-form-field > span,
+.cash-form-field__label {
+  color: #3a3831;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* Column assignments — desktop 3-col */
+.cash-form-field--type    { grid-column: 1; }
+.cash-form-field--payment { grid-column: 2; }
+.cash-form-field--party   { grid-column: 3; }
+
+/* Second row: description (wide) + amount (narrow) */
+.cash-form-field--description {
+  grid-column: 1 / 3;     /* spans first two thirds */
+}
+.cash-form-field--amount {
+  grid-column: 3;         /* last column */
+}
+
+/* Electronic fields — full row */
+.cash-electronic-fields {
+  grid-column: 1 / -1;
+}
+
+/* Error block — full row */
+.cash-form-error {
+  grid-column: 1 / -1;
+}
+
+/* Cash form inputs */
+.cash-transaction-form input:not([type="radio"]):not([type="file"]),
+.cash-transaction-form select {
+  width: 100%;
+  min-height: 50px;
+  height: 50px;
+  padding: 0 15px;
+  border: 1.5px solid #d5d0c6;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 0.9375rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.cash-transaction-form select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%236d6b63' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+[dir="rtl"] .cash-transaction-form select {
+  background-position: left 12px center;
+  padding-right: 15px;
+  padding-left: 36px;
+}
+
+.cash-transaction-form textarea {
+  width: 100%;
+  min-height: 104px;
+  padding: 12px 15px;
+  border: 1.5px solid #d5d0c6;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  resize: vertical;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.cash-transaction-form input:hover,
+.cash-transaction-form select:hover,
+.cash-transaction-form textarea:hover {
+  border-color: rgba(77, 107, 74, 0.45);
+}
+
+.cash-transaction-form input:focus,
+.cash-transaction-form select:focus,
+.cash-transaction-form textarea:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(77, 107, 74, 0.18);
+  outline: none;
+}
+
+.cash-transaction-form input::placeholder,
+.cash-transaction-form textarea::placeholder {
+  color: #a09c94;
+  font-size: 0.875rem;
+}
+
+/* ------------------------------------------------------------------
+   9. Payment method segmented control — no wrapping, balanced
+   ------------------------------------------------------------------ */
+.payment-method-segment {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+  width: 100%;
+  height: 50px;
+  padding: 4px;
+  border: 1.5px solid #d5d0c6;
+  border-radius: 9px;
+  background: #f4f2ec;
+}
+
+.payment-method-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 100%;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  user-select: none;
+  transition: all 180ms ease-out;
+}
+
+.payment-method-option:hover:not(.is-selected) {
+  background: rgba(77, 107, 74, 0.09);
+  color: var(--text);
+}
+
+.payment-method-option.is-selected {
+  border-color: var(--green-dark);
+  background: var(--green);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(77, 107, 74, 0.28);
+}
+
+.payment-method-option svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+}
+
+/* Visually-hidden radio */
+.payment-method-option input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.payment-method-option:focus-within {
+  outline: 2.5px solid var(--green);
+  outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------------
+   10. Electronic payment section
+   ------------------------------------------------------------------ */
+.cash-electronic-fields {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: 16px 18px;
+  border: 1.5px solid rgba(77, 107, 74, 0.22);
+  border-radius: 10px;
+  background: rgba(238, 244, 237, 0.5);
+  animation: cashElectronicFadeIn 200ms ease-out forwards;
+}
+
+/* ------------------------------------------------------------------
+   11. Cash form sticky footer
+   ------------------------------------------------------------------ */
+.app-window__body .cash-form-actions {
+  position: sticky;
+  bottom: -24px;
+  z-index: 10;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 24px -24px -24px;
+  padding: 16px 24px;
+  border-top: 1px solid #e4dfd5;
+  background: linear-gradient(180deg, rgba(255, 253, 249, 0.97), #fffdf9);
+  backdrop-filter: blur(8px);
+}
+
+[dir="rtl"] .app-window__body .cash-form-actions {
+  justify-content: flex-start;
+}
+
+/* ------------------------------------------------------------------
+   12. Form-grid controls inside modals (Warehouse, Customers, etc.)
+   ------------------------------------------------------------------ */
+.app-window .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 18px;
+}
+
+.app-window .form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  color: #3a3831;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.app-window .form-grid input:not([type="radio"]):not([type="checkbox"]),
+.app-window .form-grid select,
+.app-window .form-grid textarea,
+.app-window .form-grid__wide input,
+.app-window .section-panel input:not([type="radio"]):not([type="checkbox"]):not([type="file"]),
+.app-window .section-panel select,
+.app-window .section-panel textarea {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 15px;
+  border: 1.5px solid #d5d0c6;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 0.9375rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.app-window .form-grid textarea,
+.app-window .section-panel textarea {
+  min-height: 104px;
+  padding: 12px 15px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.app-window .form-grid input:focus,
+.app-window .form-grid select:focus,
+.app-window .form-grid textarea:focus,
+.app-window .section-panel input:focus,
+.app-window .section-panel select:focus,
+.app-window .section-panel textarea:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(77, 107, 74, 0.18);
+  outline: none;
+}
+
+/* Wide field spanning full row */
+.app-window .form-grid__wide {
+  grid-column: 1 / -1;
+}
+
+/* ------------------------------------------------------------------
+   13. Warehouse / commodity transaction controls inside modals
+   ------------------------------------------------------------------ */
+.app-window .warehouse-transaction-grid input,
+.app-window .warehouse-transaction-grid select,
+.app-window .warehouse-transaction-grid textarea {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 15px;
+  border: 1.5px solid #d5d0c6;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 0.9375rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.app-window .warehouse-transaction-grid textarea {
+  min-height: 100px;
+  padding: 12px 15px;
+  resize: vertical;
+}
+
+.app-window .warehouse-transaction-grid input:focus,
+.app-window .warehouse-transaction-grid select:focus,
+.app-window .warehouse-transaction-grid textarea:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(77, 107, 74, 0.18);
+  outline: none;
+}
+
+/* ------------------------------------------------------------------
+   14. Warehouse operation segment (Deposit / Withdraw tabs)
+   ------------------------------------------------------------------ */
+.app-window .warehouse-operation-segment {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  padding: 5px;
+  border: 1.5px solid #d5d0c6;
+  border-radius: 10px;
+  background: #f4f2ec;
+}
+
+.app-window .warehouse-operation-segment button {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.app-window .warehouse-operation-segment button.is-active {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(77, 107, 74, 0.24);
+}
+
+/* ------------------------------------------------------------------
+   15. Module-dialog (ConfirmationDialog shared) — wider when needed
+   ------------------------------------------------------------------ */
+/* Keep the standard 520px but allow form-style usage to expand */
+.module-dialog--standard {
+  width: min(calc(100vw - 40px), 520px);
+}
+
+/* ------------------------------------------------------------------
+   16. Dock (minimized windows indicator)
+   ------------------------------------------------------------------ */
+.app-window-dock {
+  position: fixed;
+  z-index: 1800;
+  right: 20px;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.app-window-dock__item {
+  max-width: min(380px, calc(100vw - 40px));
+  min-height: 44px;
+  overflow: hidden;
+  border: 1px solid #ccc6bb;
+  border-radius: 9px;
+  background: #2e3329;
+  box-shadow: 0 14px 38px rgba(28, 30, 26, 0.30);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  pointer-events: auto;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.app-window-dock__item:hover,
+.app-window-dock__item:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+/* ------------------------------------------------------------------
+   17. Responsive — Tablet (≤ 900px)
+   ------------------------------------------------------------------ */
+@media screen and (max-width: 900px) {
+  .app-window,
+  .app-window--medium,
+  .app-window--large,
+  .app-window--xlarge {
+    width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+  }
+
+  .cash-transaction-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cash-form-field--type    { grid-column: 1; }
+  .cash-form-field--payment { grid-column: 2; }
+  .cash-form-field--party   { grid-column: 1 / -1; }
+  .cash-form-field--description { grid-column: 1; }
+  .cash-form-field--amount  { grid-column: 2; }
+
+  .cash-electronic-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------------
+   18. Responsive — Mobile (≤ 600px)
+   ------------------------------------------------------------------ */
+@media screen and (max-width: 600px) {
+  .app-window-backdrop,
+  .module-dialog-backdrop,
+  .confirmation-overlay {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .app-window,
+  .app-window--small,
+  .app-window--medium,
+  .app-window--large,
+  .app-window--xlarge,
+  .app-window.is-maximized {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    height: calc(100vh - 16px);
+    height: calc(100dvh - 16px);
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    border-radius: 12px 12px 6px 6px;
+  }
+
+  .module-dialog,
+  .confirmation-dialog,
+  .app-window-confirm__dialog {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+  }
+
+  .app-window__titlebar {
+    padding: 14px 16px;
+  }
+
+  .app-window__title h2 {
+    font-size: 1.0625rem;
+  }
+
+  .app-window__title p {
+    display: none;
+  }
+
+  .app-window__body {
+    padding: 16px;
+  }
+
+  .app-window__body .workflow-actions,
+  .app-window__body .form-grid__actions,
+  .app-window__body .warehouse-transaction-actions,
+  .app-window__body .cash-form-actions {
+    bottom: -16px;
+    margin: 16px -16px -16px;
+    padding: 14px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cash-transaction-form {
+    grid-template-columns: 1fr;
+  }
+
+  .cash-form-field--type,
+  .cash-form-field--payment,
+  .cash-form-field--party,
+  .cash-form-field--amount,
+  .cash-form-field--description {
+    grid-column: 1;
+  }
+
+  .payment-method-option {
+    font-size: 0.8125rem;
+    padding: 0 8px;
+    gap: 5px;
+  }
+
+  .app-window .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-window .button,
+  .module-dialog .button,
+  .confirmation-dialog .button {
+    min-height: 48px;
+    width: 100%;
+  }
+
+  .module-dialog footer,
+  .confirmation-dialog__actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .module-dialog footer .button,
+  .module-dialog footer .tooltip,
+  .confirmation-dialog__actions .button,
+  .confirmation-dialog__actions .tooltip {
+    width: 100%;
+  }
+}
+
+/* ------------------------------------------------------------------
+   19. RTL titlebar alignment
+   ------------------------------------------------------------------ */
+[dir="rtl"] .app-window__titlebar {
+  text-align: right;
+}
+
+[dir="rtl"] .app-window__title p {
+  line-height: 1.75;
+}
+
+[dir="rtl"] .app-window__body .cash-form-actions {
+  justify-content: flex-start;
+}
+
+/* ------------------------------------------------------------------
+   END BAYAD ERP MODAL VISUAL SYSTEM v2
+   ------------------------------------------------------------------ */

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import Button from './Button.jsx';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
+import ModalPortal from './ModalPortal.jsx';
 
 export function ModulePageHeader({ title, description, meta, actions }) {
   return (
@@ -135,24 +136,26 @@ export function ConfirmationDialog({
   }, [onCancel, saving]);
 
   return (
-    <div className="module-dialog-backdrop" role="presentation">
-      <section
-        className={`module-dialog module-dialog--${variant}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="module-dialog-title"
-        ref={dialogRef}
-      >
-        <header>
-          <h2 id="module-dialog-title">{title}</h2>
-          {description && <p>{description}</p>}
-        </header>
-        <div className="module-dialog__body">{children}</div>
-        <footer>
-          <Button variant="secondary" onClick={onCancel} disabled={saving}>{cancelLabel}</Button>
-          <Button onClick={onConfirm} disabled={saving}>{saving ? (isArabic ? 'جارٍ الحفظ...' : 'Saving...') : confirmLabel}</Button>
-        </footer>
-      </section>
-    </div>
+    <ModalPortal>
+      <div className="module-dialog-backdrop" role="presentation">
+        <section
+          className={`module-dialog module-dialog--${variant}`}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="module-dialog-title"
+          ref={dialogRef}
+        >
+          <header>
+            <h2 id="module-dialog-title">{title}</h2>
+            {description && <p>{description}</p>}
+          </header>
+          <div className="module-dialog__body">{children}</div>
+          <footer>
+            <Button variant="secondary" onClick={onCancel} disabled={saving}>{cancelLabel}</Button>
+            <Button onClick={onConfirm} disabled={saving}>{saving ? (isArabic ? 'جارٍ الحفظ...' : 'Saving...') : confirmLabel}</Button>
+          </footer>
+        </section>
+      </div>
+    </ModalPortal>
   );
 }

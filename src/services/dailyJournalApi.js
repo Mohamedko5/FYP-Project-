@@ -53,3 +53,15 @@ export function deleteJournalTransaction(id) {
     method: 'DELETE',
   });
 }
+
+export function getOpeningBalance(date) {
+  return apiRequest(`/api/journal/opening-balance/?date=${date}`);
+}
+
+export function setOpeningBalance(date, payload) {
+  return apiRequest(`/api/journal/opening-balance/${date}/`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+

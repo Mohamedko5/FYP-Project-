@@ -16,8 +16,9 @@ from rest_framework.response import Response
 
 from inventory.permissions import IsAdminOrManager
 
-from .models import JournalTransaction
+from .models import JournalTransaction, DailyOpeningBalance
 from .serializers import (
+    DailyOpeningBalanceSerializer,
     JournalTransactionSerializer,
     WarehouseCommodityReversalSerializer,
     WarehouseCommodityTransactionResponseSerializer,
@@ -149,10 +150,9 @@ class JournalTransactionViewSet(viewsets.ModelViewSet):
         start, end = local_day_bounds(day)
         base = self.get_queryset()
 
-        previous_cash = base.filter(journal_type=JournalTransaction.JOURNAL_CASH, created_at__lt=start)
-        previous_income = previous_cash.filter(cash_type=JournalTransaction.CASH_INCOME).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        previous_expenses = previous_cash.filter(cash_type=JournalTransaction.CASH_EXPENSE).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        opening_balance = previous_income - previous_expenses
+        opening_record = DailyOpeningBalance.objects.filter(journal_date=day).first()
+        opening_balance = opening_record.amount if opening_record else Decimal('0.00')
+        is_opening_balance_set = bool(opening_record)
 
         current_cash = base.filter(journal_type=JournalTransaction.JOURNAL_CASH, created_at__gte=start, created_at__lte=end)
         total_income = current_cash.filter(cash_type=JournalTransaction.CASH_INCOME).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
@@ -175,6 +175,7 @@ class JournalTransactionViewSet(viewsets.ModelViewSet):
             'date': day.isoformat(),
             'cash': {
                 'opening_balance': money(opening_balance),
+                'is_opening_balance_set': is_opening_balance_set,
                 'total_income': money(total_income),
                 'total_expenses': money(total_expenses),
                 'net': money(net),
@@ -251,3 +252,43 @@ class WarehouseCommodityTransactionReverseView(APIView):
             'inventory': inventory,
         }, context={'request': request})
         return Response(response.data, status=status.HTTP_201_CREATED)
+
+class DailyOpeningBalanceView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        date_str = request.query_params.get('date')
+        if not date_str:
+            return Response({'detail': 'Date parameter is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            day = parse_local_date(date_str)
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+            
+        record = DailyOpeningBalance.objects.filter(journal_date=day).first()
+        if not record:
+            return Response({'detail': 'Opening balance not set.'}, status=status.HTTP_404_NOT_FOUND)
+            
+        serializer = DailyOpeningBalanceSerializer(record)
+        return Response(serializer.data)
+        
+    def put(self, request, date_str):
+        try:
+            day = parse_local_date(date_str)
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+            
+        record = DailyOpeningBalance.objects.filter(journal_date=day).first()
+        data = request.data.copy()
+        data['journal_date'] = day.isoformat()
+        
+        if record:
+            serializer = DailyOpeningBalanceSerializer(record, data=data, context={'request': request}, partial=True)
+        else:
+            serializer = DailyOpeningBalanceSerializer(data=data, context={'request': request})
+            
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK if record else status.HTTP_201_CREATED)
+

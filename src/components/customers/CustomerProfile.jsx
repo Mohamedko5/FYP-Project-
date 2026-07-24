@@ -290,7 +290,7 @@ export default function CustomerProfile({
   function renderActiveSection() {
     if (activeSection === 'payment') {
       return (
-        <Card title={t('customers.addPayment')} subtitle={t('customers.customerPaymentSubtitle')}>
+        <Card className="customer-modal-card">
           <div className="customer-section-header">
             <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
           </div>
@@ -314,7 +314,7 @@ export default function CustomerProfile({
 
     if (activeSection === 'cash') {
       return (
-        <Card title={t('customers.addCashTransaction')} subtitle={t('customers.cashAccountSubtitle')}>
+        <Card className="customer-modal-card">
           <div className="customer-section-header">
             <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
           </div>
@@ -335,7 +335,7 @@ export default function CustomerProfile({
 
     if (activeSection === 'commodity') {
       return (
-        <Card title={t('customers.addCommodityTransaction')} subtitle={t('customers.commodityAccountSubtitle')}>
+        <Card className="customer-modal-card">
           <div className="customer-section-header">
             <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
           </div>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
+import ModalPortal from '../components/ui/ModalPortal.jsx';
 import PrintableDailyJournal from '../components/reports/PrintableDailyJournal.jsx';
 import JournalTypeSelector from '../components/journal/JournalTypeSelector.jsx';
 import CashJournalForm from '../components/journal/CashJournalForm.jsx';
@@ -19,6 +20,7 @@ import {
   getDailyJournalSummary,
   listJournalTransactions,
   updateJournalTransaction,
+  setOpeningBalance,
 } from '../services/dailyJournalApi.js';
 import { getProducts, getStocks, getWarehouses } from '../services/inventoryApi.js';
 
@@ -128,6 +130,7 @@ function makeIdempotencyKey() {
 function cashSummaryFromApi(summary) {
   return {
     openingBalance: decimalNumber(summary?.cash?.opening_balance),
+    isOpeningBalanceSet: Boolean(summary?.cash?.is_opening_balance_set),
     income: decimalNumber(summary?.cash?.total_income),
     expenses: decimalNumber(summary?.cash?.total_expenses),
     net: decimalNumber(summary?.cash?.net),
@@ -164,22 +167,24 @@ function WarehouseTransactionDialog({ children, title, description, onClose, isS
   }, [isSaving, onClose]);
 
   return (
-    <div className="module-dialog-backdrop warehouse-transaction-backdrop" role="presentation">
-      <section
-        className="module-dialog warehouse-transaction-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="warehouse-transaction-title"
-        dir={isArabic ? 'rtl' : 'ltr'}
-        ref={dialogRef}
-      >
-        <header>
-          <h2 id="warehouse-transaction-title">{title}</h2>
-          <p>{description}</p>
-        </header>
-        <div className="module-dialog__body">{children}</div>
-      </section>
-    </div>
+    <ModalPortal>
+      <div className="module-dialog-backdrop warehouse-transaction-backdrop" role="presentation">
+        <section
+          className="module-dialog warehouse-transaction-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="warehouse-transaction-title"
+          dir={isArabic ? 'rtl' : 'ltr'}
+          ref={dialogRef}
+        >
+          <header>
+            <h2 id="warehouse-transaction-title">{title}</h2>
+            <p>{description}</p>
+          </header>
+          <div className="module-dialog__body">{children}</div>
+        </section>
+      </div>
+    </ModalPortal>
   );
 }
 
@@ -187,18 +192,20 @@ function JournalConfirmationDialog({ confirmation, onCancel, onConfirm, t, isDel
   if (!confirmation) return null;
 
   return (
-    <div className="confirmation-overlay" role="presentation">
-      <div className="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="journal-confirmation-title">
-        <h3 id="journal-confirmation-title">{confirmation.title}</h3>
-        <p>{confirmation.message}</p>
-        <div className="confirmation-dialog__actions">
-          <Button type="button" variant="secondary" onClick={onCancel} disabled={isDeleting}>{t('cancel')}</Button>
-          <Button type="button" variant={confirmation.variant || 'primary'} onClick={onConfirm} disabled={isDeleting}>
-            {isDeleting ? t('journal.deleting') : confirmation.confirmLabel}
-          </Button>
+    <ModalPortal>
+      <div className="confirmation-overlay" role="presentation">
+        <div className="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="journal-confirmation-title">
+          <h3 id="journal-confirmation-title">{confirmation.title}</h3>
+          <p>{confirmation.message}</p>
+          <div className="confirmation-dialog__actions">
+            <Button type="button" variant="secondary" onClick={onCancel} disabled={isDeleting}>{t('cancel')}</Button>
+            <Button type="button" variant={confirmation.variant || 'primary'} onClick={onConfirm} disabled={isDeleting}>
+              {isDeleting ? t('journal.deleting') : confirmation.confirmLabel}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 
@@ -222,6 +229,8 @@ export default function DailyJournal() {
   const [showCommodityForm, setShowCommodityForm] = useState(false);
   const [cashErrors, setCashErrors] = useState([]);
   const [commodityErrors, setCommodityErrors] = useState([]);
+  const [showOpeningBalanceForm, setShowOpeningBalanceForm] = useState(false);
+  const [openingBalanceForm, setOpeningBalanceForm] = useState({ amount: '', notes: '' });
   const [confirmation, setConfirmation] = useState(null);
   const [adminName] = useState(storedAdminName);
   const [isLoading, setIsLoading] = useState(false);
@@ -283,6 +292,7 @@ export default function DailyJournal() {
     setEditingCommodityId(null);
     setShowCashForm(false);
     setShowCommodityForm(false);
+    setShowOpeningBalanceForm(false);
     setCashForm(createEmptyCashForm());
     setCommodityForm(createEmptyCommodityForm());
     setCashErrors([]);
@@ -634,6 +644,37 @@ export default function DailyJournal() {
     window.print();
   }
 
+  function handleSetOpeningBalance() {
+    setOpeningBalanceForm({
+      amount: cashTotals.isOpeningBalanceSet ? String(cashTotals.openingBalance) : '',
+      notes: '',
+    });
+    setShowOpeningBalanceForm(true);
+  }
+
+  async function handleOpeningBalanceSubmit(event) {
+    event.preventDefault();
+    if (Number(openingBalanceForm.amount) < 0) {
+      setApiError(t('journal.negativeOpeningBalanceError'));
+      return;
+    }
+    setApiError('');
+    setIsSaving(true);
+    try {
+      await setOpeningBalance(selectedDate, {
+        amount: openingBalanceForm.amount,
+        notes: openingBalanceForm.notes,
+      });
+      setShowOpeningBalanceForm(false);
+      setSuccessMessage(t('journal.openingBalanceSaved'));
+      await loadJournalData();
+    } catch (error) {
+      setApiError(error.message || 'Unable to save opening balance.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   function productLabel(productName) {
     return commodityProductLabels[productName]?.[isArabic ? 'ar' : 'en'] || productName;
   }
@@ -685,8 +726,23 @@ export default function DailyJournal() {
           <div className="summary-grid">
             <Card className="summary-card">
               <p>{t('journal.openingBalance')}</p>
-              <strong>{formatCurrency(cashTotals.openingBalance)}</strong>
-              <small>{selectedDate}</small>
+              {cashTotals.isOpeningBalanceSet ? (
+                <>
+                  <strong>{formatCurrency(cashTotals.openingBalance)}</strong>
+                  <small>{selectedDate}</small>
+                  <Button variant="secondary" onClick={handleSetOpeningBalance} style={{ marginTop: '0.5rem', width: 'fit-content' }}>
+                    {t('journal.editOpeningBalance')}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <strong>{formatCurrency(0)}</strong>
+                  <small style={{ color: 'var(--color-danger)' }}>{t('journal.openingBalanceNotSet')}</small>
+                  <Button onClick={handleSetOpeningBalance} style={{ marginTop: '0.5rem', width: 'fit-content' }}>
+                    {t('journal.setOpeningBalance')}
+                  </Button>
+                </>
+              )}
             </Card>
             <Card className="summary-card">
               <p>{t('journal.totalIncome')}</p>
@@ -733,11 +789,7 @@ export default function DailyJournal() {
             openerRef={cashButtonRef}
             onClose={handleCashCancel}
           >
-            <Card
-              className="journal-expandable-form app-window-card"
-              title={editingCashId ? t('journal.editingTitle') : t('journal.cashJournalTitle')}
-              subtitle={editingCashId ? t('journal.editingSubtitle') : t('journal.cashJournalSubtitle')}
-            >
+            <Card className="journal-expandable-form app-window-card">
               <CashJournalForm
                 form={cashForm}
                 errors={cashErrors}
@@ -750,6 +802,53 @@ export default function DailyJournal() {
                 t={t}
                 statusLabel={statusLabel}
               />
+            </Card>
+          </AppWindow>
+
+          <AppWindow
+            id="daily-journal-opening-balance"
+            title={cashTotals.isOpeningBalanceSet ? t('journal.editOpeningBalance') : t('journal.setOpeningBalance')}
+            description={t('journal.openingBalanceForThisDay')}
+            isOpen={showOpeningBalanceForm}
+            isDirty={false}
+            isSubmitting={isSaving}
+            defaultSize="small"
+            onClose={() => setShowOpeningBalanceForm(false)}
+          >
+            <Card className="app-window-card">
+              <form onSubmit={handleOpeningBalanceSubmit} className="journal-form" dir={isArabic ? 'rtl' : 'ltr'}>
+                <div className="form-group">
+                  <label>{t('common.date')}</label>
+                  <input type="text" value={selectedDate} readOnly disabled />
+                </div>
+                <div className="form-group">
+                  <label>{t('journal.openingBalance')} (SDG)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={openingBalanceForm.amount}
+                    onChange={(e) => setOpeningBalanceForm({ ...openingBalanceForm, amount: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>{t('common.note')}</label>
+                  <input
+                    type="text"
+                    value={openingBalanceForm.notes}
+                    onChange={(e) => setOpeningBalanceForm({ ...openingBalanceForm, notes: e.target.value })}
+                  />
+                </div>
+                <div className="form-actions">
+                  <Button type="button" variant="secondary" onClick={() => setShowOpeningBalanceForm(false)} disabled={isSaving}>
+                    {t('cancel')}
+                  </Button>
+                  <Button type="submit" disabled={isSaving}>
+                    {t('save')}
+                  </Button>
+                </div>
+              </form>
             </Card>
           </AppWindow>
 

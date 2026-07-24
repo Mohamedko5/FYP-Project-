@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import AppWindow from '../components/ui/AppWindow.jsx';
+import ModalPortal from '../components/ui/ModalPortal.jsx';
 import PrintableWarehouseInventory from '../components/reports/PrintableWarehouseInventory.jsx';
 import InventoryMovementHistory from '../components/warehouse/InventoryMovementHistory.jsx';
 import StockForm from '../components/warehouse/StockForm.jsx';
@@ -172,16 +173,18 @@ function productUnitRules(products) {
 
 function WarehouseBackConfirmationDialog({ onCancel, onConfirm, isArabic }) {
   return (
-    <div className="confirmation-overlay" role="presentation">
-      <section className="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="warehouse-back-confirm-title">
-        <h3 id="warehouse-back-confirm-title">{isArabic ? 'تغييرات غير محفوظة' : 'Unsaved Changes'}</h3>
-        <p>{isArabic ? 'لديك تغييرات غير محفوظة. هل تريد الرجوع إلى قائمة المخازن وتجاهلها؟' : 'You have unsaved changes. Return to the Warehouse list and discard them?'}</p>
-        <div className="confirmation-dialog__actions">
-          <Button type="button" variant="secondary" onClick={onCancel}>{isArabic ? 'متابعة التعديل' : 'Continue Editing'}</Button>
-          <Button type="button" onClick={onConfirm}>{isArabic ? 'تجاهل والرجوع' : 'Discard and Return'}</Button>
-        </div>
-      </section>
-    </div>
+    <ModalPortal>
+      <div className="confirmation-overlay" role="presentation">
+        <section className="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="warehouse-back-confirm-title">
+          <h3 id="warehouse-back-confirm-title">{isArabic ? 'تغييرات غير محفوظة' : 'Unsaved Changes'}</h3>
+          <p>{isArabic ? 'لديك تغييرات غير محفوظة. هل تريد الرجوع إلى قائمة المخازن وتجاهلها؟' : 'You have unsaved changes. Return to the Warehouse list and discard them?'}</p>
+          <div className="confirmation-dialog__actions">
+            <Button type="button" variant="secondary" onClick={onCancel}>{isArabic ? 'متابعة التعديل' : 'Continue Editing'}</Button>
+            <Button type="button" onClick={onConfirm}>{isArabic ? 'تجاهل والرجوع' : 'Discard and Return'}</Button>
+          </div>
+        </section>
+      </div>
+    </ModalPortal>
   );
 }
 

@@ -186,4 +186,26 @@ class JournalTransaction(models.Model):
             return f'{self.get_cash_type_display()} - {self.party} - {self.amount}'
         return f'{self.product_name} - {self.quantity} {self.unit} - {self.party}'
 
-# Create your models here.
+
+class DailyOpeningBalance(models.Model):
+    journal_date = models.DateField(unique=True)
+    amount = models.DecimalField(max_digits=18, decimal_places=2)
+    currency = models.CharField(max_length=10, default='SDG')
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='created_opening_balances')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='updated_opening_balances', null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    update_reason = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-journal_date']
+        constraints = [
+            models.CheckConstraint(
+                name='opening_balance_amount_non_negative',
+                condition=models.Q(amount__gte=0),
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.journal_date} - {self.amount} {self.currency}'

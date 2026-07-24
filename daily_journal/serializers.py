@@ -7,7 +7,7 @@ from rest_framework import serializers
 from inventory.models import InventoryMovement, Product, Warehouse
 from inventory.serializers import InventoryMovementSerializer, InventorySerializer
 
-from .models import JournalTransaction
+from .models import JournalTransaction, DailyOpeningBalance
 from .services import record_warehouse_commodity_transaction, warehouse_summary
 
 ALLOWED_RECEIPT_CONTENT_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
@@ -402,3 +402,42 @@ class WarehouseCommodityReversalSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError('Reversal reason is required.')
         return value
+
+class DailyOpeningBalanceSerializer(serializers.ModelSerializer):
+    amount = serializers.DecimalField(max_digits=18, decimal_places=2, coerce_to_string=False)
+    
+    class Meta:
+        model = DailyOpeningBalance
+        fields = [
+            'journal_date',
+            'amount',
+            'currency',
+            'notes',
+            'created_by',
+            'created_at',
+            'updated_by',
+            'updated_at',
+            'update_reason',
+        ]
+        read_only_fields = [
+            'created_by',
+            'created_at',
+            'updated_by',
+            'updated_at',
+        ]
+
+    def validate_amount(self, value):
+        if value < 0:
+            raise serializers.ValidationError('Opening balance amount cannot be negative.')
+        return value
+
+    def create(self, validated_data):
+        request = self.context['request']
+        validated_data['created_by'] = request.user
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        request = self.context['request']
+        validated_data['updated_by'] = request.user
+        return super().update(instance, validated_data)
+

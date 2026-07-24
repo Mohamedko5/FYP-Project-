@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import Button from './Button.jsx';
+import ModalPortal from './ModalPortal.jsx';
 
 function MinusIcon() {
   return <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12" /></svg>;
@@ -38,16 +39,18 @@ function UnsavedChangesDialog({ onContinue, onDiscard, saving }) {
   const titleId = useId();
 
   return (
-    <div className="app-window-confirm" role="presentation">
-      <section className="confirmation-dialog app-window-confirm__dialog" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <h3 id={titleId}>{t('window.unsavedChanges')}</h3>
-        <p>{t('window.unsavedCloseMessage')}</p>
-        <div className="confirmation-dialog__actions">
-          <Button type="button" variant="secondary" onClick={onContinue} disabled={saving}>{t('window.continueEditing')}</Button>
-          <Button type="button" onClick={onDiscard} disabled={saving}>{t('window.discardChanges')}</Button>
-        </div>
-      </section>
-    </div>
+    <ModalPortal>
+      <div className="app-window-confirm" role="presentation">
+        <section className="confirmation-dialog app-window-confirm__dialog" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+          <h3 id={titleId}>{t('window.unsavedChanges')}</h3>
+          <p>{t('window.unsavedCloseMessage')}</p>
+          <div className="confirmation-dialog__actions">
+            <Button type="button" variant="secondary" onClick={onContinue} disabled={saving}>{t('window.continueEditing')}</Button>
+            <Button type="button" onClick={onDiscard} disabled={saving}>{t('window.discardChanges')}</Button>
+          </div>
+        </section>
+      </div>
+    </ModalPortal>
   );
 }
 
@@ -184,36 +187,38 @@ export default function AppWindow({
   }
 
   return (
-    <div className="app-window-backdrop" role="presentation" dir={isArabic ? 'rtl' : 'ltr'}>
-      <section ref={windowRef} className={className} role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <header className="app-window__titlebar">
-          <div className="app-window__title">
-            <h2 id={titleId}>{title}</h2>
-            {description && <p>{description}</p>}
-          </div>
-          <div className="app-window__controls">
-            {allowMinimize && <WindowControl label={t('window.minimize')} onClick={minimize} disabled={isSubmitting}><MinusIcon /></WindowControl>}
-            {allowMaximize && (
-              <WindowControl
-                label={isMaximized ? t('window.restore') : t('window.maximize')}
-                onClick={() => setIsMaximized((current) => !current)}
-                disabled={isSubmitting}
-              >
-                {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
-              </WindowControl>
-            )}
-            <WindowControl label={t('window.close')} onClick={requestClose} disabled={isSubmitting}><CloseIcon /></WindowControl>
-          </div>
-        </header>
-        <div className="app-window__body">{children}</div>
-      </section>
-      {showUnsavedDialog && (
-        <UnsavedChangesDialog
-          saving={isSubmitting}
-          onContinue={() => setShowUnsavedDialog(false)}
-          onDiscard={completeClose}
-        />
-      )}
-    </div>
+    <ModalPortal>
+      <div className="app-window-backdrop" role="presentation" dir={isArabic ? 'rtl' : 'ltr'}>
+        <section ref={windowRef} className={className} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+          <header className="app-window__titlebar">
+            <div className="app-window__title">
+              <h2 id={titleId}>{title}</h2>
+              {description && <p>{description}</p>}
+            </div>
+            <div className="app-window__controls">
+              {allowMinimize && <WindowControl label={t('window.minimize')} onClick={minimize} disabled={isSubmitting}><MinusIcon /></WindowControl>}
+              {allowMaximize && (
+                <WindowControl
+                  label={isMaximized ? t('window.restore') : t('window.maximize')}
+                  onClick={() => setIsMaximized((current) => !current)}
+                  disabled={isSubmitting}
+                >
+                  {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
+                </WindowControl>
+              )}
+              <WindowControl label={t('window.close')} onClick={requestClose} disabled={isSubmitting}><CloseIcon /></WindowControl>
+            </div>
+          </header>
+          <div className="app-window__body">{children}</div>
+        </section>
+        {showUnsavedDialog && (
+          <UnsavedChangesDialog
+            saving={isSubmitting}
+            onContinue={() => setShowUnsavedDialog(false)}
+            onDiscard={completeClose}
+          />
+        )}
+      </div>
+    </ModalPortal>
   );
 }

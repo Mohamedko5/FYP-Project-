@@ -342,16 +342,26 @@ class JournalTransactionAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['cash']['total_income'], '0.00')
 
-    def test_opening_balance_uses_previous_non_deleted_cash_transactions(self):
+    def test_opening_balance_is_isolated_per_date_and_zero_by_default(self):
         today = timezone.localdate()
         yesterday = today - timedelta(days=1)
         self.move_created_at(self.create_transaction(self.cash_payload(amount='1000.00', cash_type='income')), yesterday)
-        self.move_created_at(self.create_transaction(self.cash_payload(amount='200.00', cash_type='expense')), yesterday)
 
         self.authenticate()
         response = self.client.get(self.summary_url, {'date': today.isoformat()})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['cash']['opening_balance'], '800.00')
+        self.assertEqual(response.data['cash']['opening_balance'], '0.00')
+
+    def test_opening_balance_is_fetched_correctly(self):
+        today = timezone.localdate()
+        from .models import DailyOpeningBalance
+        DailyOpeningBalance.objects.create(journal_date=today, amount=Decimal('5000.00'), created_by=self.user)
+        
+        self.authenticate()
+        response = self.client.get(self.summary_url, {'date': today.isoformat()})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['cash']['opening_balance'], '5000.00')
+        self.assertTrue(response.data['cash']['is_opening_balance_set'])
 
     def test_daily_income_expenses_net_and_closing_balance_are_correct(self):
         today = timezone.localdate()
@@ -363,11 +373,11 @@ class JournalTransactionAPITests(APITestCase):
         self.authenticate()
         response = self.client.get(self.summary_url, {'date': today.isoformat()})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['cash']['opening_balance'], '500.00')
+        self.assertEqual(response.data['cash']['opening_balance'], '0.00')
         self.assertEqual(response.data['cash']['total_income'], '1000.00')
         self.assertEqual(response.data['cash']['total_expenses'], '200.00')
         self.assertEqual(response.data['cash']['net'], '800.00')
-        self.assertEqual(response.data['cash']['closing_balance'], '1300.00')
+        self.assertEqual(response.data['cash']['closing_balance'], '800.00')
 
     def test_payment_method_does_not_change_financial_summary_calculations(self):
         today = timezone.localdate()
