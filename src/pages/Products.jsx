@@ -1,8 +1,9 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import PrintableProductsReport from '../components/reports/PrintableProductsReport.jsx';
 import AppWindow from '../components/ui/AppWindow.jsx';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
+import SectionHeader from '../components/ui/SectionHeader.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 import Table from '../components/ui/Table.jsx';
 import Tooltip from '../components/ui/Tooltip.jsx';
@@ -505,12 +506,10 @@ export default function Products() {
           onClose={closeForm}
         >
           <form className="section-panel product-form" onSubmit={saveProduct}>
-            <div className="section-panel__header">
-              <div>
-                <h3>{editingProductId ? label.editProduct : label.addProductTitle}</h3>
-                <p>{label.formSubtitle}</p>
-              </div>
-            </div>
+            <SectionHeader
+              title={editingProductId ? label.editProduct : label.addProductTitle}
+              subtitle={label.formSubtitle}
+            />
 
             <div className="form-grid">
               <label>
@@ -542,13 +541,11 @@ export default function Products() {
             </div>
 
             <div className="product-unit-editor">
-              <div className="section-panel__header">
-                <div>
-                  <h3>{label.productUnits}</h3>
-                  <p>{label.unitSubtitle}</p>
-                </div>
-                <Button variant="secondary" onClick={addUnit}>{label.addUnit}</Button>
-              </div>
+              <SectionHeader
+                title={label.productUnits}
+                subtitle={label.unitSubtitle}
+                actions={<Button variant="secondary" onClick={addUnit}>{label.addUnit}</Button>}
+              />
               {form.units.map((unit, index) => (
                 <div className="product-unit-row" key={`${unit.id || 'new'}-${index}`}>
                   <select value={unit.unit} onChange={(event) => updateUnit(index, 'unit', event.target.value)}>

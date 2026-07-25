@@ -16,6 +16,8 @@ import { useCurrency } from '../i18n/CurrencyContext.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getReport, getReportOptions } from '../services/reportsApi.js';
 
+import ReportCharts from '../components/reports/ReportCharts.jsx';
+
 const reportTypes = [
   { id: 'daily-journal', icon: 'J', title: 'Daily Journal', text: 'Cash income, expenses, opening, and closing balances.' },
   { id: 'inventory', icon: 'I', title: 'Inventory', text: 'Warehouse stock grouped by product and unit.' },
@@ -365,7 +367,7 @@ export default function Reports() {
 
   const tableRows = selectedReportId === 'financial-summary' ? flattenSummary(summary, '', isArabic).map((item, index) => ({ id: index, ...item })) : rows;
   const columns = columnsByReport[selectedReportId] || [];
-  const summaryCards = summaryHighlights(selectedReportId, summary, isArabic);
+  const summaryCards = summaryHighlights(selectedReportId, summary, isArabic, rows);
   const activeFilters = Object.entries(appliedFilters).filter(([key, value]) => activeFilterKeys.includes(key) && value);
 
   function selectReport(reportId) {
@@ -415,7 +417,25 @@ export default function Reports() {
     if (key === 'payment_method') return <label key={key}>{t('common.method')}<select {...commonProps}><option value="">{t('reports.all')}</option><option value="cash">{label.cash}</option><option value="online">{label.online}</option></select></label>;
     if (key === 'payment_status') return <label key={key}>{t('orders.paymentStatus')}<select {...commonProps}><option value="">{t('reports.all')}</option><option value="unpaid">{label.unpaid}</option><option value="paid">{label.paid}</option></select></label>;
     if (key === 'transaction_type') return <label key={key}>{t('common.type')}<select {...commonProps}><option value="">{t('reports.all')}</option><option value="income">{label.income}</option><option value="expense">{label.expense}</option></select></label>;
-    if (key === 'unit') return <label key={key}>{t('common.unit')}<select {...commonProps}><option value="">{t('reports.all')}</option><option value="Qintar">Qintar</option><option value="KG">KG</option><option value="Bag">Bag</option><option value="Bale">Bale</option><option value="Unit">Unit</option></select></label>;
+    if (key === 'unit') {
+      const unitMap = {
+        en: { Qintar: 'Qintar', KG: 'KG', Bag: 'Bag', Bale: 'Bale', Unit: 'Unit' },
+        ar: { Qintar: 'قنطار', KG: 'كجم', Bag: 'جوال', Bale: 'بالة', Unit: 'وحدة' },
+      };
+      return (
+        <label key={key}>
+          {t('common.unit')}
+          <select {...commonProps}>
+            <option value="">{t('reports.all')}</option>
+            {['Qintar', 'KG', 'Bag', 'Bale', 'Unit'].map((u) => (
+              <option key={u} value={u}>
+                {(unitMap[isArabic ? 'ar' : 'en'] || {})[u] || u}
+              </option>
+            ))}
+          </select>
+        </label>
+      );
+    }
     if (key === 'order_status') return <label key={key}>{t('common.status')}<select {...commonProps}><option value="">{t('reports.all')}</option><option value="pending">{label.pending}</option><option value="received">{label.received}</option><option value="invoiced">{label.invoiced}</option><option value="ready_for_shipment">{label.readyForShipment}</option><option value="processing">{label.processing}</option><option value="completed">{label.completed}</option><option value="cancelled">{label.cancelled}</option></select></label>;
     if (key === 'shipment_status') return <label key={key}>{t('shipments.shipmentStatus')}<select {...commonProps}><option value="">{t('reports.all')}</option><option value="ready_for_shipment">{label.readyForShipment}</option><option value="processing">{label.processing}</option><option value="completed">{label.completed}</option><option value="cancelled">{label.cancelled}</option></select></label>;
     return null;
@@ -467,6 +487,7 @@ export default function Reports() {
                   {summaryCards.map((item) => <SummaryCard key={item.label} label={item.label} value={item.value} note={item.note} tone={item.tone} />)}
                 </StatGrid>
               )}
+              <ReportCharts reportId={selectedReportId} summary={summary} rows={tableRows} isArabic={isArabic} />
               {tableRows.length === 0 ? <EmptyState title={label.noData} /> : <Table columns={columns} rows={tableRows} />}
             </>
           )}
@@ -477,55 +498,145 @@ export default function Reports() {
   );
 }
 
-function summaryHighlights(reportId, summary, isArabic = false) {
+function summaryHighlights(reportId, summary, isArabic = false, rows = []) {
   const labels = isArabic ? {
     openingBalance: 'الرصيد الافتتاحي',
     income: 'الإيرادات',
     expenses: 'المصروفات',
     closingBalance: 'الرصيد الختامي',
+    netMovement: 'صافي الحركة',
     totalCustomers: 'إجمالي العملاء',
+    activeCustomers: 'العملاء النشطون',
+    totalDebits: 'إجمالي المديونيات',
+    totalPayments: 'إجمالي المدفوعات',
+    totalOutstanding: 'إجمالي المستحق',
     totalWorkers: 'إجمالي العمال',
+    activeWorkers: 'العمال النشطون',
+    totalPaidWages: 'إجمالي الأجور المدفوعة',
+    totalUnpaidWages: 'إجمالي الأجور المستحقة',
+    totalOrders: 'إجمالي الطلبات',
+    pendingOrders: 'طلبات معلقة',
+    readyOrders: 'جاهزة للشحن',
+    completedOrders: 'طلبات مكتملة',
     activeValue: 'قيمة الطلبات النشطة',
-    paid: 'مدفوعة',
-    unpaid: 'غير مدفوعة',
-    paidValue: 'القيمة المدفوعة',
-    outstandingValue: 'القيمة المستحقة',
+    totalInvoices: 'إجمالي الفواتير',
+    paidInvoices: 'فواتير مدفوعة',
+    unpaidInvoices: 'فواتير غير مدفوعة',
+    totalInvoicedAmount: 'إجمالي المبالغ المفوترة',
+    totalPaidAmount: 'إجمالي المبالغ المدفوعة',
+    totalOutstandingAmount: 'إجمالي المبالغ المستحقة',
+    totalWarehouses: 'إجمالي المخازن',
+    totalProducts: 'إجمالي المنتجات',
+    totalStock: 'إجمالي المخزون',
+    lowStockItems: 'عناصر منخفضة المخزون',
+    totalShipments: 'إجمالي الشحنات',
+    completedShipments: 'شحنات مكتملة',
+    pendingShipments: 'شحنات معلقة',
+    totalShippedQuantity: 'إجمالي الكميات المشحونة',
   } : {
     openingBalance: 'Opening Balance',
-    income: 'Income',
-    expenses: 'Expenses',
+    income: 'Total Income',
+    expenses: 'Total Expenses',
     closingBalance: 'Closing Balance',
+    netMovement: 'Net Movement',
     totalCustomers: 'Total Customers',
+    activeCustomers: 'Active Customers',
+    totalDebits: 'Total Debits',
+    totalPayments: 'Total Payments',
+    totalOutstanding: 'Total Outstanding',
     totalWorkers: 'Total Workers',
+    activeWorkers: 'Active Workers',
+    totalPaidWages: 'Total Paid Wages',
+    totalUnpaidWages: 'Total Unpaid Wages',
+    totalOrders: 'Total Orders',
+    pendingOrders: 'Pending Orders',
+    readyOrders: 'Ready for Shipment',
+    completedOrders: 'Completed Orders',
     activeValue: 'Active Value',
-    paid: 'Paid',
-    unpaid: 'Unpaid',
-    paidValue: 'Paid Value',
-    outstandingValue: 'Outstanding Value',
+    totalInvoices: 'Total Invoices',
+    paidInvoices: 'Paid Invoices',
+    unpaidInvoices: 'Unpaid Invoices',
+    totalInvoicedAmount: 'Total Invoiced Amount',
+    totalPaidAmount: 'Total Paid Amount',
+    totalOutstandingAmount: 'Total Outstanding Amount',
+    totalWarehouses: 'Total Warehouses',
+    totalProducts: 'Total Products',
+    totalStock: 'Total Stock',
+    lowStockItems: 'Low Stock Items',
+    totalShipments: 'Total Shipments',
+    completedShipments: 'Completed Shipments',
+    pendingShipments: 'Pending Shipments',
+    totalShippedQuantity: 'Total Shipped Quantity',
   };
+
   if (reportId === 'daily-journal') {
     return [
-      { label: labels.openingBalance, value: summary.opening_balance },
-      { label: labels.income, value: summary.total_income, tone: 'good' },
-      { label: labels.expenses, value: summary.total_expenses, tone: 'warning' },
-      { label: labels.closingBalance, value: summary.closing_balance },
+      { label: labels.openingBalance, value: summary.opening_balance ? `SDG ${summary.opening_balance}` : '-' },
+      { label: labels.income, value: summary.total_income ? `SDG ${summary.total_income}` : '-', tone: 'good' },
+      { label: labels.expenses, value: summary.total_expenses ? `SDG ${summary.total_expenses}` : '-', tone: 'warning' },
+      { label: labels.closingBalance, value: summary.closing_balance ? `SDG ${summary.closing_balance}` : '-' },
     ];
   }
+
   if (reportId === 'inventory') {
-    return (summary.groups || []).slice(0, 4).map((group) => ({ label: group.product_name, value: `${group.quantity} ${group.unit}` }));
+    return [
+      { label: labels.totalWarehouses, value: summary.total_warehouses ?? '-' },
+      { label: labels.totalProducts, value: summary.total_products ?? '-' },
+      { label: labels.totalStock, value: summary.total_stock ?? '-' },
+      { label: labels.lowStockItems, value: summary.low_stock_count ?? '-', tone: summary.low_stock_count > 0 ? 'warning' : 'neutral' },
+    ];
   }
-  if (reportId === 'customer-accounts') return [{ label: labels.totalCustomers, value: summary.total_customers }];
-  if (reportId === 'workers') return [{ label: labels.totalWorkers, value: summary.total_workers }];
-  if (reportId === 'orders') return [{ label: labels.activeValue, value: summary.active_value }];
+
+  if (reportId === 'customer-accounts') {
+    return [
+      { label: labels.totalCustomers, value: summary.total_customers ?? '-' },
+      { label: labels.activeCustomers, value: summary.active_customers ?? '-' },
+      { label: labels.totalPayments, value: summary.total_payments ? `SDG ${summary.total_payments}` : '-', tone: 'good' },
+      { label: labels.totalOutstanding, value: summary.total_outstanding ? `SDG ${summary.total_outstanding}` : '-', tone: 'warning' },
+    ];
+  }
+
+  if (reportId === 'workers') {
+    return [
+      { label: labels.totalWorkers, value: summary.total_workers ?? '-' },
+      { label: labels.activeWorkers, value: summary.active_workers ?? '-' },
+      { label: labels.totalPaidWages, value: summary.total_paid_wages ? `SDG ${summary.total_paid_wages}` : '-', tone: 'good' },
+      { label: labels.totalUnpaidWages, value: summary.total_unpaid_wages ? `SDG ${summary.total_unpaid_wages}` : '-', tone: 'warning' },
+    ];
+  }
+
+  if (reportId === 'orders') {
+    return [
+      { label: labels.totalOrders, value: summary.total_orders ?? '-' },
+      { label: labels.pendingOrders, value: summary.pending_orders ?? '-', tone: 'warning' },
+      { label: labels.readyOrders, value: summary.ready_orders ?? '-' },
+      { label: labels.completedOrders, value: summary.completed_orders ?? '-', tone: 'good' },
+    ];
+  }
+
   if (reportId === 'invoices') {
     return [
-      { label: labels.paid, value: summary.paid_count, tone: 'good' },
-      { label: labels.unpaid, value: summary.unpaid_count, tone: 'warning' },
-      { label: labels.paidValue, value: summary.total_paid_value },
-      { label: labels.outstandingValue, value: summary.total_outstanding_value },
+      { label: labels.totalInvoices, value: summary.total_invoices ?? '-' },
+      { label: labels.paidInvoices, value: summary.paid_count ?? '-', tone: 'good' },
+      { label: labels.unpaidInvoices, value: summary.unpaid_count ?? '-', tone: 'warning' },
+      { label: labels.totalInvoicedAmount, value: summary.total_invoiced_value ? `SDG ${summary.total_invoiced_value}` : '-' },
+      { label: labels.totalPaidAmount, value: summary.total_paid_value ? `SDG ${summary.total_paid_value}` : '-', tone: 'good' },
+      { label: labels.totalOutstandingAmount, value: summary.total_outstanding_value ? `SDG ${summary.total_outstanding_value}` : '-', tone: 'warning' },
     ];
   }
-  if (reportId === 'shipments') return (summary.completed_item_groups || []).slice(0, 4).map((group) => ({ label: group.product_name, value: `${group.quantity} ${group.unit}` }));
-  if (reportId === 'financial-summary') return flattenSummary(summary, '', isArabic).slice(0, 6);
+
+  if (reportId === 'shipments') {
+    return [
+      { label: labels.totalShipments, value: summary.total_shipments ?? '-' },
+      { label: labels.completedShipments, value: summary.completed_shipments ?? '-', tone: 'good' },
+      { label: labels.pendingShipments, value: summary.pending_shipments ?? '-', tone: 'warning' },
+      { label: labels.totalShippedQuantity, value: summary.total_shipped_quantity ?? '-' },
+    ];
+  }
+
+  if (reportId === 'financial-summary') {
+    return flattenSummary(summary, '', isArabic).slice(0, 6);
+  }
+
   return [];
 }

@@ -146,7 +146,7 @@ export default function WorkerProfile({
 
   return (
     <Card title={t('customers.workerProfileTitle')} subtitle={t('customers.workerProfileSubtitle')}>
-      <div className="customer-profile-header">
+      <div className="customer-profile-header section-header">
         <div className="customer-profile-identity">
           <div className="customer-avatar customer-avatar--large">{avatar}</div>
           <div>
@@ -233,7 +233,7 @@ export default function WorkerProfile({
       )}
 
       {activeSection === 'statement' && (
-        <div className="customer-section-header">
+        <div className="customer-section-header section-header">
           <Button onClick={onPrint}>{t('reports.printPdf')}</Button>
           <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
         </div>

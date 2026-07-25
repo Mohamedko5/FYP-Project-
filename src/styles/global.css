@@ -9093,3 +9093,113 @@ textarea:focus-visible {
 /* ------------------------------------------------------------------
    END BAYAD ERP MODAL VISUAL SYSTEM v2
    ------------------------------------------------------------------ */
+
+/* --- SECTION HEADER UNIFICATION --- */
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+  margin-bottom: 16px;
+  background: transparent;
+}
+.section-header__content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.section-header__content h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(1.25rem, 1.55vw, 1.625rem);
+  font-weight: 700;
+}
+.section-header__content p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.section-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card .section-header {
+  padding: 0;
+}
+[dir="rtl"] .section-header {
+  justify-content: space-between;
+}
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* Report Analytics Charts */
+.report-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+  margin-bottom: 24px;
+}
+
+.report-chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow var(--transition-base);
+}
+
+.report-chart-card:hover {
+  box-shadow: var(--shadow-medium);
+}
+
+.report-chart-card__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 14px 0;
+}
+
+.report-chart-wrapper {
+  width: 100%;
+  position: relative;
+}
+
+.report-chart-empty {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-muted);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.report-chart-empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+@media print {
+  .report-charts-grid,
+  .report-chart-card {
+    display: none !important;
+  }
+}
+

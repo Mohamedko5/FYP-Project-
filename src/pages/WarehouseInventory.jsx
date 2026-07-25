@@ -510,7 +510,7 @@ export default function WarehouseInventory() {
           </div>
         )}
 
-        <div className="warehouse-overview-header">
+        <div className="warehouse-overview-header section-header">
           <label>
             {warehouseText.selectWarehouse}
             <select

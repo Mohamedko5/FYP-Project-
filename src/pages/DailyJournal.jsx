@@ -882,7 +882,17 @@ export default function DailyJournal() {
                   onChange={(event) => setCommodityFilters((current) => ({ ...current, unit: event.target.value }))}
                 >
                   <option value="">{t('journal.allUnits')}</option>
-                  {['Qintar', 'KG', 'Bag', 'Bale', 'Unit'].map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+                  {['Qintar', 'KG', 'Bag', 'Bale', 'Unit'].map((unit) => {
+                    const unitMap = {
+                      en: { Qintar: 'Qintar', KG: 'KG', Bag: 'Bag', Bale: 'Bale', Unit: 'Unit' },
+                      ar: { Qintar: 'قنطار', KG: 'كجم', Bag: 'جوال', Bale: 'بالة', Unit: 'وحدة' },
+                    };
+                    return (
+                      <option key={unit} value={unit}>
+                        {(unitMap[isArabic ? 'ar' : 'en'] || {})[unit] || unit}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <Button onClick={handleAddCommodityTransaction} ref={newWarehouseButtonRef}>{t('journal.newWarehouseTransaction')}</Button>

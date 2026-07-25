@@ -291,7 +291,7 @@ export default function CustomerProfile({
     if (activeSection === 'payment') {
       return (
         <Card className="customer-modal-card">
-          <div className="customer-section-header">
+          <div className="customer-section-header section-header">
             <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
           </div>
           {paymentMessage && <div className="form-success">{paymentMessage}</div>}
@@ -315,7 +315,7 @@ export default function CustomerProfile({
     if (activeSection === 'cash') {
       return (
         <Card className="customer-modal-card">
-          <div className="customer-section-header">
+          <div className="customer-section-header section-header">
             <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
           </div>
           <CustomerCashTransactionForm
@@ -336,7 +336,7 @@ export default function CustomerProfile({
     if (activeSection === 'commodity') {
       return (
         <Card className="customer-modal-card">
-          <div className="customer-section-header">
+          <div className="customer-section-header section-header">
             <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
           </div>
           <CustomerCommodityTransactionForm
@@ -360,7 +360,7 @@ export default function CustomerProfile({
     if (activeSection === 'orders') {
       return (
         <Card title={t('customers.orderHistory')} subtitle={t('customers.orderHistorySubtitle')}>
-          <div className="customer-section-header">
+          <div className="customer-section-header section-header">
             <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
           </div>
           {orderError && (
@@ -392,7 +392,7 @@ export default function CustomerProfile({
     if (activeSection === 'payments') {
       return (
         <Card title={t('customers.paymentHistory')} subtitle={t('customers.paymentSubtitle')}>
-          <div className="customer-section-header">
+          <div className="customer-section-header section-header">
             <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
           </div>
           <Table columns={paymentColumns} rows={payments} emptyMessage={t('customers.noPaymentHistory')} />
@@ -403,7 +403,7 @@ export default function CustomerProfile({
     if (activeSection === 'statement') {
       return (
         <Card title={t('customers.customerStatement')} subtitle={t('customers.balanceSummary')}>
-          <div className="customer-section-header">
+          <div className="customer-section-header section-header">
             <Button onClick={onPrint}>{t('customers.printStatement')}</Button>
             <Button variant="secondary" onClick={closeSection}>{t('customers.closeSection')}</Button>
           </div>
@@ -425,7 +425,7 @@ export default function CustomerProfile({
   return (
     <>
       <Card title={t('customers.profileTitle')} subtitle={isLoadingProfile ? t('customers.loadingProfile') : t('customers.profileSubtitle')}>
-        <div className="customer-profile-header">
+        <div className="customer-profile-header section-header">
           <div className="customer-profile-identity">
             <div className="customer-avatar customer-avatar--large">{avatar}</div>
             <div>

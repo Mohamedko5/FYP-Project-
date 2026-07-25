@@ -4,6 +4,7 @@ import PrintableOrder from '../components/reports/PrintableOrder.jsx';
 import AppWindow from '../components/ui/AppWindow.jsx';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
+import SectionHeader from '../components/ui/SectionHeader.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 import Table from '../components/ui/Table.jsx';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
@@ -412,12 +413,10 @@ export default function Orders() {
           onClose={() => setShowForm(false)}
         >
           <form className="section-panel order-form" onSubmit={saveOrder}>
-            <div className="section-panel__header">
-              <div>
-                <h3>{editingId ? t('orders.editOrder') : t('orders.addOrder')}</h3>
-                <p>{t('orders.formSubtitle')}</p>
-              </div>
-            </div>
+            <SectionHeader
+              title={editingId ? t('orders.editOrder') : t('orders.addOrder')}
+              subtitle={t('orders.formSubtitle')}
+            />
 
             <div className="form-grid">
               <label>{t('common.customerName')}<select name="customer_id" value={form.customer_id} onChange={updateForm}><option value="">{t('orders.selectCustomer')}</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.code} - {customer.name}</option>)}</select></label>
@@ -428,13 +427,11 @@ export default function Orders() {
             </div>
 
             <div className="order-items-editor">
-              <div className="section-panel__header">
-                <div>
-                  <h3>{t('orders.orderItems')}</h3>
-                  <p>{t('orders.stockRecheckMessage')}</p>
-                </div>
-                <Button variant="secondary" onClick={addItem}>{t('orders.addItem')}</Button>
-              </div>
+              <SectionHeader
+                title={t('orders.orderItems')}
+                subtitle={t('orders.stockRecheckMessage')}
+                actions={<Button variant="secondary" onClick={addItem}>{t('orders.addItem')}</Button>}
+              />
               {form.items.map((item, index) => {
                 const product = itemProduct(item);
                 const unit = itemUnit(item);

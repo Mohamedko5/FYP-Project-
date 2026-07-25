@@ -1,4 +1,5 @@
 import Button from '../ui/Button.jsx';
+import SectionHeader from '../ui/SectionHeader.jsx';
 import StatusBadge from '../ui/StatusBadge.jsx';
 import { commodityProductLabels, commodityUnits } from '../../data/dummyData.js';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
@@ -16,13 +17,12 @@ export default function WarehouseCard({ warehouse, isSelected, onSelect }) {
 
   return (
     <article className={`warehouse-card ${isSelected ? 'is-selected' : ''}`}>
-      <div className="warehouse-card__header">
-        <div>
-          <h3>{warehouse.warehouseName}</h3>
-          <p>{warehouse.location}</p>
-        </div>
-        <StatusBadge status={status} />
-      </div>
+      <SectionHeader
+        title={warehouse.warehouseName}
+        subtitle={warehouse.location}
+        actions={<StatusBadge status={status} />}
+        className="warehouse-card__header"
+      />
 
       <div className="warehouse-card__capacity">
         <div>

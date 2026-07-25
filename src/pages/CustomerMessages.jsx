@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AppWindow from '../components/ui/AppWindow.jsx';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
+import SectionHeader from '../components/ui/SectionHeader.jsx';
 import {
   closeAdminConversation,
   getAdminChatConversations,
@@ -213,16 +214,17 @@ export default function CustomerMessages() {
           <section className="chat-thread-panel">
             {activeConversation ? (
               <>
-                <header className="chat-thread-header">
-                  <div>
-                    <h3>{activeConversation.customer_name}</h3>
-                    <p><span className="code-text">{activeConversation.customer_code}</span> · {t(`chat.statuses.${activeConversation.status}`)}</p>
-                  </div>
-                  <div className="chat-thread-actions">
-                    <Button type="button" variant="secondary" onClick={() => openCustomerProfile()}>{t('chat.viewCustomerProfile')}</Button>
-                    <Button type="button" variant="secondary" onClick={handleCloseReopen}>{activeConversation.status === 'closed' ? t('chat.reopenConversation') : t('chat.closeConversation')}</Button>
-                  </div>
-                </header>
+                <SectionHeader
+                  className="chat-thread-header"
+                  title={activeConversation.customer_name}
+                  subtitle={<><span className="code-text">{activeConversation.customer_code}</span> · {t(`chat.statuses.${activeConversation.status}`)}</>}
+                  actions={
+                    <>
+                      <Button type="button" variant="secondary" onClick={() => openCustomerProfile()}>{t('chat.viewCustomerProfile')}</Button>
+                      <Button type="button" variant="secondary" onClick={handleCloseReopen}>{activeConversation.status === 'closed' ? t('chat.reopenConversation') : t('chat.closeConversation')}</Button>
+                    </>
+                  }
+                />
                 {error && <div className="form-error"><p>{error}</p></div>}
                 <div className="chat-message-list" aria-busy={isLoadingMessages}>
                   {messages.length === 0 ? (

@@ -82,7 +82,7 @@ export function ErrorState({ errors, onRetry, retryLabel = 'Retry' }) {
 export function DetailSection({ title, children, actions }) {
   return (
     <section className="module-detail-section">
-      <div className="module-detail-section__header">
+      <div className="module-detail-section__header section-header">
         <h3>{title}</h3>
         {actions && <div>{actions}</div>}
       </div>
