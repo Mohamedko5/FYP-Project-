@@ -8,6 +8,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_text_field.dart';
+import 'auth_login_widgets.dart';
 import 'account_flow_controller.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -32,7 +33,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   void dispose() {
-    for (final controller in [fullName, businessName, email, phone, secondaryPhone, address, password, confirmPassword]) {
+    for (final controller in [
+      fullName,
+      businessName,
+      email,
+      phone,
+      secondaryPhone,
+      address,
+      password,
+      confirmPassword,
+    ]) {
       controller.dispose();
     }
     super.dispose();
@@ -41,7 +51,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> submit() async {
     final l10n = AppLocalizations.of(context);
     setState(() => error = null);
-    if (fullName.text.trim().isEmpty || email.text.trim().isEmpty || phone.text.trim().isEmpty || address.text.trim().isEmpty) {
+    if (fullName.text.trim().isEmpty ||
+        email.text.trim().isEmpty ||
+        phone.text.trim().isEmpty ||
+        address.text.trim().isEmpty) {
       setState(() => error = l10n.completeRequiredFields);
       return;
     }
@@ -61,7 +74,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       'confirm_password': confirmPassword.text,
       'accept_terms': acceptTerms,
     });
-    if (ok && mounted) context.goNamed(RouteNames.verifyEmail);
+    if (ok && mounted) {
+      context.goNamed(RouteNames.verifyEmail);
+    }
   }
 
   @override
@@ -74,18 +89,45 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _SectionTitle(l10n.personalInformation),
-          AppTextField(controller: fullName, label: l10n.fullName, hint: l10n.fullNameHint),
+          AppTextField(
+            controller: fullName,
+            label: l10n.fullName,
+            hint: l10n.fullNameHint,
+          ),
           const SizedBox(height: 12),
-          AppTextField(controller: businessName, label: l10n.businessName, hint: l10n.optional),
+          AppTextField(
+            controller: businessName,
+            label: l10n.businessName,
+            hint: l10n.optional,
+          ),
           const SizedBox(height: 18),
           _SectionTitle(l10n.contactInformation),
-          AppTextField(controller: email, label: l10n.emailAddress, hint: 'email@example.com', keyboardType: TextInputType.emailAddress),
+          AppTextField(
+            controller: email,
+            label: l10n.emailAddress,
+            hint: 'email@example.com',
+            keyboardType: TextInputType.emailAddress,
+          ),
           const SizedBox(height: 12),
-          AppTextField(controller: phone, label: l10n.phoneNumber, hint: l10n.phoneHint, keyboardType: TextInputType.phone),
+          AppTextField(
+            controller: phone,
+            label: l10n.phoneNumber,
+            hint: l10n.phoneHint,
+            keyboardType: TextInputType.phone,
+          ),
           const SizedBox(height: 12),
-          AppTextField(controller: secondaryPhone, label: l10n.secondaryPhone, hint: l10n.optional, keyboardType: TextInputType.phone),
+          AppTextField(
+            controller: secondaryPhone,
+            label: l10n.secondaryPhone,
+            hint: l10n.optional,
+            keyboardType: TextInputType.phone,
+          ),
           const SizedBox(height: 12),
-          AppTextField(controller: address, label: l10n.address, hint: l10n.addressHint),
+          AppTextField(
+            controller: address,
+            label: l10n.address,
+            hint: l10n.addressHint,
+          ),
           const SizedBox(height: 18),
           _SectionTitle(l10n.businessInformation),
           DropdownButtonFormField<String>(
@@ -99,23 +141,55 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               DropdownMenuItem(value: 'factory', child: Text(l10n.factory)),
               DropdownMenuItem(value: 'supplier', child: Text(l10n.supplier)),
             ],
-            onChanged: (value) => setState(() => customerType = value ?? 'exporter'),
+            onChanged: (value) =>
+                setState(() => customerType = value ?? 'exporter'),
           ),
           const SizedBox(height: 18),
           _SectionTitle(l10n.accountSecurity),
-          AppTextField(controller: password, label: l10n.password, hint: 'StrongPassword123!', obscureText: !showPassword),
+          AppTextField(
+            controller: password,
+            label: l10n.password,
+            hint: 'StrongPassword123!',
+            obscureText: !showPassword,
+          ),
           const SizedBox(height: 12),
-          AppTextField(controller: confirmPassword, label: l10n.confirmPassword, hint: l10n.repeatPassword, obscureText: !showPassword),
-          CheckboxListTile(value: showPassword, onChanged: (value) => setState(() => showPassword = value ?? false), title: Text(l10n.showPassword)),
-          CheckboxListTile(value: acceptTerms, onChanged: (value) => setState(() => acceptTerms = value ?? false), title: Text(l10n.acceptTerms)),
-          Text(l10n.passwordRequirements, style: const TextStyle(color: AppColors.mutedText)),
+          AppTextField(
+            controller: confirmPassword,
+            label: l10n.confirmPassword,
+            hint: l10n.repeatPassword,
+            obscureText: !showPassword,
+          ),
+          CheckboxListTile(
+            value: showPassword,
+            onChanged: (value) => setState(() => showPassword = value ?? false),
+            title: Text(l10n.showPassword),
+          ),
+          CheckboxListTile(
+            value: acceptTerms,
+            onChanged: (value) => setState(() => acceptTerms = value ?? false),
+            title: Text(l10n.acceptTerms),
+          ),
+          Text(
+            l10n.passwordRequirements,
+            style: const TextStyle(color: AppColors.mutedText),
+          ),
           if (error != null || state.error != null) ...[
             const SizedBox(height: 12),
-            Text(error ?? state.error!, style: const TextStyle(color: AppColors.danger)),
+            Text(
+              error ?? state.error!,
+              style: const TextStyle(color: AppColors.danger),
+            ),
           ],
           const SizedBox(height: 18),
-          AppButton(label: state.isLoading ? l10n.submitting : l10n.createAccount, isLoading: state.isLoading, onPressed: submit),
-          TextButton(onPressed: () => context.goNamed(RouteNames.login), child: Text(l10n.backToLogin)),
+          AppButton(
+            label: state.isLoading ? l10n.submitting : l10n.createAccount,
+            isLoading: state.isLoading,
+            onPressed: submit,
+          ),
+          TextButton(
+            onPressed: () => context.goNamed(RouteNames.login),
+            child: Text(l10n.backToLogin),
+          ),
         ],
       ),
     );
@@ -136,32 +210,62 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     code.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(accountFlowControllerProvider);
     return AuthFlowScaffold(
       title: l10n.emailVerification,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(l10n.verificationInstruction(state.emailMasked.isEmpty ? state.email : state.emailMasked)),
-        const SizedBox(height: 16),
-        AppTextField(controller: code, label: l10n.verificationCode, hint: '123456', keyboardType: TextInputType.number),
-        if (error != null || state.error != null) ...[const SizedBox(height: 12), Text(error ?? state.error!, style: const TextStyle(color: AppColors.danger))],
-        const SizedBox(height: 16),
-        AppButton(
-          label: state.isLoading ? l10n.verifying : l10n.verifyEmail,
-          isLoading: state.isLoading,
-          onPressed: () async {
-            if (!RegExp(r'^\d{6}$').hasMatch(code.text.trim())) {
-              setState(() => error = l10n.enterSixDigitCode);
-              return;
-            }
-            final ok = await ref.read(accountFlowControllerProvider.notifier).verifyEmail(code.text.trim());
-            if (ok && context.mounted) context.goNamed(RouteNames.pendingApproval);
-          },
-        ),
-        TextButton(onPressed: state.isLoading ? null : () => ref.read(accountFlowControllerProvider.notifier).resendVerification(), child: Text(l10n.resendCode)),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.verificationInstruction(
+              state.emailMasked.isEmpty ? state.email : state.emailMasked,
+            ),
+          ),
+          const SizedBox(height: 16),
+          AppTextField(
+            controller: code,
+            label: l10n.verificationCode,
+            hint: '123456',
+            keyboardType: TextInputType.number,
+          ),
+          if (error != null || state.error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              error ?? state.error!,
+              style: const TextStyle(color: AppColors.danger),
+            ),
+          ],
+          const SizedBox(height: 16),
+          AppButton(
+            label: state.isLoading ? l10n.verifying : l10n.verifyEmail,
+            isLoading: state.isLoading,
+            onPressed: () async {
+              if (!RegExp(r'^\d{6}$').hasMatch(code.text.trim())) {
+                setState(() => error = l10n.enterSixDigitCode);
+                return;
+              }
+              final ok = await ref
+                  .read(accountFlowControllerProvider.notifier)
+                  .verifyEmail(code.text.trim());
+              if (ok && context.mounted) {
+                context.goNamed(RouteNames.pendingApproval);
+              }
+            },
+          ),
+          TextButton(
+            onPressed: state.isLoading
+                ? null
+                : () => ref
+                      .read(accountFlowControllerProvider.notifier)
+                      .resendVerification(),
+            child: Text(l10n.resendCode),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -174,15 +278,27 @@ class PendingApprovalScreen extends ConsumerWidget {
     final state = ref.watch(accountFlowControllerProvider);
     return AuthFlowScaffold(
       title: l10n.pendingAdminApproval,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Icon(Icons.hourglass_top, size: 58, color: AppColors.green),
-        const SizedBox(height: 16),
-        Text(l10n.pendingApprovalMessage, textAlign: TextAlign.center),
-        const SizedBox(height: 16),
-        if (state.message != null) Text(state.message!, textAlign: TextAlign.center),
-        AppButton(label: state.isLoading ? l10n.checking : l10n.checkStatus, isLoading: state.isLoading, onPressed: () => ref.read(accountFlowControllerProvider.notifier).checkStatus()),
-        TextButton(onPressed: () => context.goNamed(RouteNames.login), child: Text(l10n.backToLogin)),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Icon(Icons.hourglass_top, size: 58, color: AppColors.green),
+          const SizedBox(height: 16),
+          Text(l10n.pendingApprovalMessage, textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          if (state.message != null)
+            Text(state.message!, textAlign: TextAlign.center),
+          AppButton(
+            label: state.isLoading ? l10n.checking : l10n.checkStatus,
+            isLoading: state.isLoading,
+            onPressed: () =>
+                ref.read(accountFlowControllerProvider.notifier).checkStatus(),
+          ),
+          TextButton(
+            onPressed: () => context.goNamed(RouteNames.login),
+            child: Text(l10n.backToLogin),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -190,7 +306,8 @@ class PendingApprovalScreen extends ConsumerWidget {
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
   @override
-  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
@@ -200,27 +317,43 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     email.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(accountFlowControllerProvider);
     return AuthFlowScaffold(
       title: l10n.forgotPassword,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(l10n.forgotPasswordInstruction),
-        const SizedBox(height: 16),
-        AppTextField(controller: email, label: l10n.emailAddress, hint: 'customer@example.com', keyboardType: TextInputType.emailAddress),
-        if (state.error != null) ...[const SizedBox(height: 12), Text(state.error!, style: const TextStyle(color: AppColors.danger))],
-        const SizedBox(height: 16),
-        AppButton(
-          label: state.isLoading ? l10n.sending : l10n.sendResetCode,
-          isLoading: state.isLoading,
-          onPressed: () async {
-            final ok = await ref.read(accountFlowControllerProvider.notifier).forgotPassword(email.text.trim());
-            if (ok && context.mounted) context.goNamed(RouteNames.verifyResetCode);
-          },
-        ),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.forgotPasswordInstruction),
+          const SizedBox(height: 16),
+          AppTextField(
+            controller: email,
+            label: l10n.emailAddress,
+            hint: 'customer@example.com',
+            keyboardType: TextInputType.emailAddress,
+          ),
+          if (state.error != null) ...[
+            const SizedBox(height: 12),
+            Text(state.error!, style: const TextStyle(color: AppColors.danger)),
+          ],
+          const SizedBox(height: 16),
+          AppButton(
+            label: state.isLoading ? l10n.sending : l10n.sendResetCode,
+            isLoading: state.isLoading,
+            onPressed: () async {
+              final ok = await ref
+                  .read(accountFlowControllerProvider.notifier)
+                  .forgotPassword(email.text.trim());
+              if (ok && context.mounted) {
+                context.goNamed(RouteNames.verifyResetCode);
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 }
@@ -228,7 +361,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 class VerifyResetCodeScreen extends ConsumerStatefulWidget {
   const VerifyResetCodeScreen({super.key});
   @override
-  ConsumerState<VerifyResetCodeScreen> createState() => _VerifyResetCodeScreenState();
+  ConsumerState<VerifyResetCodeScreen> createState() =>
+      _VerifyResetCodeScreenState();
 }
 
 class _VerifyResetCodeScreenState extends ConsumerState<VerifyResetCodeScreen> {
@@ -238,31 +372,49 @@ class _VerifyResetCodeScreenState extends ConsumerState<VerifyResetCodeScreen> {
     code.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(accountFlowControllerProvider);
     return AuthFlowScaffold(
       title: l10n.resetCode,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(l10n.resetCodeInstruction(state.email)),
-        const SizedBox(height: 16),
-        AppTextField(controller: code, label: l10n.verificationCode, hint: '123456', keyboardType: TextInputType.number),
-        if (state.error != null) ...[const SizedBox(height: 12), Text(state.error!, style: const TextStyle(color: AppColors.danger))],
-        const SizedBox(height: 16),
-        AppButton(
-          label: state.isLoading ? l10n.verifying : l10n.verifyCode,
-          isLoading: state.isLoading,
-          onPressed: () async {
-            if (!RegExp(r'^\d{6}$').hasMatch(code.text.trim())) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.enterSixDigitCode)));
-              return;
-            }
-            final ok = await ref.read(accountFlowControllerProvider.notifier).verifyResetCode(code.text.trim());
-            if (ok && context.mounted) context.goNamed(RouteNames.resetPassword);
-          },
-        ),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.resetCodeInstruction(state.email)),
+          const SizedBox(height: 16),
+          AppTextField(
+            controller: code,
+            label: l10n.verificationCode,
+            hint: '123456',
+            keyboardType: TextInputType.number,
+          ),
+          if (state.error != null) ...[
+            const SizedBox(height: 12),
+            Text(state.error!, style: const TextStyle(color: AppColors.danger)),
+          ],
+          const SizedBox(height: 16),
+          AppButton(
+            label: state.isLoading ? l10n.verifying : l10n.verifyCode,
+            isLoading: state.isLoading,
+            onPressed: () async {
+              if (!RegExp(r'^\d{6}$').hasMatch(code.text.trim())) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(l10n.enterSixDigitCode)));
+                return;
+              }
+              final ok = await ref
+                  .read(accountFlowControllerProvider.notifier)
+                  .verifyResetCode(code.text.trim());
+              if (ok && context.mounted) {
+                context.goNamed(RouteNames.resetPassword);
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 }
@@ -270,7 +422,8 @@ class _VerifyResetCodeScreenState extends ConsumerState<VerifyResetCodeScreen> {
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key});
   @override
-  ConsumerState<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() =>
+      _ResetPasswordScreenState();
 }
 
 class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
@@ -282,32 +435,56 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     confirm.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(accountFlowControllerProvider);
     return AuthFlowScaffold(
       title: l10n.resetPassword,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        AppTextField(controller: password, label: l10n.newPassword, hint: 'NewStrongPassword123!', obscureText: true),
-        const SizedBox(height: 12),
-        AppTextField(controller: confirm, label: l10n.confirmNewPassword, hint: l10n.repeatNewPassword, obscureText: true),
-        const SizedBox(height: 8),
-        Text(l10n.newPasswordRequirements, style: const TextStyle(color: AppColors.mutedText)),
-        if (state.error != null) ...[const SizedBox(height: 12), Text(state.error!, style: const TextStyle(color: AppColors.danger))],
-        const SizedBox(height: 16),
-        AppButton(
-          label: state.isLoading ? l10n.saving : l10n.resetPassword,
-          isLoading: state.isLoading,
-          onPressed: () async {
-            final ok = await ref.read(accountFlowControllerProvider.notifier).resetPassword(password.text, confirm.text);
-            if (ok && context.mounted) {
-              await ref.read(secureStorageProvider).clearTokens();
-              if (context.mounted) context.goNamed(RouteNames.login);
-            }
-          },
-        ),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppTextField(
+            controller: password,
+            label: l10n.newPassword,
+            hint: 'NewStrongPassword123!',
+            obscureText: true,
+          ),
+          const SizedBox(height: 12),
+          AppTextField(
+            controller: confirm,
+            label: l10n.confirmNewPassword,
+            hint: l10n.repeatNewPassword,
+            obscureText: true,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.newPasswordRequirements,
+            style: const TextStyle(color: AppColors.mutedText),
+          ),
+          if (state.error != null) ...[
+            const SizedBox(height: 12),
+            Text(state.error!, style: const TextStyle(color: AppColors.danger)),
+          ],
+          const SizedBox(height: 16),
+          AppButton(
+            label: state.isLoading ? l10n.saving : l10n.resetPassword,
+            isLoading: state.isLoading,
+            onPressed: () async {
+              final ok = await ref
+                  .read(accountFlowControllerProvider.notifier)
+                  .resetPassword(password.text, confirm.text);
+              if (ok && context.mounted) {
+                await ref.read(secureStorageProvider).clearTokens();
+                if (context.mounted) {
+                  context.goNamed(RouteNames.login);
+                }
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 }
@@ -319,24 +496,38 @@ class AuthFlowScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 460),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(22),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    Row(children: [
-                      Container(width: 44, height: 44, alignment: Alignment.center, decoration: BoxDecoration(color: AppColors.green, borderRadius: BorderRadius.circular(10)), child: const Text('B', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900))),
-                    ]),
-                    const SizedBox(height: 20),
-                    child,
-                  ]),
+      body: LoginBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: LoginCard(
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            const BayadMark(size: 48),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w900),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        child,
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -352,7 +543,12 @@ class _SectionTitle extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(text, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      text,
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+    ),
+  );
 }

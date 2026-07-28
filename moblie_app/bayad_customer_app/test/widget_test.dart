@@ -1,5 +1,6 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,9 +16,12 @@ import 'package:bayad_customer_app/features/auth/presentation/auth_controller.da
 import 'package:bayad_customer_app/features/chat/domain/chat_models.dart';
 import 'package:bayad_customer_app/features/profile/domain/customer.dart';
 import 'package:bayad_customer_app/features/supply_offers/data/models/supply_offer_models.dart';
+import 'package:bayad_customer_app/l10n/app_localizations.dart';
+import 'package:bayad_customer_app/core/theme/app_theme.dart';
 import 'package:bayad_customer_app/shared/data/mobile_providers.dart';
 import 'package:bayad_customer_app/shared/models/mobile_models.dart';
 import 'package:bayad_customer_app/shared/models/paged_response.dart';
+import 'package:bayad_customer_app/shared/widgets/customer_widgets.dart';
 
 const testCustomer = Customer(
   id: 1,
@@ -38,13 +42,52 @@ final testProduct = Product(
   category: 'commodity',
   description: 'High quality white sesame',
   image: null,
-  units: const [ProductUnitOption(id: 1, unit: 'Qintar', sellingPrice: 110000, isDefault: true, availableQuantity: 500, isAvailable: true)],
+  units: const [
+    ProductUnitOption(
+      id: 1,
+      unit: 'Qintar',
+      sellingPrice: 110000,
+      isDefault: true,
+      availableQuantity: 500,
+      isAvailable: true,
+    ),
+  ],
   stockStatus: 'available',
 );
 
-const testOrder = OrderSummary(id: 1, orderNumber: 'ORD-2026-000001', status: 'pending', itemCount: 1, productSummary: 'White Sesame', totalAmount: 110000, currency: 'SDG', createdAt: null);
-const testInvoice = InvoiceSummary(id: 1, invoiceNumber: 'INV-2026-000001', orderNumber: 'ORD-2026-000001', status: 'issued', paymentStatus: 'unpaid', totalAmount: 110000, currency: 'SDG', issuedAt: null, productSummary: 'White Sesame');
-const testShipment = ShipmentSummary(id: 1, shipmentNumber: 'SHP-2026-000001', orderNumber: 'ORD-2026-000001', invoiceNumber: 'INV-2026-000001', status: 'ready_for_shipment', productSummary: 'White Sesame', driverName: '', vehicleNumber: '', startedAt: null, completedAt: null);
+const testOrder = OrderSummary(
+  id: 1,
+  orderNumber: 'ORD-2026-000001',
+  status: 'pending',
+  itemCount: 1,
+  productSummary: 'White Sesame',
+  totalAmount: 110000,
+  currency: 'SDG',
+  createdAt: null,
+);
+const testInvoice = InvoiceSummary(
+  id: 1,
+  invoiceNumber: 'INV-2026-000001',
+  orderNumber: 'ORD-2026-000001',
+  status: 'issued',
+  paymentStatus: 'unpaid',
+  totalAmount: 110000,
+  currency: 'SDG',
+  issuedAt: null,
+  productSummary: 'White Sesame',
+);
+const testShipment = ShipmentSummary(
+  id: 1,
+  shipmentNumber: 'SHP-2026-000001',
+  orderNumber: 'ORD-2026-000001',
+  invoiceNumber: 'INV-2026-000001',
+  status: 'ready_for_shipment',
+  productSummary: 'White Sesame',
+  driverName: '',
+  vehicleNumber: '',
+  startedAt: null,
+  completedAt: null,
+);
 const testOfferResponse = OfferResponse(
   id: 5,
   responseNumber: 'SUP-2026-000001-R1',
@@ -56,8 +99,59 @@ const testOfferResponse = OfferResponse(
   expiresAt: '',
   createdAt: '2026-07-24T10:00:00Z',
   items: [
-    OfferResponseItem(productName: 'White Sesame', unit: 'Qintar', customerQuantity: 100, adminQuantity: 70, customerPrice: 120000, adminPrice: 70000, customerTotal: 12000000, adminTotal: 4900000),
+    OfferResponseItem(
+      productName: 'White Sesame',
+      unit: 'Qintar',
+      customerQuantity: 100,
+      adminQuantity: 70,
+      customerPrice: 120000,
+      adminPrice: 70000,
+      customerTotal: 12000000,
+      adminTotal: 4900000,
+    ),
   ],
+);
+
+final longNameProduct = Product(
+  id: 2,
+  code: 'PRD-0002',
+  nameEn: 'Premium Long Staple White Sesame For Export Quality Large Bags',
+  nameAr: 'سمسم أبيض فاخر طويل الاسم بجودة تصدير وأكياس كبيرة',
+  category: 'commodity',
+  description: 'High quality white sesame with a deliberately long name.',
+  image: null,
+  units: const [
+    ProductUnitOption(
+      id: 2,
+      unit: 'Kilogram',
+      sellingPrice: 123456789.75,
+      isDefault: true,
+      availableQuantity: 800,
+      isAvailable: true,
+    ),
+  ],
+  stockStatus: 'available',
+);
+
+final unavailableProduct = Product(
+  id: 3,
+  code: 'PRD-0003',
+  nameEn: 'Sorghum',
+  nameAr: 'ذرة',
+  category: 'commodity',
+  description: 'Temporarily unavailable.',
+  image: null,
+  units: const [
+    ProductUnitOption(
+      id: 3,
+      unit: 'Sack',
+      sellingPrice: 10000,
+      isDefault: true,
+      availableQuantity: 0,
+      isAvailable: false,
+    ),
+  ],
+  stockStatus: 'unavailable',
 );
 const testSupplyOffer = SupplyOffer(
   id: 1,
@@ -79,7 +173,18 @@ const testSupplyOffer = SupplyOffer(
   currency: 'SDG',
   createdAt: null,
   items: [
-    SupplyOfferItem(id: 1, productName: 'White Sesame', unit: 'Qintar', quantity: 100, customerPrice: 120000, lineTotal: 12000000, adminPrice: 0, agreedPrice: 0, qualityGrade: 'Grade A', packagingDetails: 'Sealed bags'),
+    SupplyOfferItem(
+      id: 1,
+      productName: 'White Sesame',
+      unit: 'Qintar',
+      quantity: 100,
+      customerPrice: 120000,
+      lineTotal: 12000000,
+      adminPrice: 0,
+      agreedPrice: 0,
+      qualityGrade: 'Grade A',
+      packagingDetails: 'Sealed bags',
+    ),
   ],
   attachments: [],
   timeline: [],
@@ -114,7 +219,18 @@ const testCounterOffer = SupplyOffer(
   currency: 'SDG',
   createdAt: null,
   items: [
-    SupplyOfferItem(id: 1, productName: 'White Sesame', unit: 'Qintar', quantity: 100, customerPrice: 120000, lineTotal: 12000000, adminPrice: 70000, agreedPrice: 0, qualityGrade: 'Grade A', packagingDetails: 'Sealed bags'),
+    SupplyOfferItem(
+      id: 1,
+      productName: 'White Sesame',
+      unit: 'Qintar',
+      quantity: 100,
+      customerPrice: 120000,
+      lineTotal: 12000000,
+      adminPrice: 70000,
+      agreedPrice: 0,
+      qualityGrade: 'Grade A',
+      packagingDetails: 'Sealed bags',
+    ),
   ],
   attachments: [],
   timeline: [],
@@ -127,12 +243,19 @@ const testCounterOffer = SupplyOffer(
   hasUnreadResponse: true,
   unreadResponseCount: 1,
   requiresCustomerAction: true,
-  allowedActions: {'can_accept_response': true, 'can_reject_response': true, 'can_withdraw_offer': false},
+  allowedActions: {
+    'can_accept_response': true,
+    'can_reject_response': true,
+    'can_withdraw_offer': false,
+  },
 );
 
 class FakeAuthRepository extends AuthRepository {
-  FakeAuthRepository({this.loginError, this.restoreError, this.loginCustomer = testCustomer})
-      : super(dio: Dio(), storage: SecureStorageService());
+  FakeAuthRepository({
+    this.loginError,
+    this.restoreError,
+    this.loginCustomer = testCustomer,
+  }) : super(dio: Dio(), storage: SecureStorageService());
 
   final String? loginError;
   final String? restoreError;
@@ -140,7 +263,10 @@ class FakeAuthRepository extends AuthRepository {
   bool didLogout = false;
 
   @override
-  Future<Customer> login({required String email, required String password}) async {
+  Future<Customer> login({
+    required String email,
+    required String password,
+  }) async {
     if (loginError != null) throw Exception(loginError);
     return loginCustomer;
   }
@@ -165,10 +291,16 @@ Future<void> pumpBayadApp(
   AuthState initialState = const AuthState.unauthenticated(),
   FakeAuthRepository? repository,
   String language = 'en',
-  Map<String, dynamic> offersSummary = const {'total': 1, 'unread_responses': 0, 'requires_customer_action': 0},
+  Map<String, dynamic> offersSummary = const {
+    'total': 1,
+    'unread_responses': 0,
+    'requires_customer_action': 0,
+  },
   List<SupplyOffer> offerResults = const [testSupplyOffer],
 }) async {
-  SharedPreferences.setMockInitialValues({PreferencesService.languageKey: language});
+  SharedPreferences.setMockInitialValues({
+    PreferencesService.languageKey: language,
+  });
   FlutterSecureStorage.setMockInitialValues({});
   final preferences = await SharedPreferences.getInstance();
   await tester.pumpWidget(
@@ -183,41 +315,141 @@ Future<void> pumpBayadApp(
           controller.setStateForTesting(initialState);
           return controller;
         }),
-        homeSummaryProvider.overrideWith((ref) async => HomeSummary(
-              customer: testCustomer,
-              orders: const {'total': 1, 'pending': 1, 'completed': 0},
-              invoices: const {'total': 1, 'unpaid': 1, 'paid': 0, 'outstanding_value': '110000.00'},
-              shipments: const {'ready': 1, 'processing': 0, 'completed': 0},
-              offers: offersSummary,
-              recentOrders: const [testOrder],
-            )),
-        productsProvider.overrideWith((ref) async => PagedResponse(count: 1, next: null, previous: null, results: [testProduct])),
+        homeSummaryProvider.overrideWith(
+          (ref) async => HomeSummary(
+            customer: testCustomer,
+            orders: const {'total': 1, 'pending': 1, 'completed': 0},
+            invoices: const {
+              'total': 1,
+              'unpaid': 1,
+              'paid': 0,
+              'outstanding_value': '110000.00',
+            },
+            shipments: const {'ready': 1, 'processing': 0, 'completed': 0},
+            offers: offersSummary,
+            recentOrders: const [testOrder],
+          ),
+        ),
+        productsProvider.overrideWith(
+          (ref) async => PagedResponse(
+            count: 1,
+            next: null,
+            previous: null,
+            results: [testProduct],
+          ),
+        ),
         productDetailProvider.overrideWith((ref, id) async => testProduct),
-        ordersProvider.overrideWith((ref) async => const PagedResponse(count: 1, next: null, previous: null, results: [testOrder])),
-        orderDetailProvider.overrideWith((ref, id) async => const OrderDetail(
-              id: 1,
-              orderNumber: 'ORD-2026-000001',
-              status: 'pending',
-              itemCount: 1,
-              productSummary: 'White Sesame',
-              totalAmount: 110000,
-              currency: 'SDG',
-              createdAt: null,
-              customerReference: '',
-              customerNotes: '',
-              subtotal: 110000,
-              discountAmount: 0,
-              items: [OrderItemModel(id: 1, productNameEn: 'White Sesame', productNameAr: 'Ø³Ù…Ø³Ù… Ø£Ø¨ÙŠØ¶', unit: 'Qintar', quantity: 1, unitPrice: 110000, lineTotal: 110000)],
-              workflowSteps: [WorkflowStepModel(key: 'pending', label: 'Pending', state: 'current')],
-            )),
-        invoicesProvider.overrideWith((ref) async => const PagedResponse(count: 1, next: null, previous: null, results: [testInvoice])),
-        invoiceDetailProvider.overrideWith((ref, id) async => const InvoiceDetail(id: 1, invoiceNumber: 'INV-2026-000001', orderNumber: 'ORD-2026-000001', status: 'issued', paymentStatus: 'unpaid', totalAmount: 110000, currency: 'SDG', issuedAt: null, productSummary: 'White Sesame', subtotal: 110000, discountAmount: 0, notes: '', items: [])),
-        shipmentsProvider.overrideWith((ref) async => const PagedResponse(count: 1, next: null, previous: null, results: [testShipment])),
-        shipmentDetailProvider.overrideWith((ref, id) async => const ShipmentDetail(id: 1, shipmentNumber: 'SHP-2026-000001', orderNumber: 'ORD-2026-000001', invoiceNumber: 'INV-2026-000001', status: 'ready_for_shipment', productSummary: 'White Sesame', driverName: '', vehicleNumber: '', startedAt: null, completedAt: null, notes: '', items: [], workflowSteps: [WorkflowStepModel(key: 'ready_for_shipment', label: 'Ready for Shipment', state: 'current')])),
+        ordersProvider.overrideWith(
+          (ref) async => const PagedResponse(
+            count: 1,
+            next: null,
+            previous: null,
+            results: [testOrder],
+          ),
+        ),
+        orderDetailProvider.overrideWith(
+          (ref, id) async => const OrderDetail(
+            id: 1,
+            orderNumber: 'ORD-2026-000001',
+            status: 'pending',
+            itemCount: 1,
+            productSummary: 'White Sesame',
+            totalAmount: 110000,
+            currency: 'SDG',
+            createdAt: null,
+            customerReference: '',
+            customerNotes: '',
+            subtotal: 110000,
+            discountAmount: 0,
+            items: [
+              OrderItemModel(
+                id: 1,
+                productNameEn: 'White Sesame',
+                productNameAr: 'Ø³Ù…Ø³Ù… Ø£Ø¨ÙŠØ¶',
+                unit: 'Qintar',
+                quantity: 1,
+                unitPrice: 110000,
+                lineTotal: 110000,
+              ),
+            ],
+            workflowSteps: [
+              WorkflowStepModel(
+                key: 'pending',
+                label: 'Pending',
+                state: 'current',
+              ),
+            ],
+          ),
+        ),
+        invoicesProvider.overrideWith(
+          (ref) async => const PagedResponse(
+            count: 1,
+            next: null,
+            previous: null,
+            results: [testInvoice],
+          ),
+        ),
+        invoiceDetailProvider.overrideWith(
+          (ref, id) async => const InvoiceDetail(
+            id: 1,
+            invoiceNumber: 'INV-2026-000001',
+            orderNumber: 'ORD-2026-000001',
+            status: 'issued',
+            paymentStatus: 'unpaid',
+            totalAmount: 110000,
+            currency: 'SDG',
+            issuedAt: null,
+            productSummary: 'White Sesame',
+            subtotal: 110000,
+            discountAmount: 0,
+            notes: '',
+            items: [],
+          ),
+        ),
+        shipmentsProvider.overrideWith(
+          (ref) async => const PagedResponse(
+            count: 1,
+            next: null,
+            previous: null,
+            results: [testShipment],
+          ),
+        ),
+        shipmentDetailProvider.overrideWith(
+          (ref, id) async => const ShipmentDetail(
+            id: 1,
+            shipmentNumber: 'SHP-2026-000001',
+            orderNumber: 'ORD-2026-000001',
+            invoiceNumber: 'INV-2026-000001',
+            status: 'ready_for_shipment',
+            productSummary: 'White Sesame',
+            driverName: '',
+            vehicleNumber: '',
+            startedAt: null,
+            completedAt: null,
+            notes: '',
+            items: [],
+            workflowSteps: [
+              WorkflowStepModel(
+                key: 'ready_for_shipment',
+                label: 'Ready for Shipment',
+                state: 'current',
+              ),
+            ],
+          ),
+        ),
         chatUnreadCountProvider.overrideWith((ref) async => 0),
         chatMessagesProvider.overrideWith((ref) async => const <ChatMessage>[]),
-        supplyOffersProvider.overrideWith((ref) async => PagedResponse(count: offerResults.length, next: null, previous: null, results: offerResults)),
-        supplyOfferDetailProvider.overrideWith((ref, id) async => offerResults.first),
+        supplyOffersProvider.overrideWith(
+          (ref) async => PagedResponse(
+            count: offerResults.length,
+            next: null,
+            previous: null,
+            results: offerResults,
+          ),
+        ),
+        supplyOfferDetailProvider.overrideWith(
+          (ref, id) async => offerResults.first,
+        ),
       ],
       child: const BayadCustomerApp(),
     ),
@@ -226,7 +458,180 @@ Future<void> pumpBayadApp(
   await tester.pump(const Duration(milliseconds: 100));
 }
 
+Future<void> pumpProductCard(
+  WidgetTester tester, {
+  required Product product,
+  String language = 'en',
+  Size surfaceSize = const Size(390, 844),
+  VoidCallback? onAdd,
+}) async {
+  tester.view.physicalSize = surfaceSize;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+  final locale = Locale(language);
+  final isArabic = language == 'ar';
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: AppTheme.light(),
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: Directionality(
+        textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
+        child: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: surfaceSize.width < 360 ? surfaceSize.width - 32 : 170,
+              height: isArabic ? 330 : 312,
+              child: Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context);
+                  return ProductCard(
+                    product: product,
+                    isArabic: isArabic,
+                    addToCartLabel: l10n.addToCart,
+                    availableLabel: l10n.available,
+                    unavailableLabel: l10n.unavailable,
+                    onDetails: () {},
+                    onAdd: onAdd ?? () {},
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  testWidgets('Product grid card renders without overflow on narrow phone', (
+    tester,
+  ) async {
+    await pumpProductCard(
+      tester,
+      product: longNameProduct,
+      surfaceSize: const Size(360, 800),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('Premium Long Staple'), findsOneWidget);
+  });
+
+  testWidgets('Long Product name is constrained to two readable lines', (
+    tester,
+  ) async {
+    await pumpProductCard(tester, product: longNameProduct);
+    final text = tester.widget<Text>(
+      find.textContaining('Premium Long Staple'),
+    );
+    expect(text.maxLines, 2);
+    expect(text.overflow, TextOverflow.ellipsis);
+  });
+
+  testWidgets('Large price remains one readable line', (tester) async {
+    await pumpProductCard(tester, product: longNameProduct);
+    final text = tester.widget<Text>(find.text('SDG 123,456,789.75'));
+    expect(text.maxLines, 1);
+    expect(text.overflow, TextOverflow.ellipsis);
+  });
+
+  testWidgets('Unavailable badge is localized in Arabic', (tester) async {
+    await pumpProductCard(tester, product: unavailableProduct, language: 'ar');
+    expect(find.text('غير متوفر'), findsOneWidget);
+    expect(find.text('Unavailable'), findsNothing);
+  });
+
+  testWidgets('Unavailable badge is localized in English', (tester) async {
+    await pumpProductCard(tester, product: unavailableProduct);
+    expect(find.text('Unavailable'), findsOneWidget);
+    expect(find.text('غير متوفر'), findsNothing);
+  });
+
+  testWidgets('Disabled Add to Cart button remains disabled', (tester) async {
+    var called = false;
+    await pumpProductCard(
+      tester,
+      product: unavailableProduct,
+      onAdd: () => called = true,
+    );
+    await tester.tap(find.text('Add to Cart'));
+    await tester.pump();
+    expect(called, isFalse);
+  });
+
+  testWidgets('Available Add to Cart button still calls the current action', (
+    tester,
+  ) async {
+    var called = false;
+    await pumpProductCard(
+      tester,
+      product: testProduct,
+      onAdd: () => called = true,
+    );
+    await tester.tap(find.text('Add to Cart'));
+    await tester.pump();
+    expect(called, isTrue);
+  });
+
+  testWidgets('Missing image displays the Bayad product placeholder', (
+    tester,
+  ) async {
+    await pumpProductCard(tester, product: testProduct);
+    expect(find.byIcon(Icons.grass), findsOneWidget);
+  });
+
+  testWidgets('Arabic Product card uses RTL and localized Add to Cart', (
+    tester,
+  ) async {
+    await pumpProductCard(
+      tester,
+      product: testProduct,
+      language: 'ar',
+      surfaceSize: const Size(390, 844),
+    );
+    final directionality = tester.widget<Directionality>(
+      find.byType(Directionality).first,
+    );
+    expect(directionality.textDirection, TextDirection.rtl);
+    expect(find.text('إضافة إلى السلة'), findsOneWidget);
+  });
+
+  testWidgets('English Product card uses LTR labels', (tester) async {
+    await pumpProductCard(
+      tester,
+      product: testProduct,
+      language: 'en',
+      surfaceSize: const Size(412, 915),
+    );
+    final directionality = tester.widget<Directionality>(
+      find.byType(Directionality).first,
+    );
+    expect(directionality.textDirection, TextDirection.ltr);
+    expect(find.text('Add to Cart'), findsOneWidget);
+  });
+
+  testWidgets('Product card remains readable on very narrow width', (
+    tester,
+  ) async {
+    await pumpProductCard(
+      tester,
+      product: longNameProduct,
+      surfaceSize: const Size(320, 800),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('SDG 123,456,789.75'), findsOneWidget);
+  });
+
   testWidgets('Empty email validation', (tester) async {
     await pumpBayadApp(tester);
     await tester.tap(find.text('Login'));
@@ -257,7 +662,10 @@ void main() {
   });
 
   testWidgets('Login API error state', (tester) async {
-    await pumpBayadApp(tester, repository: FakeAuthRepository(loginError: 'Invalid email or password.'));
+    await pumpBayadApp(
+      tester,
+      repository: FakeAuthRepository(loginError: 'Invalid email or password.'),
+    );
     await tester.enterText(find.byType(TextField).first, 'customer@bayad.com');
     await tester.enterText(find.byType(TextField).last, 'wrong-password');
     await tester.tap(find.text('Login'));
@@ -293,7 +701,10 @@ void main() {
 
   test('Logout clears secure tokens path', () async {
     final repository = FakeAuthRepository();
-    final controller = AuthController(repository: repository, storage: SecureStorageService());
+    final controller = AuthController(
+      repository: repository,
+      storage: SecureStorageService(),
+    );
     await controller.logout();
     expect(repository.didLogout, isTrue);
   });
@@ -305,18 +716,26 @@ void main() {
 
   testWidgets('Arabic RTL Login rendering', (tester) async {
     await pumpBayadApp(tester, language: 'ar');
-    final directionality = tester.widget<Directionality>(find.byType(Directionality).first);
+    final directionality = tester.widget<Directionality>(
+      find.byType(Directionality).first,
+    );
     expect(directionality.textDirection, TextDirection.rtl);
     expect(find.text('دخول العملاء'), findsOneWidget);
   });
 
   testWidgets('Home displays Customer name', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
     expect(find.textContaining('Ahmed Trading'), findsWidgets);
   });
 
   testWidgets('Profile displays Customer API data', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
     await tester.tap(find.byIcon(Icons.person_outline).last);
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));
@@ -324,12 +743,18 @@ void main() {
   });
 
   testWidgets('Chat appears in bottom navigation', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
     expect(find.text('Chat'), findsOneWidget);
   });
 
   testWidgets('Selecting Chat opens ChatScreen with composer', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
     await tester.tap(find.text('Chat'));
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));
@@ -340,26 +765,54 @@ void main() {
   });
 
   testWidgets('Home displays Contact Bayad', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
-    await tester.scrollUntilVisible(find.text('Contact Bayad'), 120, scrollable: find.byType(Scrollable).first);
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
+    await tester.scrollUntilVisible(
+      find.text('Contact Bayad'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Contact Bayad'), findsOneWidget);
   });
 
   testWidgets('Home displays Sell to Bayad', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
-    await tester.scrollUntilVisible(find.text('Sell to Bayad'), 120, scrollable: find.byType(Scrollable).first);
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
+    await tester.scrollUntilVisible(
+      find.text('Sell to Bayad'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Sell to Bayad'), findsOneWidget);
   });
 
   testWidgets('Home displays My Offers', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
-    await tester.scrollUntilVisible(find.text('My Offers'), 120, scrollable: find.byType(Scrollable).first);
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
+    await tester.scrollUntilVisible(
+      find.text('My Offers'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('My Offers'), findsOneWidget);
   });
 
   testWidgets('My Offers opens Offers list', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
-    await tester.scrollUntilVisible(find.text('My Offers'), 120, scrollable: find.byType(Scrollable).first);
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
+    await tester.scrollUntilVisible(
+      find.text('My Offers'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.ensureVisible(find.text('My Offers'));
     await tester.pump();
     await tester.tap(find.text('My Offers'));
@@ -368,36 +821,67 @@ void main() {
     expect(find.text('SUP-2026-000001'), findsOneWidget);
   });
 
-  testWidgets('Home displays unread Offer response count from API summary', (tester) async {
+  testWidgets('Home displays unread Offer response count from API summary', (
+    tester,
+  ) async {
     await pumpBayadApp(
       tester,
       initialState: const AuthState.authenticated(testCustomer),
-      offersSummary: const {'total': 1, 'unread_responses': 1, 'requires_customer_action': 1},
+      offersSummary: const {
+        'total': 1,
+        'unread_responses': 1,
+        'requires_customer_action': 1,
+      },
       offerResults: const [testCounterOffer],
     );
     expect(find.text('Admin Offer Responses'), findsOneWidget);
     expect(find.text('1'), findsWidgets);
-    await tester.scrollUntilVisible(find.text('Bayad Admin has responded to your Offer.'), 120, scrollable: find.byType(Scrollable).first);
-    expect(find.text('Bayad Admin has responded to your Offer.'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Bayad Admin has responded to your Offer.'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.text('Bayad Admin has responded to your Offer.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('Counter-offered Offer shows Admin response badge and translated status', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer), offerResults: const [testCounterOffer]);
-    await tester.scrollUntilVisible(find.text('My Offers'), 120, scrollable: find.byType(Scrollable).first);
-    await tester.ensureVisible(find.text('My Offers'));
-    await tester.pump();
-    await tester.tap(find.text('My Offers'));
-    await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.textContaining('Admin Responded'), findsOneWidget);
-    expect(find.text('New Admin Response'), findsOneWidget);
-    expect(find.text('Review Admin Offer'), findsOneWidget);
-    expect(find.textContaining('SDG 4,900,000.00'), findsOneWidget);
-  });
+  testWidgets(
+    'Counter-offered Offer shows Admin response badge and translated status',
+    (tester) async {
+      await pumpBayadApp(
+        tester,
+        initialState: const AuthState.authenticated(testCustomer),
+        offerResults: const [testCounterOffer],
+      );
+      await tester.scrollUntilVisible(
+        find.text('My Offers'),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('My Offers'));
+      await tester.pump();
+      await tester.tap(find.text('My Offers'));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.textContaining('Admin Responded'), findsOneWidget);
+      expect(find.text('New Admin Response'), findsOneWidget);
+      expect(find.text('Review Admin Offer'), findsOneWidget);
+      expect(find.textContaining('SDG 4,900,000.00'), findsOneWidget);
+    },
+  );
 
   testWidgets('Sell to Bayad opens Create Offer', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
-    await tester.scrollUntilVisible(find.text('Sell to Bayad'), 120, scrollable: find.byType(Scrollable).first);
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
+    await tester.scrollUntilVisible(
+      find.text('Sell to Bayad'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.ensureVisible(find.text('Sell to Bayad'));
     await tester.pump();
     await tester.tap(find.text('Sell to Bayad'));
@@ -408,7 +892,11 @@ void main() {
   });
 
   testWidgets('Arabic message can be entered in Chat', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer), language: 'ar');
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+      language: 'ar',
+    );
     await tester.tap(find.byIcon(Icons.chat_bubble_outline).last);
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));
@@ -417,12 +905,18 @@ void main() {
   });
 
   testWidgets('Server error displays Retry', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.error('Unable to connect to the server.'));
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.error('Unable to connect to the server.'),
+    );
     expect(find.text('Retry'), findsOneWidget);
   });
 
   testWidgets('Route error does not show a blank screen', (tester) async {
-    await pumpBayadApp(tester, initialState: const AuthState.authenticated(testCustomer));
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

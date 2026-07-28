@@ -127,6 +127,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get products => 'Products';
 
   @override
+  String get searchProducts => 'Search products';
+
+  @override
+  String get addToCart => 'Add to Cart';
+
+  @override
+  String get addedToCart => 'Added to Cart';
+
+  @override
+  String get available => 'Available';
+
+  @override
+  String get unavailable => 'Unavailable';
+
+  @override
   String get myOrders => 'My Orders';
 
   @override

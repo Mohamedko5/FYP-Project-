@@ -3,7 +3,9 @@ import 'package:bayad_customer_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/preferences_provider.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/bayad_design_system.dart';
 import '../../../shared/widgets/customer_widgets.dart';
 import '../../auth/presentation/auth_controller.dart';
 
@@ -14,17 +16,30 @@ class ProfileScreen extends ConsumerWidget {
     final ok = await showModalBottomSheet<bool>(
       context: context,
       builder: (context) => Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Logout', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+            Text(
+              'Logout',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ),
             const SizedBox(height: 8),
-            const Text('Are you sure you want to logout from the customer application?'),
+            const Text(
+              'Are you sure you want to logout from the customer application?',
+            ),
             const SizedBox(height: 18),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Logout')),
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Logout'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
           ],
         ),
       ),
@@ -40,24 +55,43 @@ class ProfileScreen extends ConsumerWidget {
       title: l10n.profile,
       currentIndex: 4,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 104),
         children: [
-          CustomerHeaderCard(name: customer?.name ?? '', code: customer?.code ?? ''),
+          CustomerHeaderCard(
+            name: customer?.name ?? '',
+            code: customer?.code ?? '',
+          ),
           const SizedBox(height: 16),
           _ProfileRow(label: l10n.emailAddress, value: customer?.email ?? ''),
           _ProfileRow(label: l10n.phone, value: customer?.phone ?? ''),
-          if ((customer?.secondaryPhone ?? '').isNotEmpty) _ProfileRow(label: l10n.secondaryPhone, value: customer!.secondaryPhone),
+          if ((customer?.secondaryPhone ?? '').isNotEmpty)
+            _ProfileRow(
+              label: l10n.secondaryPhone,
+              value: customer!.secondaryPhone,
+            ),
           _ProfileRow(label: l10n.address, value: customer?.address ?? ''),
-          _ProfileRow(label: l10n.customerType, value: customer?.customerType ?? ''),
-          Card(
+          _ProfileRow(
+            label: l10n.customerType,
+            value: customer?.customerType ?? '',
+          ),
+          BayadCard(
             child: ListTile(
+              contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.language),
               title: const Text('Language'),
-              trailing: TextButton(onPressed: () => ref.read(localeControllerProvider.notifier).toggle(), child: Text(l10n.language)),
+              trailing: TextButton(
+                onPressed: () =>
+                    ref.read(localeControllerProvider.notifier).toggle(),
+                child: Text(l10n.language),
+              ),
             ),
           ),
           const SizedBox(height: 12),
-          OutlinedButton.icon(onPressed: () => _confirmLogout(context, ref), icon: const Icon(Icons.logout), label: Text(l10n.logout)),
+          OutlinedButton.icon(
+            onPressed: () => _confirmLogout(context, ref),
+            icon: const Icon(Icons.logout),
+            label: Text(l10n.logout),
+          ),
         ],
       ),
     );
@@ -74,10 +108,27 @@ class _ProfileRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Card(
+      child: BayadCard(
         child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.person_outline,
+              color: AppColors.green,
+              size: 21,
+            ),
+          ),
           title: Text(label, style: Theme.of(context).textTheme.labelLarge),
-          subtitle: Directionality(textDirection: TextDirection.ltr, child: Text(value.isEmpty ? '-' : value)),
+          subtitle: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(value.isEmpty ? '-' : value),
+          ),
         ),
       ),
     );

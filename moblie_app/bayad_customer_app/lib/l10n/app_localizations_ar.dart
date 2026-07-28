@@ -128,6 +128,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get products => 'المنتجات';
 
   @override
+  String get searchProducts => 'البحث في المنتجات';
+
+  @override
+  String get addToCart => 'إضافة إلى السلة';
+
+  @override
+  String get addedToCart => 'تمت الإضافة إلى السلة';
+
+  @override
+  String get available => 'متوفر';
+
+  @override
+  String get unavailable => 'غير متوفر';
+
+  @override
   String get myOrders => 'طلباتي';
 
   @override

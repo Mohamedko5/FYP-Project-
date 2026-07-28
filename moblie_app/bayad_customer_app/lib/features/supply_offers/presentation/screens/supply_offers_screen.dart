@@ -9,6 +9,7 @@ import '../../../../shared/data/mobile_providers.dart';
 import '../../../../shared/data/mobile_repository.dart';
 import '../../../../shared/models/mobile_models.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../../shared/widgets/bayad_design_system.dart';
 import '../../../../shared/widgets/empty_view.dart';
 import '../../../../shared/widgets/error_view.dart';
 import '../../../../shared/widgets/loading_view.dart';
@@ -41,45 +42,90 @@ class SupplyOffersScreen extends ConsumerWidget {
           Expanded(
             child: offers.when(
               loading: () => LoadingView(message: l10n.loadingSupplyOffers),
-              error: (error, _) => ErrorView(message: l10n.supplyOfferLoadError, retryLabel: l10n.retry, onRetry: () => ref.invalidate(supplyOffersProvider)),
+              error: (error, _) => ErrorView(
+                message: l10n.supplyOfferLoadError,
+                retryLabel: l10n.retry,
+                onRetry: () => ref.invalidate(supplyOffersProvider),
+              ),
               data: (page) {
-                if (page.results.isEmpty) return EmptyView(message: l10n.noSupplyOffers);
+                if (page.results.isEmpty) {
+                  return EmptyView(message: l10n.noSupplyOffers);
+                }
                 return RefreshIndicator(
                   onRefresh: () async {
                     ref.invalidate(homeSummaryProvider);
                     return ref.refresh(supplyOffersProvider.future);
                   },
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 104),
                     itemCount: page.results.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final offer = page.results[index];
-                      return Card(
+                      return BayadCard(
+                        onTap: () => context.goNamed(
+                          RouteNames.supplyOfferDetail,
+                          pathParameters: {'id': offer.id.toString()},
+                        ),
                         child: InkWell(
-                          onTap: () => context.goNamed(RouteNames.supplyOfferDetail, pathParameters: {'id': offer.id.toString()}),
+                          onTap: () => context.goNamed(
+                            RouteNames.supplyOfferDetail,
+                            pathParameters: {'id': offer.id.toString()},
+                          ),
                           child: Padding(
-                            padding: const EdgeInsets.all(16),
+                            padding: EdgeInsets.zero,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
-                                    Expanded(child: Text(offer.offerNumber.isEmpty ? l10n.draft : offer.offerNumber, style: const TextStyle(fontWeight: FontWeight.w900))),
-                                    if (offer.hasUnreadResponse) Chip(label: Text(l10n.newAdminResponse)),
+                                    Expanded(
+                                      child: Text(
+                                        offer.offerNumber.isEmpty
+                                            ? l10n.draft
+                                            : offer.offerNumber,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                    if (offer.hasUnreadResponse)
+                                      Chip(label: Text(l10n.newAdminResponse)),
                                   ],
                                 ),
                                 const SizedBox(height: 6),
-                                Text('${offer.productSummary}\n${offer.city} - ${offer.region}\n${_statusLabel(l10n, offer.status)}'),
+                                Text(
+                                  '${offer.productSummary}\n${offer.city} - ${offer.region}\n${_statusLabel(l10n, offer.status)}',
+                                ),
                                 const SizedBox(height: 8),
-                                Text('${l10n.originalTotal}: ${formatMoney(offer.proposedTotal, offer.currency)}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                Text(
+                                  '${l10n.originalTotal}: ${formatMoney(offer.proposedTotal, offer.currency)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                                 if (offer.currentResponse != null) ...[
-                                  Text('${l10n.adminProposedTotal}: ${formatMoney(offer.currentResponse!.proposedTotal, offer.currency)}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                                  if (offer.latestAdminMessage.isNotEmpty) Text(offer.latestAdminMessage),
+                                  Text(
+                                    '${l10n.adminProposedTotal}: ${formatMoney(offer.currentResponse!.proposedTotal, offer.currency)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  if (offer.latestAdminMessage.isNotEmpty)
+                                    Text(offer.latestAdminMessage),
                                   const SizedBox(height: 8),
                                   Align(
                                     alignment: AlignmentDirectional.centerEnd,
-                                    child: OutlinedButton(onPressed: () => context.goNamed(RouteNames.supplyOfferDetail, pathParameters: {'id': offer.id.toString()}), child: Text(l10n.reviewAdminOffer)),
+                                    child: OutlinedButton(
+                                      onPressed: () => context.goNamed(
+                                        RouteNames.supplyOfferDetail,
+                                        pathParameters: {
+                                          'id': offer.id.toString(),
+                                        },
+                                      ),
+                                      child: Text(l10n.reviewAdminOffer),
+                                    ),
                                   ),
                                 ],
                               ],
@@ -113,7 +159,11 @@ class SupplyOfferDetailScreen extends ConsumerWidget {
       currentIndex: 0,
       child: offer.when(
         loading: () => LoadingView(message: l10n.loadingSupplyOffers),
-        error: (error, _) => ErrorView(message: l10n.supplyOfferLoadError, retryLabel: l10n.retry, onRetry: () => ref.invalidate(supplyOfferDetailProvider(offerId))),
+        error: (error, _) => ErrorView(
+          message: l10n.supplyOfferLoadError,
+          retryLabel: l10n.retry,
+          onRetry: () => ref.invalidate(supplyOfferDetailProvider(offerId)),
+        ),
         data: (offer) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             ref.invalidate(homeSummaryProvider);
@@ -126,50 +176,101 @@ class SupplyOfferDetailScreen extends ConsumerWidget {
               return ref.refresh(supplyOfferDetailProvider(offerId).future);
             },
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 104),
               children: [
-            Text(offer.offerNumber, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-            const SizedBox(height: 6),
-            Chip(label: Text(_statusLabel(l10n, offer.status))),
-            if (offer.adminMessage.isNotEmpty) Card(child: Padding(padding: const EdgeInsets.all(16), child: Text(offer.adminMessage))),
-            if (offer.rejectionReason.isNotEmpty) Card(child: Padding(padding: const EdgeInsets.all(16), child: Text(offer.rejectionReason))),
-            if (offer.currentResponse != null) _AdminResponseCard(offer: offer),
-            Card(
-              child: ListTile(
-                title: Text(l10n.paymentStatus),
-                subtitle: Text(offer.paymentStatus == 'paid' ? l10n.paymentCompleted : offer.status == 'customer_accepted' ? l10n.waitingFinalApproval : offer.paymentStatus),
-                trailing: Text(formatMoney(offer.paidAmount, offer.currency), style: const TextStyle(fontWeight: FontWeight.w900)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(l10n.products, style: Theme.of(context).textTheme.titleLarge),
-            ...offer.items.map((item) => Card(
-                  child: ListTile(
-                    title: Text('${item.productName} - ${item.unit}'),
-                    subtitle: Text('${l10n.quantity}: ${item.quantity}\n${l10n.proposedUnitPrice}: ${formatMoney(item.customerPrice)}'),
-                    trailing: Text(formatMoney(item.lineTotal)),
+                Text(
+                  offer.offerNumber,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
                   ),
-                )),
-            const SizedBox(height: 12),
-            Text(l10n.productLocation, style: Theme.of(context).textTheme.titleLarge),
-            Card(child: Padding(padding: const EdgeInsets.all(16), child: Text('${offer.region}, ${offer.city}, ${offer.area}\n${offer.detailedAddress}'))),
-            const SizedBox(height: 12),
-            Text(l10n.offerStatusTimeline, style: Theme.of(context).textTheme.titleLarge),
-            ...offer.timeline.map((entry) => ListTile(title: Text(_statusLabel(l10n, entry.status)), subtitle: Text(entry.note))),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: () async {
-                await ref.read(mobileRepositoryProvider).supplyOfferAction(offer.id, 'chat-card');
-                if (context.mounted) context.goNamed(RouteNames.chat);
-              },
-              icon: const Icon(Icons.chat_bubble_outline),
-              label: Text(l10n.chatAboutThisOffer),
-            ),
-            if (offer.status == 'counter_offered') ...[
-              const SizedBox(height: 8),
-              FilledButton(onPressed: () => _acceptOffer(context, ref, offer), child: Text(l10n.acceptPrice)),
-              TextButton(onPressed: () => _rejectOffer(context, ref, offer), child: Text(l10n.declinePrice)),
-            ],
+                ),
+                const SizedBox(height: 6),
+                Chip(label: Text(_statusLabel(l10n, offer.status))),
+                if (offer.adminMessage.isNotEmpty)
+                  BayadCard(child: Text(offer.adminMessage)),
+                if (offer.rejectionReason.isNotEmpty)
+                  BayadCard(child: Text(offer.rejectionReason)),
+                if (offer.currentResponse != null)
+                  _AdminResponseCard(offer: offer),
+                BayadCard(
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.paymentStatus),
+                    subtitle: Text(
+                      offer.paymentStatus == 'paid'
+                          ? l10n.paymentCompleted
+                          : offer.status == 'customer_accepted'
+                          ? l10n.waitingFinalApproval
+                          : offer.paymentStatus,
+                    ),
+                    trailing: Text(
+                      formatMoney(offer.paidAmount, offer.currency),
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.products,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                ...offer.items.map(
+                  (item) => BayadCard(
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('${item.productName} - ${item.unit}'),
+                      subtitle: Text(
+                        '${l10n.quantity}: ${item.quantity}\n${l10n.proposedUnitPrice}: ${formatMoney(item.customerPrice)}',
+                      ),
+                      trailing: Text(formatMoney(item.lineTotal)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.productLocation,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                BayadCard(
+                  child: Text(
+                    '${offer.region}, ${offer.city}, ${offer.area}\n${offer.detailedAddress}',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.offerStatusTimeline,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                ...offer.timeline.map(
+                  (entry) => ListTile(
+                    title: Text(_statusLabel(l10n, entry.status)),
+                    subtitle: Text(entry.note),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () async {
+                    await ref
+                        .read(mobileRepositoryProvider)
+                        .supplyOfferAction(offer.id, 'chat-card');
+                    if (context.mounted) {
+                      context.goNamed(RouteNames.chat);
+                    }
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  label: Text(l10n.chatAboutThisOffer),
+                ),
+                if (offer.status == 'counter_offered') ...[
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    onPressed: () => _acceptOffer(context, ref, offer),
+                    child: Text(l10n.acceptPrice),
+                  ),
+                  TextButton(
+                    onPressed: () => _rejectOffer(context, ref, offer),
+                    child: Text(l10n.declinePrice),
+                  ),
+                ],
               ],
             ),
           );
@@ -178,9 +279,15 @@ class SupplyOfferDetailScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _acceptOffer(BuildContext context, WidgetRef ref, SupplyOffer offer) async {
+  Future<void> _acceptOffer(
+    BuildContext context,
+    WidgetRef ref,
+    SupplyOffer offer,
+  ) async {
     final response = offer.currentResponse;
-    if (response == null) return _offerAction(context, ref, offer.id, 'accept-counter-offer');
+    if (response == null) {
+      return _offerAction(context, ref, offer.id, 'accept-counter-offer');
+    }
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -188,52 +295,105 @@ class SupplyOfferDetailScreen extends ConsumerWidget {
         title: Text(l10n.acceptPrice),
         content: Text(l10n.reviewAdminOffer),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l10n.cancel)),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.acceptPrice)),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.acceptPrice),
+          ),
         ],
       ),
     );
-    if (confirmed != true) return;
-    if (!context.mounted) return;
+    if (confirmed != true) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
     await _responseAction(context, ref, offer.id, response.id, 'accept');
   }
 
-  Future<void> _rejectOffer(BuildContext context, WidgetRef ref, SupplyOffer offer) async {
+  Future<void> _rejectOffer(
+    BuildContext context,
+    WidgetRef ref,
+    SupplyOffer offer,
+  ) async {
     final response = offer.currentResponse;
-    if (response == null) return _offerAction(context, ref, offer.id, 'decline-counter-offer');
+    if (response == null) {
+      return _offerAction(context, ref, offer.id, 'decline-counter-offer');
+    }
     final controller = TextEditingController();
     final l10n = AppLocalizations.of(context);
     final reason = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.declinePrice),
-        content: TextField(controller: controller, decoration: InputDecoration(labelText: l10n.reasonForRejection), maxLines: 3),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(labelText: l10n.reasonForRejection),
+          maxLines: 3,
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
-          FilledButton(onPressed: () => Navigator.of(context).pop(controller.text.trim()), child: Text(l10n.declinePrice)),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: Text(l10n.declinePrice),
+          ),
         ],
       ),
     );
     controller.dispose();
-    if (reason == null || reason.isEmpty) return;
-    if (!context.mounted) return;
-    await _responseAction(context, ref, offer.id, response.id, 'reject', data: {'reason': reason});
+    if (reason == null || reason.isEmpty) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+    await _responseAction(
+      context,
+      ref,
+      offer.id,
+      response.id,
+      'reject',
+      data: {'reason': reason},
+    );
   }
 
-  Future<void> _responseAction(BuildContext context, WidgetRef ref, int offerId, int responseId, String action, {Map<String, dynamic>? data}) async {
+  Future<void> _responseAction(
+    BuildContext context,
+    WidgetRef ref,
+    int offerId,
+    int responseId,
+    String action, {
+    Map<String, dynamic>? data,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
     try {
-      await ref.read(mobileRepositoryProvider).supplyOfferResponseAction(offerId, responseId, action, data: data);
+      await ref
+          .read(mobileRepositoryProvider)
+          .supplyOfferResponseAction(offerId, responseId, action, data: data);
       ref.invalidate(supplyOfferDetailProvider(offerId));
       ref.invalidate(supplyOffersProvider);
       messenger.showSnackBar(SnackBar(content: Text(l10n.saved)));
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.supplyOfferSaveError)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.supplyOfferSaveError)),
+      );
     }
   }
 
-  Future<void> _offerAction(BuildContext context, WidgetRef ref, int id, String action) async {
+  Future<void> _offerAction(
+    BuildContext context,
+    WidgetRef ref,
+    int id,
+    String action,
+  ) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
     try {
@@ -242,7 +402,9 @@ class SupplyOfferDetailScreen extends ConsumerWidget {
       ref.invalidate(supplyOffersProvider);
       messenger.showSnackBar(SnackBar(content: Text(l10n.saved)));
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.supplyOfferSaveError)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.supplyOfferSaveError)),
+      );
     }
   }
 }
@@ -256,27 +418,42 @@ class _AdminResponseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final response = offer.currentResponse!;
-    return Card(
+    return BayadCard(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.adminResponse, style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              l10n.adminResponse,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             if (response.message.isNotEmpty) Text(response.message),
             const SizedBox(height: 8),
-            Text('${l10n.originalTotal}: ${formatMoney(offer.proposedTotal, offer.currency)}'),
-            Text('${l10n.adminProposedTotal}: ${formatMoney(response.proposedTotal, offer.currency)}'),
-            if (response.createdAt.isNotEmpty) Text('${l10n.responseDate}: ${response.createdAt}'),
-            if (response.expiresAt.isNotEmpty) Text('${l10n.responseExpiry}: ${response.expiresAt}'),
-            if (response.proposedReceiptDate.isNotEmpty) Text('${l10n.availabilityDate}: ${response.proposedReceiptDate}'),
-            if (response.warehouseName.isNotEmpty) Text('${l10n.receivingWarehouse}: ${response.warehouseName}'),
+            Text(
+              '${l10n.originalTotal}: ${formatMoney(offer.proposedTotal, offer.currency)}',
+            ),
+            Text(
+              '${l10n.adminProposedTotal}: ${formatMoney(response.proposedTotal, offer.currency)}',
+            ),
+            if (response.createdAt.isNotEmpty)
+              Text('${l10n.responseDate}: ${response.createdAt}'),
+            if (response.expiresAt.isNotEmpty)
+              Text('${l10n.responseExpiry}: ${response.expiresAt}'),
+            if (response.proposedReceiptDate.isNotEmpty)
+              Text('${l10n.availabilityDate}: ${response.proposedReceiptDate}'),
+            if (response.warehouseName.isNotEmpty)
+              Text('${l10n.receivingWarehouse}: ${response.warehouseName}'),
             const Divider(),
-            ...response.items.map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text('${item.productName} - ${item.unit}\n${l10n.customerQuantity}: ${item.customerQuantity}\n${l10n.adminQuantity}: ${item.adminQuantity}\n${l10n.customerPrice}: ${formatMoney(item.customerPrice)}\n${l10n.adminPrice}: ${formatMoney(item.adminPrice)}'),
-                )),
+            ...response.items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  '${item.productName} - ${item.unit}\n${l10n.customerQuantity}: ${item.customerQuantity}\n${l10n.adminQuantity}: ${item.adminQuantity}\n${l10n.customerPrice}: ${formatMoney(item.customerPrice)}\n${l10n.adminPrice}: ${formatMoney(item.adminPrice)}',
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -288,10 +465,12 @@ class CreateSupplyOfferScreen extends ConsumerStatefulWidget {
   const CreateSupplyOfferScreen({super.key});
 
   @override
-  ConsumerState<CreateSupplyOfferScreen> createState() => _CreateSupplyOfferScreenState();
+  ConsumerState<CreateSupplyOfferScreen> createState() =>
+      _CreateSupplyOfferScreenState();
 }
 
-class _CreateSupplyOfferScreenState extends ConsumerState<CreateSupplyOfferScreen> {
+class _CreateSupplyOfferScreenState
+    extends ConsumerState<CreateSupplyOfferScreen> {
   final _formKey = GlobalKey<FormState>();
   final _reference = TextEditingController();
   final _region = TextEditingController();
@@ -326,51 +505,90 @@ class _CreateSupplyOfferScreenState extends ConsumerState<CreateSupplyOfferScree
       currentIndex: 0,
       child: products.when(
         loading: () => LoadingView(message: l10n.loadingProducts),
-        error: (error, _) => ErrorView(message: l10n.supplyOfferLoadError, retryLabel: l10n.retry, onRetry: () => ref.invalidate(productsProvider)),
+        error: (error, _) => ErrorView(
+          message: l10n.supplyOfferLoadError,
+          retryLabel: l10n.retry,
+          onRetry: () => ref.invalidate(productsProvider),
+        ),
         data: (page) => Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 104),
             children: [
-              Text(l10n.addOfferItems, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                l10n.addOfferItems,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 8),
-              ...List.generate(_items.length, (index) => _ItemEditor(
-                    item: _items[index],
-                    products: page.results,
-                    canRemove: _items.length > 1,
-                    onRemove: () => setState(() => _items.removeAt(index)),
-                  )),
+              ...List.generate(
+                _items.length,
+                (index) => _ItemEditor(
+                  item: _items[index],
+                  products: page.results,
+                  canRemove: _items.length > 1,
+                  onRemove: () => setState(() => _items.removeAt(index)),
+                ),
+              ),
               OutlinedButton.icon(
                 onPressed: () => setState(() => _items.add(_DraftOfferItem())),
                 icon: const Icon(Icons.add),
                 label: Text(l10n.addProduct),
               ),
               const SizedBox(height: 16),
-              Text(l10n.productLocation, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                l10n.productLocation,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               _field(_region, l10n.regionState, required: true),
               _field(_city, l10n.city, required: true),
               _field(_area, l10n.area),
-              _field(_address, l10n.detailedAddress, required: true, maxLines: 2),
+              _field(
+                _address,
+                l10n.detailedAddress,
+                required: true,
+                maxLines: 2,
+              ),
               _field(_reference, l10n.customerReference),
               _field(_notes, l10n.customerNotes, maxLines: 3),
               const SizedBox(height: 16),
-              Text(l10n.uploadProductPhotos, style: Theme.of(context).textTheme.titleLarge),
-              OutlinedButton.icon(onPressed: _pickFiles, icon: const Icon(Icons.image_outlined), label: Text(l10n.chooseAttachment)),
-              ..._attachments.map((file) => ListTile(
-                    leading: const Icon(Icons.attach_file),
-                    title: Text(file.name),
-                    trailing: IconButton(onPressed: () => setState(() => _attachments.remove(file)), icon: const Icon(Icons.close)),
-                  )),
+              Text(
+                l10n.uploadProductPhotos,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              OutlinedButton.icon(
+                onPressed: _pickFiles,
+                icon: const Icon(Icons.image_outlined),
+                label: Text(l10n.chooseAttachment),
+              ),
+              ..._attachments.map(
+                (file) => ListTile(
+                  leading: const Icon(Icons.attach_file),
+                  title: Text(file.name),
+                  trailing: IconButton(
+                    onPressed: () => setState(() => _attachments.remove(file)),
+                    icon: const Icon(Icons.close),
+                  ),
+                ),
+              ),
               const SizedBox(height: 16),
-              Text(l10n.reviewOffer, style: Theme.of(context).textTheme.titleLarge),
-              Card(
+              Text(
+                l10n.reviewOffer,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              BayadCard(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('${l10n.proposedTotal}: ${formatMoney(_previewTotal())}', style: const TextStyle(fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 8),
-                    Text(l10n.supplyOfferNotice),
-                  ]),
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${l10n.proposedTotal}: ${formatMoney(_previewTotal())}',
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(l10n.supplyOfferNotice),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -386,31 +604,56 @@ class _CreateSupplyOfferScreenState extends ConsumerState<CreateSupplyOfferScree
     );
   }
 
-  Widget _field(TextEditingController controller, String label, {bool required = false, int maxLines = 1}) {
+  Widget _field(
+    TextEditingController controller,
+    String label, {
+    bool required = false,
+    int maxLines = 1,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: TextFormField(
         controller: controller,
         maxLines: maxLines,
         decoration: InputDecoration(labelText: label),
-        validator: required ? (value) => (value == null || value.trim().isEmpty) ? AppLocalizations.of(context).requiredField : null : null,
+        validator: required
+            ? (value) => (value == null || value.trim().isEmpty)
+                  ? AppLocalizations.of(context).requiredField
+                  : null
+            : null,
       ),
     );
   }
 
   Future<void> _pickFiles() async {
-    final result = await FilePicker.platform.pickFiles(allowMultiple: true, type: FileType.custom, allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'pdf']);
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+    );
     if (result != null) {
-      setState(() => _attachments.addAll(result.files.where((file) => file.path != null)));
+      setState(
+        () => _attachments.addAll(
+          result.files.where((file) => file.path != null),
+        ),
+      );
     }
   }
 
-  double _previewTotal() => _items.fold(0, (sum, item) => sum + ((double.tryParse(item.quantity.text) ?? 0) * (double.tryParse(item.price.text) ?? 0)));
+  double _previewTotal() => _items.fold(
+    0,
+    (sum, item) =>
+        sum +
+        ((double.tryParse(item.quantity.text) ?? 0) *
+            (double.tryParse(item.price.text) ?? 0)),
+  );
 
   Future<void> _submit(List<Product> products) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
     final payloadItems = <Map<String, dynamic>>[];
     final seen = <String>{};
     for (final item in _items) {
@@ -436,7 +679,9 @@ class _CreateSupplyOfferScreenState extends ConsumerState<CreateSupplyOfferScree
       }
       final key = '${product.id}-${unit.id}';
       if (seen.contains(key)) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.duplicateProductUnit)));
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.duplicateProductUnit)),
+        );
         return;
       }
       seen.add(key);
@@ -451,7 +696,9 @@ class _CreateSupplyOfferScreenState extends ConsumerState<CreateSupplyOfferScree
     }
     setState(() => _saving = true);
     try {
-      final offer = await ref.read(mobileRepositoryProvider).createSupplyOffer(
+      final offer = await ref
+          .read(mobileRepositoryProvider)
+          .createSupplyOffer(
             idempotencyKey: DateTime.now().microsecondsSinceEpoch.toString(),
             data: {
               'customer_reference': _reference.text,
@@ -464,15 +711,28 @@ class _CreateSupplyOfferScreenState extends ConsumerState<CreateSupplyOfferScree
             },
           );
       for (final file in _attachments) {
-        await ref.read(mobileRepositoryProvider).uploadSupplyOfferAttachment(offer.id, file.path!, file.name);
+        await ref
+            .read(mobileRepositoryProvider)
+            .uploadSupplyOfferAttachment(offer.id, file.path!, file.name);
       }
-      final submitted = await ref.read(mobileRepositoryProvider).supplyOfferAction(offer.id, 'submit');
+      final submitted = await ref
+          .read(mobileRepositoryProvider)
+          .supplyOfferAction(offer.id, 'submit');
       ref.invalidate(supplyOffersProvider);
-      if (mounted) context.goNamed(RouteNames.supplyOfferDetail, pathParameters: {'id': submitted.id.toString()});
+      if (mounted) {
+        context.goNamed(
+          RouteNames.supplyOfferDetail,
+          pathParameters: {'id': submitted.id.toString()},
+        );
+      }
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.supplyOfferSaveError)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.supplyOfferSaveError)),
+      );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
   }
 }
@@ -494,7 +754,12 @@ class _DraftOfferItem {
 }
 
 class _ItemEditor extends StatefulWidget {
-  const _ItemEditor({required this.item, required this.products, required this.canRemove, required this.onRemove});
+  const _ItemEditor({
+    required this.item,
+    required this.products,
+    required this.canRemove,
+    required this.onRemove,
+  });
 
   final _DraftOfferItem item;
   final List<Product> products;
@@ -517,15 +782,26 @@ class _ItemEditorState extends State<_ItemEditor> {
       }
     }
     final units = selectedProduct?.units ?? const <ProductUnitOption>[];
-    return Card(
+    return BayadCard(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.zero,
         child: Column(
           children: [
             DropdownButtonFormField<int>(
               initialValue: widget.item.productId,
               decoration: InputDecoration(labelText: l10n.product),
-              items: widget.products.map((product) => DropdownMenuItem(value: product.id, child: Text(product.localizedName(Directionality.of(context) == TextDirection.rtl)))).toList(),
+              items: widget.products
+                  .map(
+                    (product) => DropdownMenuItem(
+                      value: product.id,
+                      child: Text(
+                        product.localizedName(
+                          Directionality.of(context) == TextDirection.rtl,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
               onChanged: (value) => setState(() {
                 widget.item.productId = value;
                 widget.item.unitId = null;
@@ -536,19 +812,47 @@ class _ItemEditorState extends State<_ItemEditor> {
             DropdownButtonFormField<int>(
               initialValue: widget.item.unitId,
               decoration: InputDecoration(labelText: l10n.unit),
-              items: units.map((unit) => DropdownMenuItem(value: unit.id, child: Text(unit.unit))).toList(),
+              items: units
+                  .map(
+                    (unit) => DropdownMenuItem(
+                      value: unit.id,
+                      child: Text(unit.unit),
+                    ),
+                  )
+                  .toList(),
               onChanged: (value) => setState(() => widget.item.unitId = value),
               validator: (value) => value == null ? l10n.requiredField : null,
             ),
             const SizedBox(height: 10),
-            TextFormField(controller: widget.item.quantity, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: l10n.quantity), validator: _positive),
+            TextFormField(
+              controller: widget.item.quantity,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: l10n.quantity),
+              validator: _positive,
+            ),
             const SizedBox(height: 10),
-            TextFormField(controller: widget.item.price, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: l10n.proposedUnitPrice), validator: _positive),
+            TextFormField(
+              controller: widget.item.price,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: l10n.proposedUnitPrice),
+              validator: _positive,
+            ),
             const SizedBox(height: 10),
-            TextFormField(controller: widget.item.quality, decoration: InputDecoration(labelText: l10n.qualityGrade)),
+            TextFormField(
+              controller: widget.item.quality,
+              decoration: InputDecoration(labelText: l10n.qualityGrade),
+            ),
             const SizedBox(height: 10),
-            TextFormField(controller: widget.item.packaging, decoration: InputDecoration(labelText: l10n.packagingDetails)),
-            if (widget.canRemove) TextButton.icon(onPressed: widget.onRemove, icon: const Icon(Icons.delete_outline), label: Text(l10n.remove)),
+            TextFormField(
+              controller: widget.item.packaging,
+              decoration: InputDecoration(labelText: l10n.packagingDetails),
+            ),
+            if (widget.canRemove)
+              TextButton.icon(
+                onPressed: widget.onRemove,
+                icon: const Icon(Icons.delete_outline),
+                label: Text(l10n.remove),
+              ),
           ],
         ),
       ),
@@ -557,7 +861,9 @@ class _ItemEditorState extends State<_ItemEditor> {
 
   String? _positive(String? value) {
     final parsed = double.tryParse(value ?? '');
-    if (parsed == null || parsed <= 0) return AppLocalizations.of(context).positiveNumberRequired;
+    if (parsed == null || parsed <= 0) {
+      return AppLocalizations.of(context).positiveNumberRequired;
+    }
     return null;
   }
 }
