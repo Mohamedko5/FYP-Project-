@@ -53,11 +53,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ],
           );
       ref.read(cartControllerProvider.notifier).clear();
-      if (mounted)
+      if (mounted) {
         context.goNamed(
           RouteNames.orderSuccess,
           pathParameters: {'id': '${order.id}'},
         );
+      }
     } catch (error) {
       setState(() => _error = error.toString());
     } finally {

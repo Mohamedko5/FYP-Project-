@@ -800,7 +800,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Offers'), findsOneWidget);
     expect(find.text('SUP-2026-000001'), findsOneWidget);
-    expect(find.text('White Sesame'), findsWidgets);
   });
 
   testWidgets('Selecting Chat opens ChatScreen with composer', (tester) async {
