@@ -15,6 +15,11 @@ import CustomerCashTransactionForm from './CustomerCashTransactionForm.jsx';
 import CustomerCommodityTransactionForm from './CustomerCommodityTransactionForm.jsx';
 import CustomerPaymentForm from './CustomerPaymentForm.jsx';
 import CustomerStatement from './CustomerStatement.jsx';
+import CustomerProfileEditForm, {
+  createCustomerProfileEditForm,
+  isCustomerProfileEditDirty,
+  validateCustomerProfileEditForm,
+} from './CustomerProfileEditForm.jsx';
 import { customerTypeLabel, productLabel, unitLabel } from './customerHelpers.js';
 
 function createCashForm(customerName = '') {
@@ -68,16 +73,19 @@ export default function CustomerProfile({
   isSavingCash,
   isSavingCommodity,
   isSavingPayment,
+  isSavingProfile = false,
   isLoadingProfile,
   onAddCashTransaction,
   onAddCommodityTransaction,
   onAddPayment,
+  onUpdateProfile,
   onLoadStatement,
   onPrint,
   onRestore,
   onClose,
   adminName,
   isAdmin = false,
+  canEdit = false,
   isRestoringCustomer = false,
 }) {
   const { t, isArabic } = useLanguage();
@@ -92,10 +100,13 @@ export default function CustomerProfile({
   const [unpaidInvoices, setUnpaidInvoices] = useState([]);
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
   const [commodityErrors, setCommodityErrors] = useState([]);
+  const [editForm, setEditForm] = useState(createCustomerProfileEditForm(customer));
+  const [editErrors, setEditErrors] = useState([]);
   const [orderRows, setOrderRows] = useState([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [orderError, setOrderError] = useState('');
   const activeSectionButtonRef = useRef(null);
+  const editButtonRef = useRef(null);
 
   useEffect(() => {
     if (!customer) return;
@@ -107,6 +118,8 @@ export default function CustomerProfile({
     setPaymentErrors([]);
     setPaymentMessage('');
     setCommodityErrors([]);
+    setEditForm(createCustomerProfileEditForm(customer));
+    setEditErrors([]);
   }, [customer?.id, products]);
 
   if (!customer) return null;
@@ -145,6 +158,7 @@ export default function CustomerProfile({
   const paymentDirty = activeSection === 'payment' && JSON.stringify({ ...paymentForm, idempotencyKey: '' }) !== JSON.stringify({ ...createPaymentForm(), idempotencyKey: '' });
   const cashDirty = activeSection === 'cash' && JSON.stringify(cashForm) !== JSON.stringify(createCashForm(customer.name));
   const commodityDirty = activeSection === 'commodity' && JSON.stringify(commodityForm) !== JSON.stringify(createCommodityForm(customer.name, products));
+  const editDirty = activeSection === 'edit' && isCustomerProfileEditDirty(editForm, customer);
 
   function openSection(section) {
     if (isArchived && transactionSections.has(section)) return;
@@ -166,6 +180,12 @@ export default function CustomerProfile({
   async function confirmRestore() {
     await onRestore?.();
     setShowRestoreConfirm(false);
+  }
+
+  function openEditForm() {
+    setActiveSection('edit');
+    setEditForm(createCustomerProfileEditForm(customer));
+    setEditErrors([]);
   }
 
   async function loadUnpaidInvoices() {
@@ -198,6 +218,7 @@ export default function CustomerProfile({
     setCashErrors([]);
     setPaymentErrors([]);
     setCommodityErrors([]);
+    setEditErrors([]);
   }
 
   function handleCashChange(event) {
@@ -229,6 +250,49 @@ export default function CustomerProfile({
   function handleCommodityChange(event) {
     const { name, value } = event.target;
     setCommodityForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function handleEditChange(event) {
+    const { name, value, files, type } = event.target;
+    if (type === 'file') {
+      const file = files?.[0] || null;
+      setEditForm((current) => ({
+        ...current,
+        photo: file,
+        photoPreview: file ? URL.createObjectURL(file) : '',
+      }));
+      return;
+    }
+    setEditForm((current) => ({ ...current, [name]: name === 'isActive' ? value === 'true' : value }));
+  }
+
+  function removeSelectedPhoto() {
+    setEditForm((current) => ({ ...current, photo: null, photoPreview: '' }));
+  }
+
+  async function handleEditSubmit(event) {
+    event.preventDefault();
+    const validationErrors = validateCustomerProfileEditForm(editForm, t);
+    if (validationErrors.length) {
+      setEditErrors(validationErrors);
+      return;
+    }
+    setEditErrors([]);
+    try {
+      const payload = new FormData();
+      payload.append('name', editForm.name);
+      payload.append('phone', editForm.phone);
+      payload.append('secondary_phone', editForm.secondaryPhone);
+      payload.append('address', editForm.address);
+      payload.append('customer_type', editForm.customerType);
+      payload.append('notes', editForm.notes);
+      if (!isArchived) payload.append('is_active', editForm.isActive ? 'true' : 'false');
+      if (editForm.photo) payload.append('photo', editForm.photo);
+      await onUpdateProfile?.(customer.id, payload);
+      closeSection();
+    } catch (error) {
+      setEditErrors([error?.message || t('customers.customerProfileUpdateError')]);
+    }
   }
 
   async function handleCashSubmit(event) {
@@ -438,6 +502,7 @@ export default function CustomerProfile({
           <div className="customer-profile-header__actions">
             {isArchived && <StatusBadge status={t('customers.archivedCustomer')} />}
             {canRestore && <Button type="button" onClick={() => setShowRestoreConfirm(true)} disabled={isRestoringCustomer}>{t('customers.restoreCustomer')}</Button>}
+            {canEdit && <Button variant="secondary" onClick={openEditForm} ref={editButtonRef}>{t('editProfile')}</Button>}
             <Button variant="secondary" onClick={onClose}>{t('customers.closeProfile')}</Button>
           </div>
         </div>
@@ -499,6 +564,29 @@ export default function CustomerProfile({
           ))}
         </div>
       </Card>
+
+      <AppWindow
+        id="customer-profile-edit"
+        title={t('customers.editCustomerProfileTitle')}
+        description={t('customers.editCustomerProfileSubtitle')}
+        isOpen={activeSection === 'edit'}
+        isDirty={editDirty}
+        isSubmitting={isSavingProfile}
+        defaultSize="large"
+        openerRef={editButtonRef}
+        onClose={closeSection}
+      >
+        <CustomerProfileEditForm
+          form={editForm}
+          customer={customer}
+          errors={editErrors}
+          onChange={handleEditChange}
+          onRemovePhoto={removeSelectedPhoto}
+          onSubmit={handleEditSubmit}
+          onCancel={closeSection}
+          isSaving={isSavingProfile}
+        />
+      </AppWindow>
 
       {isFormSection ? (
         <AppWindow

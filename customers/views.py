@@ -19,6 +19,7 @@ from .serializers import (
     CustomerPaymentResponseSerializer,
     CustomerPaymentReverseSerializer,
     CustomerSerializer,
+    CustomerUpdateSerializer,
 )
 from .services import (
     customer_cash_balance,
@@ -135,6 +136,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminForDeleteOnly]
     pagination_class = CustomerPagination
     allowed_ordering = {'name', '-name', 'created_at', '-created_at', 'cash_balance', '-cash_balance'}
+
+    def get_serializer_class(self):
+        if self.action in {'update', 'partial_update'}:
+            return CustomerUpdateSerializer
+        return CustomerSerializer
 
     def get_queryset(self):
         queryset = Customer.objects.all() if self.action == 'restore' else Customer.objects.filter(is_deleted=False)

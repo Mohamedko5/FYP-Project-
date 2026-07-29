@@ -188,6 +188,19 @@ class CustomerSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages)
 
 
+class CustomerUpdateSerializer(CustomerSerializer):
+    class Meta(CustomerSerializer.Meta):
+        fields = tuple(
+            field for field in CustomerSerializer.Meta.fields
+            if field not in {'opening_balance_amount', 'opening_balance_type'}
+        )
+
+    def validate(self, attrs):
+        if self.instance and self.instance.is_deleted and attrs.get('is_active') is True:
+            raise serializers.ValidationError({'is_active': 'Use Restore Customer to reactivate archived customers.'})
+        return attrs
+
+
 class CustomerCashTransactionSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     customer_code = serializers.CharField(source='customer.code', read_only=True)

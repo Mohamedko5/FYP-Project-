@@ -22,6 +22,7 @@ import {
   getCustomerStatement,
   getCustomers,
   restoreCustomer,
+  updateCustomer,
 } from '../services/customersApi.js';
 import { getProducts, getWarehouses } from '../services/inventoryApi.js';
 import {
@@ -140,6 +141,7 @@ export default function Customers() {
   const [isSavingCash, setIsSavingCash] = useState(false);
   const [isSavingCommodity, setIsSavingCommodity] = useState(false);
   const [isSavingPayment, setIsSavingPayment] = useState(false);
+  const [isSavingCustomerProfile, setIsSavingCustomerProfile] = useState(false);
   const [isRestoringCustomer, setIsRestoringCustomer] = useState(false);
   const [isLoadingWorkers, setIsLoadingWorkers] = useState(false);
   const [isLoadingWorkerProfile, setIsLoadingWorkerProfile] = useState(false);
@@ -154,6 +156,7 @@ export default function Customers() {
   const adminName = storedAdminName();
   const currentRole = readRole();
   const isAdmin = currentRole === 'admin';
+  const canEditCustomerProfile = ['admin', 'manager'].includes(currentRole);
   const canEditWorkerProfile = ['admin', 'manager'].includes(currentRole);
   const addCustomerButtonRef = useRef(null);
   const addWorkerButtonRef = useRef(null);
@@ -434,6 +437,22 @@ export default function Customers() {
     }
   }
 
+  async function handleUpdateCustomerProfile(customerId, payload) {
+    if (!customerId) return;
+    setApiError('');
+    setSuccessMessage('');
+    setIsSavingCustomerProfile(true);
+    try {
+      await updateCustomer(customerId, payload);
+      await Promise.all([loadCustomers(), loadSelectedCustomer(customerId)]);
+      setSuccessMessage(t('customers.customerProfileUpdated'));
+    } catch (error) {
+      throw new Error(error?.message || t('customers.customerProfileUpdateError'));
+    } finally {
+      setIsSavingCustomerProfile(false);
+    }
+  }
+
   async function handleAddPayment(payload) {
     if (!selectedCustomerId) return;
     setIsSavingPayment(true);
@@ -592,10 +611,12 @@ export default function Customers() {
               isSavingCash={isSavingCash}
               isSavingCommodity={isSavingCommodity}
               isSavingPayment={isSavingPayment}
+              isSavingProfile={isSavingCustomerProfile}
               isLoadingProfile={isLoadingProfile}
               onAddCashTransaction={handleAddCashTransaction}
               onAddCommodityTransaction={handleAddCommodityTransaction}
               onAddPayment={handleAddPayment}
+              onUpdateProfile={handleUpdateCustomerProfile}
               onLoadStatement={handleLoadStatement}
               onPrint={handlePrintStatement}
               onRestore={handleRestoreCustomer}
@@ -606,6 +627,7 @@ export default function Customers() {
               }}
               adminName={adminName}
               isAdmin={isAdmin}
+              canEdit={canEditCustomerProfile}
               isRestoringCustomer={isRestoringCustomer}
             />
           )}

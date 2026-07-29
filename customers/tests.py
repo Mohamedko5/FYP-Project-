@@ -150,6 +150,119 @@ class CustomerAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(Customer.objects.exists())
 
+    def test_admin_can_update_customer_profile_fields(self):
+        customer = self.create_customer()
+        response = self.client.patch(self.customer_url(customer), {
+            'name': 'Updated Customer',
+            'phone': '+249900000001',
+            'secondary_phone': '+249900000002',
+            'address': 'Updated Address',
+            'customer_type': Customer.TYPE_EXPORTER,
+            'notes': 'Updated notes',
+            'is_active': False,
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        customer.refresh_from_db()
+        self.assertEqual(customer.name, 'Updated Customer')
+        self.assertEqual(customer.phone, '+249900000001')
+        self.assertEqual(customer.secondary_phone, '+249900000002')
+        self.assertEqual(customer.address, 'Updated Address')
+        self.assertEqual(customer.customer_type, Customer.TYPE_EXPORTER)
+        self.assertEqual(customer.notes, 'Updated notes')
+        self.assertFalse(customer.is_active)
+        self.assertEqual(customer.updated_by, self.admin)
+
+    def test_customer_profile_patch_accepts_photo_upload(self):
+        customer = self.create_customer()
+        image = SimpleUploadedFile('profile.jpg', b'profile-image', content_type='image/jpeg')
+        response = self.client.patch(self.customer_url(customer), {'photo': image}, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        customer.refresh_from_db()
+        self.assertTrue(customer.photo.name.startswith('customers/profile'))
+
+    def test_customer_profile_patch_preserves_code_balances_and_history(self):
+        customer = self.create_customer()
+        original_code = customer.code
+        cash = CustomerCashTransaction.objects.create(
+            customer=customer,
+            transaction_type=CustomerCashTransaction.PAYMENT_OWED,
+            amount='300.00',
+            description='Debt',
+            created_by=self.admin,
+        )
+        commodity = CustomerCommodityTransaction.objects.create(
+            customer=customer,
+            transaction_type=CustomerCommodityTransaction.PRODUCT_RECEIVED,
+            product=self.product,
+            quantity='5.000',
+            unit='Qintar',
+            estimated_value='500.00',
+            description='Product received',
+            created_by=self.admin,
+        )
+        response = self.client.patch(self.customer_url(customer), {
+            'name': 'Safe Update',
+            'code': 'CUS-9999',
+            'cash_balance': '0.00',
+            'total_debits': '0.00',
+            'commodity_balances': [],
+            'cash_transaction_count': 0,
+            'commodity_transaction_count': 0,
+            'opening_balance_amount': '9999.00',
+            'opening_balance_type': 'company_owes_customer',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        customer.refresh_from_db()
+        cash.refresh_from_db()
+        commodity.refresh_from_db()
+        self.assertEqual(customer.code, original_code)
+        self.assertEqual(customer_cash_balance(customer), Decimal('300.00'))
+        self.assertEqual(CustomerCashTransaction.objects.filter(customer=customer).count(), 1)
+        self.assertEqual(CustomerCommodityTransaction.objects.filter(customer=customer).count(), 1)
+        self.assertEqual(cash.amount, Decimal('300.00'))
+        self.assertEqual(commodity.quantity, Decimal('5.000'))
+
+    def test_customer_profile_patch_is_partial(self):
+        customer = self.create_customer(address='Original Address', notes='Original notes')
+        response = self.client.patch(self.customer_url(customer), {'notes': 'Partial notes'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        customer.refresh_from_db()
+        self.assertEqual(customer.address, 'Original Address')
+        self.assertEqual(customer.notes, 'Partial notes')
+
+    def test_non_admin_or_manager_cannot_update_customer_profile(self):
+        customer = self.create_customer()
+        viewer = User.objects.create_user(username='viewer', password='pass')
+        self.client.force_authenticate(viewer)
+        response = self.client.patch(self.customer_url(customer), {'name': 'Blocked'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        customer.refresh_from_db()
+        self.assertNotEqual(customer.name, 'Blocked')
+
+    def test_customer_profile_patch_does_not_restore_archived_customer(self):
+        customer = self.create_customer()
+        customer.is_deleted = True
+        customer.is_active = False
+        customer.deleted_by = self.admin
+        customer.deleted_at = timezone.now()
+        customer.save(update_fields=['is_deleted', 'is_active', 'deleted_by', 'deleted_at'])
+        response = self.client.patch(self.customer_url(customer), {'name': 'Archived Update'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        customer.refresh_from_db()
+        self.assertTrue(customer.is_deleted)
+        self.assertFalse(customer.is_active)
+        self.assertNotEqual(customer.name, 'Archived Update')
+
+    def test_customer_profile_patch_updates_only_target_customer(self):
+        first = self.create_customer(name='First Customer', phone='+249900000003')
+        second = self.create_customer(name='Second Customer', phone='+249900000004')
+        response = self.client.patch(self.customer_url(first), {'name': 'First Updated'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertEqual(first.name, 'First Updated')
+        self.assertEqual(second.name, 'Second Customer')
+
     def test_cash_balance_is_calculated_correctly(self):
         customer = self.create_customer()
         CustomerCashTransaction.objects.create(customer=customer, transaction_type='payment_owed', amount='300.00', description='Debt', created_by=self.admin)
