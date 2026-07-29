@@ -2709,11 +2709,118 @@ textarea,
 
 .commodity-summary-card {
   align-content: start;
+  gap: 14px;
+  min-width: 0;
 }
 
+.commodity-summary-card--withdrawn {
+  border-color: #e3d4bd;
+  background: linear-gradient(180deg, #fffaf2 0%, var(--surface) 72%);
+}
+
+.commodity-summary-card--added {
+  border-color: #cfddca;
+  background: linear-gradient(180deg, #f4faf2 0%, var(--surface) 72%);
+}
+
+.commodity-summary-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.commodity-summary-card__icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--brown-light);
+  color: var(--brown);
+}
+
+.commodity-summary-card--added .commodity-summary-card__icon {
+  background: var(--color-primary-soft);
+  color: var(--green-dark);
+}
+
+.commodity-summary-card__icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.commodity-summary-card__header p {
+  font-weight: 800;
+  color: var(--text);
+}
+
+.commodity-summary-list,
 .summary-lines {
   display: grid;
-  gap: 4px;
+  gap: 10px;
+  min-width: 0;
+}
+
+.commodity-summary-row {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding-block: 8px;
+  border-top: 1px solid rgba(222, 219, 210, 0.72);
+}
+
+.commodity-summary-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.commodity-summary-row strong,
+.commodity-summary-row span,
+.commodity-summary-row small {
+  overflow-wrap: anywhere;
+}
+
+.commodity-summary-row strong {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.commodity-summary-row span {
+  color: var(--green-dark);
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.commodity-summary-row small,
+.commodity-summary-empty {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.commodity-summary-more {
+  min-width: 0;
+}
+
+.commodity-summary-more summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--green-dark);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.commodity-summary-list--expanded {
+  margin-top: 10px;
 }
 
 .two-column {
@@ -4984,9 +5091,12 @@ textarea,
 }
 
 @media (max-width: 1180px) {
-  .summary-grid,
-  .commodity-summary-grid {
+  .summary-grid {
     grid-template-columns: repeat(3, minmax(180px, 1fr));
+  }
+
+  .commodity-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .invoice-filter-grid,

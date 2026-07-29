@@ -247,6 +247,9 @@ export default function DailyJournal() {
   const loadJournalData = useCallback(async () => {
     setIsLoading(true);
     setApiError('');
+    setCashEntries([]);
+    setCommodityEntries([]);
+    setSummary(null);
     try {
       const commonParams = { date: selectedDate, ordering: '-created_at' };
       const [cashRows, commodityRows, summaryData] = await Promise.all([
