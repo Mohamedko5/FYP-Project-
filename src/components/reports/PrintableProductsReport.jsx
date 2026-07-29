@@ -75,7 +75,6 @@ export default function PrintableProductsReport({ products, summary, generatedAt
           <table className="print-table">
             <thead>
               <tr>
-                <th>{label.code}</th>
                 <th>{label.product}</th>
                 <th>{label.category}</th>
                 <th>{label.units}</th>
@@ -86,7 +85,6 @@ export default function PrintableProductsReport({ products, summary, generatedAt
             <tbody>
               {products.map((product) => (
                 <tr key={product.id}>
-                  <td>{product.code}</td>
                   <td>{product.name_en}<br />{product.name_ar}</td>
                   <td>{categoryLabel(product.category)}</td>
                   <td>{product.units.map((unit) => unit.unit).join(', ')}</td>

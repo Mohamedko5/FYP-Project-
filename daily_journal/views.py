@@ -43,6 +43,11 @@ def local_day_bounds(day):
     return start, end
 
 
+def local_day_filter(day):
+    start, end = local_day_bounds(day)
+    return {'created_at__gte': start, 'created_at__lte': end}
+
+
 def money(value):
     return f'{(value or Decimal("0.00")):.2f}'
 
@@ -147,14 +152,18 @@ class JournalTransactionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='daily-summary')
     def daily_summary(self, request):
         day = parse_local_date(request.query_params.get('date'))
-        start, end = local_day_bounds(day)
         base = self.get_queryset()
 
         opening_record = DailyOpeningBalance.objects.filter(journal_date=day).first()
         opening_balance = opening_record.amount if opening_record else Decimal('0.00')
         is_opening_balance_set = bool(opening_record)
 
-        current_cash = base.filter(journal_type=JournalTransaction.JOURNAL_CASH, created_at__gte=start, created_at__lte=end)
+        day_filter = local_day_filter(day)
+        current_cash = base.filter(
+            journal_type=JournalTransaction.JOURNAL_CASH,
+            is_reversed=False,
+            **day_filter,
+        )
         total_income = current_cash.filter(cash_type=JournalTransaction.CASH_INCOME).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         total_expenses = current_cash.filter(cash_type=JournalTransaction.CASH_EXPENSE).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         net = total_income - total_expenses
@@ -163,7 +172,11 @@ class JournalTransactionViewSet(viewsets.ModelViewSet):
         electronic_method_income = current_cash.filter(payment_method=JournalTransaction.PAYMENT_ELECTRONIC, cash_type=JournalTransaction.CASH_INCOME).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         electronic_method_expenses = current_cash.filter(payment_method=JournalTransaction.PAYMENT_ELECTRONIC, cash_type=JournalTransaction.CASH_EXPENSE).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
-        current_commodity = base.filter(journal_type=JournalTransaction.JOURNAL_COMMODITY, created_at__gte=start, created_at__lte=end)
+        current_commodity = base.filter(
+            journal_type=JournalTransaction.JOURNAL_COMMODITY,
+            is_reversed=False,
+            **day_filter,
+        )
         estimated_total_value = current_commodity.aggregate(total=Sum('estimated_value'))['total'] or Decimal('0.00')
         commodity_groups = current_commodity.values('product_name', 'unit').annotate(
             quantity_total=Sum('quantity'),
@@ -173,6 +186,10 @@ class JournalTransactionViewSet(viewsets.ModelViewSet):
 
         return Response({
             'date': day.isoformat(),
+            'business_date': day.isoformat(),
+            'today_income': money(total_income),
+            'today_expenses': money(total_expenses),
+            'today_net_movement': money(net),
             'cash': {
                 'opening_balance': money(opening_balance),
                 'is_opening_balance_set': is_opening_balance_set,
@@ -291,4 +308,3 @@ class DailyOpeningBalanceView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK if record else status.HTTP_201_CREATED)
-

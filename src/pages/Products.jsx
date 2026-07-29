@@ -433,7 +433,6 @@ export default function Products() {
   }
 
   const columns = [
-    { key: 'code', label: label.code },
     { key: 'name_en', label: label.product, render: (row) => productDisplayName(row) },
     { key: 'category', label: label.category, render: (row) => row.category === 'commodity' ? label.commodity : label.supply },
     { key: 'units', label: label.units, render: (row) => row.units.map((unit) => unitLabel(unit.unit, isArabic)).join(', ') },

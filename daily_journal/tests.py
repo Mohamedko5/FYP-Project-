@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
-from django.test import TransactionTestCase
+from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -379,6 +379,77 @@ class JournalTransactionAPITests(APITestCase):
         self.assertEqual(response.data['cash']['net'], '800.00')
         self.assertEqual(response.data['cash']['closing_balance'], '800.00')
 
+    def test_dashboard_daily_summary_never_falls_back_to_latest_transaction_date(self):
+        july_29 = datetime.strptime('2026-07-29', '%Y-%m-%d').date()
+        july_30 = datetime.strptime('2026-07-30', '%Y-%m-%d').date()
+        income = self.move_created_at(self.create_transaction(self.cash_payload(amount='200000.00', cash_type='income')), july_29)
+        expense = self.move_created_at(self.create_transaction(self.cash_payload(amount='10000.00', cash_type='expense')), july_29)
+
+        self.authenticate()
+        july_29_response = self.client.get(self.summary_url, {'date': july_29.isoformat()})
+        self.assertEqual(july_29_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(july_29_response.data['business_date'], '2026-07-29')
+        self.assertEqual(july_29_response.data['today_income'], '200000.00')
+        self.assertEqual(july_29_response.data['today_expenses'], '10000.00')
+        self.assertEqual(july_29_response.data['today_net_movement'], '190000.00')
+
+        july_30_response = self.client.get(self.summary_url, {'date': july_30.isoformat()})
+        self.assertEqual(july_30_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(july_30_response.data['business_date'], '2026-07-30')
+        self.assertEqual(july_30_response.data['today_income'], '0.00')
+        self.assertEqual(july_30_response.data['today_expenses'], '0.00')
+        self.assertEqual(july_30_response.data['today_net_movement'], '0.00')
+        self.assertEqual(july_30_response.data['cash']['total_income'], '0.00')
+        self.assertEqual(july_30_response.data['cash']['total_expenses'], '0.00')
+        self.assertEqual(july_30_response.data['cash']['net'], '0.00')
+
+        july_30_income = self.move_created_at(self.create_transaction(self.cash_payload(amount='5000.00', cash_type='income')), july_30)
+        july_30_after_income = self.client.get(self.summary_url, {'date': july_30.isoformat()})
+        self.assertEqual(july_30_after_income.status_code, status.HTTP_200_OK)
+        self.assertEqual(july_30_after_income.data['business_date'], '2026-07-30')
+        self.assertEqual(july_30_after_income.data['today_income'], '5000.00')
+        self.assertEqual(july_30_after_income.data['today_expenses'], '0.00')
+        self.assertEqual(july_30_after_income.data['today_net_movement'], '5000.00')
+
+        income.refresh_from_db()
+        expense.refresh_from_db()
+        july_30_income.refresh_from_db()
+        self.assertEqual(timezone.localtime(income.created_at).date(), july_29)
+        self.assertEqual(timezone.localtime(expense.created_at).date(), july_29)
+        self.assertEqual(timezone.localtime(july_30_income.created_at).date(), july_30)
+
+    def test_reversed_cash_transactions_are_excluded_from_daily_summary(self):
+        today = timezone.localdate()
+        transaction = self.move_created_at(self.create_transaction(self.cash_payload(amount='999.00', cash_type='income')), today)
+        transaction.is_reversed = True
+        transaction.reversed_at = timezone.now()
+        transaction.reversed_by = self.user
+        transaction.reversal_reason = 'Voided test entry'
+        transaction.save(update_fields=['is_reversed', 'reversed_at', 'reversed_by', 'reversal_reason'])
+
+        self.authenticate()
+        response = self.client.get(self.summary_url, {'date': today.isoformat()})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['today_income'], '0.00')
+        self.assertEqual(response.data['today_net_movement'], '0.00')
+
+    @override_settings(TIME_ZONE='Asia/Kuala_Lumpur')
+    def test_daily_summary_uses_configured_local_timezone_boundaries(self):
+        current_timezone = timezone.get_current_timezone()
+        july_30 = datetime.strptime('2026-07-30', '%Y-%m-%d').date()
+        local_early_morning = timezone.make_aware(datetime.combine(july_30, time(1, 30)), current_timezone)
+        transaction = self.create_transaction(self.cash_payload(amount='1234.00', cash_type='income'))
+        JournalTransaction.objects.filter(id=transaction.id).update(created_at=local_early_morning)
+
+        self.authenticate()
+        july_29_response = self.client.get(self.summary_url, {'date': '2026-07-29'})
+        july_30_response = self.client.get(self.summary_url, {'date': '2026-07-30'})
+        self.assertEqual(july_29_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(july_30_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(july_29_response.data['today_income'], '0.00')
+        self.assertEqual(july_30_response.data['business_date'], '2026-07-30')
+        self.assertEqual(july_30_response.data['today_income'], '1234.00')
+
     def test_payment_method_does_not_change_financial_summary_calculations(self):
         today = timezone.localdate()
         self.move_created_at(self.create_transaction(self.cash_payload(amount='700.00', cash_type='income', payment_method='cash')), today)
@@ -498,6 +569,22 @@ class JournalTransactionAPITests(APITestCase):
         self.assertIn('name="paymentMethod"', source)
         self.assertIn('value="cash"', source)
         self.assertIn('value="electronic"', source)
+
+    def test_dashboard_uses_local_business_date_for_daily_summary_request(self):
+        page = Path(__file__).resolve().parents[1] / 'src' / 'pages' / 'Dashboard.jsx'
+        source = page.read_text(encoding='utf-8')
+        self.assertIn('function toLocalDateString', source)
+        self.assertIn("getDailyJournalSummary({ date: requestedBusinessDate })", source)
+        self.assertNotIn('toISOString().slice(0, 10)', source)
+
+    def test_dashboard_today_cards_render_backend_business_date(self):
+        page = Path(__file__).resolve().parents[1] / 'src' / 'pages' / 'Dashboard.jsx'
+        source = page.read_text(encoding='utf-8')
+        self.assertIn("data.journalSummary?.business_date || data.journalSummary?.date || businessDate", source)
+        self.assertIn('note={dailyBusinessDate}', source)
+        self.assertIn('data.journalSummary?.today_income ?? cash.total_income', source)
+        self.assertIn('data.journalSummary?.today_expenses ?? cash.total_expenses', source)
+        self.assertIn('data.journalSummary?.today_net_movement ?? cash.net', source)
 
 
 class PaymentMethodMigrationTests(TransactionTestCase):

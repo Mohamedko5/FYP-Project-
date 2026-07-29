@@ -179,8 +179,11 @@ function statusText(value, isArabic = false) {
   return labels[isArabic ? 'ar' : 'en'][value] || value || '-';
 }
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
+function toLocalDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export default function Dashboard() {
@@ -202,12 +205,15 @@ export default function Dashboard() {
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState('');
+  const [businessDate, setBusinessDate] = useState(() => toLocalDateString());
 
   const loadDashboard = useCallback(async () => {
+    const requestedBusinessDate = toLocalDateString();
+    setBusinessDate(requestedBusinessDate);
     setLoading(true);
     setErrors([]);
     const requests = [
-      ['journalSummary', getDailyJournalSummary({ date: today() })],
+      ['journalSummary', getDailyJournalSummary({ date: requestedBusinessDate })],
       ['orderSummary', getOrderSummary()],
       ['invoiceSummary', getInvoiceSummary()],
       ['shipmentSummary', getShipmentSummary()],
@@ -233,6 +239,9 @@ export default function Dashboard() {
       }
     });
     setData((current) => ({ ...current, ...next }));
+    if (next.journalSummary?.business_date || next.journalSummary?.date) {
+      setBusinessDate(next.journalSummary.business_date || next.journalSummary.date);
+    }
     setErrors(nextErrors);
     setLastRefresh(new Date().toLocaleTimeString());
     setLoading(false);
@@ -242,10 +251,31 @@ export default function Dashboard() {
     loadDashboard();
   }, [loadDashboard]);
 
+  useEffect(() => {
+    function refreshWhenCurrentDayChanges() {
+      if (document.visibilityState !== 'visible') return;
+      const currentBusinessDate = toLocalDateString();
+      if (currentBusinessDate !== businessDate) {
+        loadDashboard();
+      }
+    }
+
+    document.addEventListener('visibilitychange', refreshWhenCurrentDayChanges);
+    const intervalId = window.setInterval(refreshWhenCurrentDayChanges, 60 * 1000);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshWhenCurrentDayChanges);
+      window.clearInterval(intervalId);
+    };
+  }, [businessDate, loadDashboard]);
+
   const activeOrders = (data.orderSummary?.pending_orders || 0) + (data.orderSummary?.received_orders || 0) + (data.orderSummary?.invoiced_orders || 0);
   const readyShipments = data.shipmentSummary?.ready_count || 0;
   const processingShipments = data.shipmentSummary?.processing_count || 0;
   const cash = data.journalSummary?.cash || {};
+  const dailyBusinessDate = data.journalSummary?.business_date || data.journalSummary?.date || businessDate;
+  const todayIncome = data.journalSummary?.today_income ?? cash.total_income;
+  const todayExpenses = data.journalSummary?.today_expenses ?? cash.total_expenses;
+  const todayNetMovement = data.journalSummary?.today_net_movement ?? cash.net;
 
   const recentActivity = useMemo(() => [
     ...data.journalRows.map((row) => ({
@@ -337,7 +367,7 @@ export default function Dashboard() {
       <ModulePageHeader
         title={label.title}
         description={label.description}
-        meta={`${label.currentDate}: ${new Date().toLocaleDateString()}`}
+        meta={`${label.currentDate}: ${new Date(`${dailyBusinessDate}T00:00:00`).toLocaleDateString()}`}
         actions={<Button variant="secondary" onClick={loadDashboard}>{label.refresh}</Button>}
       />
 
@@ -355,9 +385,9 @@ export default function Dashboard() {
           <strong>{money(cash.closing_balance)}</strong>
         </div>
         <StatGrid>
-          <SummaryCard label={label.income} value={money(cash.total_income)} note={today()} tone="good" />
-          <SummaryCard label={label.expenses} value={money(cash.total_expenses)} note={today()} tone="warning" />
-          <SummaryCard label={label.net} value={money(cash.net)} note={label.dailyJournalNote} />
+          <SummaryCard label={label.income} value={money(todayIncome)} note={dailyBusinessDate} tone="good" />
+          <SummaryCard label={label.expenses} value={money(todayExpenses)} note={dailyBusinessDate} tone="warning" />
+          <SummaryCard label={label.net} value={money(todayNetMovement)} note={label.dailyJournalNote} />
         </StatGrid>
       </section>
 
