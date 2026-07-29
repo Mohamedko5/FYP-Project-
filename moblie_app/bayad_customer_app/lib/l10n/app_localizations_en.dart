@@ -628,7 +628,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supplyOfferSaveError => 'Unable to save offer.';
 
   @override
-  String get noSupplyOffers => 'No offers yet.';
+  String get noSupplyOffers => 'You have not submitted any Offers yet.';
 
   @override
   String get requiredField => 'This field is required.';

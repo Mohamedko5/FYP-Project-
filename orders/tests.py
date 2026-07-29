@@ -1,4 +1,5 @@
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -159,6 +160,22 @@ class OrderAPITests(APITestCase):
         self.assertEqual(response.data['discount_amount'], '10.00')
         self.assertEqual(response.data['total_amount'], '290.00')
 
+    def test_new_order_defaults_manual_discount_to_zero_when_omitted(self):
+        self.auth_admin()
+        response = self.client.post(self.url, {
+            'customer_id': self.customer.id,
+            'items': [{
+                'product_id': self.white.id,
+                'product_unit_id': self.white_unit.id,
+                'quantity': '3.000',
+                'unit_price': '100.00',
+            }],
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(response.data['subtotal'], '300.00')
+        self.assertEqual(response.data['discount_amount'], '0.00')
+        self.assertEqual(response.data['total_amount'], '300.00')
+
     def test_discount_greater_than_subtotal_is_rejected(self):
         self.auth_admin()
         response = self.client.post(self.url, self.payload(discount_amount='999.00'), format='json')
@@ -187,6 +204,46 @@ class OrderAPITests(APITestCase):
         self.assertEqual(admin_missing_reason.status_code, status.HTTP_400_BAD_REQUEST)
         admin_ok = self.client.post(self.url, self.payload(items=[self.item(unit_price='80.00', price_override_reason='Approved discount')]), format='json')
         self.assertEqual(admin_ok.status_code, status.HTTP_201_CREATED, admin_ok.data)
+
+    def test_historical_optional_values_are_preserved_when_omitted_on_edit(self):
+        response = self.create_order(items=[self.item(unit_price='80.00', price_override_reason='Legacy approval', notes='Legacy item note')])
+        order_id = response.data['id']
+        self.auth_admin()
+        edit = self.client.patch(f'{self.url}{order_id}/', {
+            'customer_id': self.customer.id,
+            'items': [{
+                'product_id': self.white.id,
+                'product_unit_id': self.white_unit.id,
+                'quantity': '3.000',
+                'unit_price': '80.00',
+            }],
+        }, format='json')
+        self.assertEqual(edit.status_code, status.HTTP_200_OK, edit.data)
+        order = Order.objects.get(id=order_id)
+        item = order.items.get()
+        self.assertEqual(order.customer_reference, 'REF-1')
+        self.assertEqual(order.customer_notes, 'Customer note')
+        self.assertEqual(order.internal_notes, 'Internal note')
+        self.assertEqual(order.discount_amount, Decimal('10.00'))
+        self.assertEqual(order.total_amount, Decimal('230.00'))
+        self.assertEqual(item.price_override_reason, 'Legacy approval')
+        self.assertEqual(item.notes, 'Legacy item note')
+
+    def test_orders_form_removed_optional_controls_from_add_edit_ui(self):
+        page = Path(__file__).resolve().parents[1] / 'src' / 'pages' / 'Orders.jsx'
+        source = page.read_text(encoding='utf-8')
+        removed_fragments = [
+            'name="customer_reference"',
+            'name="discount_amount"',
+            'name="customer_notes"',
+            'name="internal_notes"',
+            "updateItem(index, 'price_override_reason'",
+            "updateItem(index, 'notes'",
+            "placeholder={t('orders.priceOverrideReason')}",
+            "placeholder={t('common.note')}",
+        ]
+        for fragment in removed_fragments:
+            self.assertNotIn(fragment, source)
 
     def test_failed_item_validation_rolls_back_complete_order(self):
         self.auth_admin()

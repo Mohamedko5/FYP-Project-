@@ -222,7 +222,7 @@
   "loadingProducts": "Loading products...",
   "supplyOfferLoadError": "Unable to load offers.",
   "supplyOfferSaveError": "Unable to save offer.",
-  "noSupplyOffers": "No offers yet.",
+  "noSupplyOffers": "You have not submitted any Offers yet.",
   "requiredField": "This field is required.",
   "positiveNumberRequired": "Enter a number greater than zero.",
   "productRequired": "Please select a product and unit.",

@@ -1307,7 +1307,7 @@ abstract class AppLocalizations {
   /// No description provided for @noSupplyOffers.
   ///
   /// In en, this message translates to:
-  /// **'No offers yet.'**
+  /// **'You have not submitted any Offers yet.'**
   String get noSupplyOffers;
 
   /// No description provided for @requiredField.

@@ -72,7 +72,7 @@ def validate_customer(customer_id):
     return customer
 
 
-def validate_item_payload(row, user):
+def validate_item_payload(row, user, existing_item=None):
     errors = {}
     product_id = row.get('product') or row.get('product_id')
     unit_id = row.get('product_unit') or row.get('product_unit_id')
@@ -104,6 +104,8 @@ def validate_item_payload(row, user):
 
     minimum = product_unit.minimum_selling_price
     reason = (row.get('price_override_reason') or '').strip()
+    if not reason and existing_item is not None:
+        reason = existing_item.price_override_reason or ''
     if minimum is not None and unit_price < minimum:
         if user_role(user) != UserProfile.ROLE_ADMIN:
             errors['unit_price'] = 'Manager cannot sell below minimum selling price.'
@@ -111,6 +113,8 @@ def validate_item_payload(row, user):
             errors['price_override_reason'] = 'Price override reason is required.'
 
     notes = (row.get('notes') or '').strip()
+    if not notes and existing_item is not None:
+        notes = existing_item.notes or ''
     if errors:
         raise ValidationError(errors)
 
@@ -130,13 +134,30 @@ def validate_item_payload(row, user):
     }
 
 
-def validate_items(items, user):
+def validate_items(items, user, existing_items=None):
     if not items:
         raise ValidationError({'items': 'At least one item is required.'})
+    def key_value(value):
+        if isinstance(value, (Product, ProductUnit)):
+            return value.id
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return value
+
+    existing_by_key = {
+        (item.product_id, item.product_unit_id): item
+        for item in existing_items or []
+    }
     seen = set()
     cleaned = []
     for index, row in enumerate(items):
-        item = validate_item_payload(row, user)
+        product_id = row.get('product') or row.get('product_id')
+        unit_id = row.get('product_unit') or row.get('product_unit_id')
+        product_id = key_value(product_id)
+        unit_id = key_value(unit_id)
+        existing_item = existing_by_key.get((product_id, unit_id))
+        item = validate_item_payload(row, user, existing_item=existing_item)
         key = (item['product'].id, item['product_unit'].id)
         if key in seen:
             raise ValidationError({'items': f'Duplicate product and unit line at item {index + 1}.'})
@@ -194,13 +215,14 @@ def update_order(*, order, user, customer_id=None, items=None, discount_amount=N
         order.customer_notes = (customer_notes or '').strip()
     if internal_notes is not None:
         order.internal_notes = (internal_notes or '').strip()
-    cleaned_items = validate_items(items, user) if items is not None else [
+    existing_items = list(order.items.all())
+    cleaned_items = validate_items(items, user, existing_items=existing_items) if items is not None else [
         {
             'line_total': item.line_total,
             'product': item.product,
             'product_unit': item.product_unit,
         }
-        for item in order.items.all()
+        for item in existing_items
     ]
     subtotal, discount, total = calculate_totals(cleaned_items, order.discount_amount if discount_amount is None else discount_amount)
     order.subtotal = subtotal

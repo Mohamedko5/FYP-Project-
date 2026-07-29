@@ -223,7 +223,7 @@
   "loadingProducts": "جاري تحميل المنتجات...",
   "supplyOfferLoadError": "تعذر تحميل العروض.",
   "supplyOfferSaveError": "تعذر حفظ العرض.",
-  "noSupplyOffers": "لا توجد عروض بعد.",
+  "noSupplyOffers": "\u0644\u0645 \u062a\u0642\u0645 \u0628\u0625\u0631\u0633\u0627\u0644 \u0623\u064a \u0639\u0631\u0648\u0636 \u0628\u0639\u062f.",
   "requiredField": "هذا الحقل مطلوب.",
   "positiveNumberRequired": "أدخل رقماً أكبر من صفر.",
   "productRequired": "يرجى اختيار المنتج والوحدة.",

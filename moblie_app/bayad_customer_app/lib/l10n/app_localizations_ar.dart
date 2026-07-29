@@ -629,7 +629,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supplyOfferSaveError => 'تعذر حفظ العرض.';
 
   @override
-  String get noSupplyOffers => 'لا توجد عروض بعد.';
+  String get noSupplyOffers => 'لم تقم بإرسال أي عروض بعد.';
 
   @override
   String get requiredField => 'هذا الحقل مطلوب.';

@@ -19,7 +19,6 @@ class OrdersScreen extends ConsumerWidget {
     final orders = ref.watch(ordersProvider);
     return AppScaffold(
       title: 'My Orders',
-      currentIndex: 3,
       child: Column(
         children: [
           SizedBox(
@@ -97,7 +96,6 @@ class OrderDetailScreen extends ConsumerWidget {
     final order = ref.watch(orderDetailProvider(orderId));
     return AppScaffold(
       title: 'Order Details',
-      currentIndex: 3,
       child: order.when(
         loading: () => const LoadingView(message: 'Loading Order...'),
         error: (error, _) => ErrorView(

@@ -25,7 +25,7 @@ class SupplyOffersScreen extends ConsumerWidget {
     final offers = ref.watch(supplyOffersProvider);
     return AppScaffold(
       title: l10n.supplyOffers,
-      currentIndex: 0,
+      currentIndex: 3,
       child: Column(
         children: [
           Padding(
@@ -156,7 +156,7 @@ class SupplyOfferDetailScreen extends ConsumerWidget {
     final offer = ref.watch(supplyOfferDetailProvider(offerId));
     return AppScaffold(
       title: l10n.offerDetails,
-      currentIndex: 0,
+      currentIndex: 3,
       child: offer.when(
         loading: () => LoadingView(message: l10n.loadingSupplyOffers),
         error: (error, _) => ErrorView(
@@ -502,7 +502,7 @@ class _CreateSupplyOfferScreenState
     final products = ref.watch(productsProvider);
     return AppScaffold(
       title: l10n.createSupplyOffer,
-      currentIndex: 0,
+      currentIndex: 3,
       child: products.when(
         loading: () => LoadingView(message: l10n.loadingProducts),
         error: (error, _) => ErrorView(

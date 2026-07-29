@@ -24,6 +24,13 @@ String formatQuantity(double value, String unit) =>
 String formatDate(DateTime? date) =>
     date == null ? '-' : intl.DateFormat('dd MMM yyyy').format(date.toLocal());
 
+int readCountValue(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
 class BayadBottomNavigation extends ConsumerWidget {
   const BayadBottomNavigation({
     super.key,
@@ -38,6 +45,9 @@ class BayadBottomNavigation extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final unreadCount = ref.watch(chatUnreadCountProvider).valueOrNull ?? 0;
+    final offerUnreadCount = readCountValue(
+      ref.watch(homeSummaryProvider).valueOrNull?.offers['unread_responses'],
+    );
     final chatIcon = unreadCount > 0
         ? Badge.count(
             count: unreadCount,
@@ -68,9 +78,19 @@ class BayadBottomNavigation extends ConsumerWidget {
           label: l10n.chat,
         ),
         NavigationDestination(
-          icon: const Icon(Icons.receipt_long_outlined),
-          selectedIcon: const Icon(Icons.receipt_long),
-          label: l10n.myOrders,
+          icon: offerUnreadCount > 0
+              ? Badge.count(
+                  count: offerUnreadCount,
+                  child: const Icon(Icons.local_offer_outlined),
+                )
+              : const Icon(Icons.local_offer_outlined),
+          selectedIcon: offerUnreadCount > 0
+              ? Badge.count(
+                  count: offerUnreadCount,
+                  child: const Icon(Icons.local_offer),
+                )
+              : const Icon(Icons.local_offer),
+          label: l10n.mySupplyOffers,
         ),
         NavigationDestination(
           icon: const Icon(Icons.person_outline),

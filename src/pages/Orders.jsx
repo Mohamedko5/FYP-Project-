@@ -30,16 +30,12 @@ const tabStatuses = {
 const statusOptions = ['pending', 'received', 'invoiced', 'ready_for_shipment', 'processing', 'completed', 'cancelled'];
 
 function emptyItem() {
-  return { product_id: '', product_unit_id: '', quantity: '', unit_price: '', notes: '', price_override_reason: '' };
+  return { product_id: '', product_unit_id: '', quantity: '', unit_price: '' };
 }
 
 function emptyForm() {
   return {
     customer_id: '',
-    customer_reference: '',
-    customer_notes: '',
-    internal_notes: '',
-    discount_amount: '',
     items: [emptyItem()],
   };
 }
@@ -128,9 +124,9 @@ export default function Orders() {
 
   const formPreview = useMemo(() => {
     const subtotal = form.items.reduce((total, item) => total + (Number(item.quantity || 0) * Number(item.unit_price || 0)), 0);
-    const discount = Number(form.discount_amount || 0);
-    return { subtotal, discount, total: Math.max(0, subtotal - discount) };
-  }, [form]);
+    const preservedDiscount = editingId ? Number(selectedOrder?.discount_amount || 0) : 0;
+    return { subtotal, total: Math.max(0, subtotal - preservedDiscount) };
+  }, [editingId, form.items, selectedOrder]);
 
   function productName(product) {
     return isArabic ? (product.name_ar || product.name_en) : product.name_en;
@@ -205,17 +201,11 @@ export default function Orders() {
     setEditingId(order.id);
     setForm({
       customer_id: order.customer?.id || '',
-      customer_reference: order.customer_reference || '',
-      customer_notes: order.customer_notes || '',
-      internal_notes: order.internal_notes || '',
-      discount_amount: order.discount_amount || '',
       items: order.items?.map((item) => ({
         product_id: item.product?.id || '',
         product_unit_id: item.product_unit || '',
         quantity: item.quantity,
         unit_price: item.unit_price,
-        notes: item.notes || '',
-        price_override_reason: item.price_override_reason || '',
       })) || [emptyItem()],
     });
     setSelectedOrder(order);
@@ -262,13 +252,15 @@ export default function Orders() {
     setErrors([]);
     try {
       const payload = {
-        ...form,
-        discount_amount: form.discount_amount || '0',
+        customer_id: form.customer_id,
         items: form.items.map((item) => ({
-          ...item,
+          product_id: item.product_id,
+          product_unit_id: item.product_unit_id,
+          quantity: item.quantity,
           unit_price: item.unit_price === '' ? undefined : item.unit_price,
         })),
       };
+      if (!editingId) payload.discount_amount = '0';
       const saved = editingId ? await updateOrder(editingId, payload) : await createOrder(payload);
       setShowForm(false);
       setEditingId(null);
@@ -420,10 +412,6 @@ export default function Orders() {
 
             <div className="form-grid">
               <label>{t('common.customerName')}<select name="customer_id" value={form.customer_id} onChange={updateForm}><option value="">{t('orders.selectCustomer')}</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.code} - {customer.name}</option>)}</select></label>
-              <label>{t('orders.customerReference')}<input name="customer_reference" value={form.customer_reference} onChange={updateForm} /></label>
-              <label>{t('orders.discount')}<input name="discount_amount" type="number" min="0" step="0.01" value={form.discount_amount} onChange={updateForm} /></label>
-              <label className="form-grid--wide">{t('orders.customerNotes')}<textarea name="customer_notes" value={form.customer_notes} onChange={updateForm} /></label>
-              <label className="form-grid--wide">{t('orders.internalNotes')}<textarea name="internal_notes" value={form.internal_notes} onChange={updateForm} /></label>
             </div>
 
             <div className="order-items-editor">
@@ -449,8 +437,6 @@ export default function Orders() {
                     <input type="number" min="0.001" step="0.001" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} placeholder={t('common.quantity')} />
                     <input type="number" min="0" step="0.01" value={item.unit_price} onChange={(event) => updateItem(index, 'unit_price', event.target.value)} placeholder={t('orders.unitPrice')} />
                     <input readOnly value={money(lineTotal)} aria-label={t('orders.lineTotal')} />
-                    <input value={item.price_override_reason} onChange={(event) => updateItem(index, 'price_override_reason', event.target.value)} placeholder={t('orders.priceOverrideReason')} />
-                    <input value={item.notes} onChange={(event) => updateItem(index, 'notes', event.target.value)} placeholder={t('common.note')} />
                     <button className="product-action-button product-action-button--delete" type="button" onClick={() => removeItem(index)}>{t('orders.removeItem')}</button>
                     <small>{unit?.minimum_selling_price ? `${t('orders.minimumPrice')}: ${money(unit.minimum_selling_price)}` : t('orders.defaultPriceFromProduct')}</small>
                   </div>
@@ -460,7 +446,6 @@ export default function Orders() {
 
             <div className="order-total-preview">
               <div><span>{t('orders.subtotal')}</span><strong>{money(formPreview.subtotal)}</strong></div>
-              <div><span>{t('orders.discount')}</span><strong>{money(formPreview.discount)}</strong></div>
               <div><span>{t('common.totalAmount')}</span><strong>{money(formPreview.total)}</strong></div>
             </div>
 

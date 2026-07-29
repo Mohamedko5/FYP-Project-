@@ -3646,7 +3646,7 @@ textarea,
 }
 
 .order-total-preview {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 14px;
 }
 
@@ -3699,7 +3699,7 @@ textarea,
 
 .order-item-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1.2fr) minmax(95px, 0.7fr) repeat(4, minmax(110px, 1fr)) auto;
+  grid-template-columns: minmax(170px, 1.35fr) minmax(110px, 0.75fr) minmax(110px, 0.8fr) minmax(120px, 0.9fr) minmax(140px, 1fr) auto;
   gap: 10px;
   align-items: center;
   padding: 10px;

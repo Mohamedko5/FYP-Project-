@@ -750,6 +750,59 @@ void main() {
     expect(find.text('Chat'), findsOneWidget);
   });
 
+  testWidgets('Bottom navigation has five destinations with My Offers fourth', (
+    tester,
+  ) async {
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
+    final destinations = tester
+        .widgetList<NavigationDestination>(find.byType(NavigationDestination))
+        .toList();
+    expect(destinations.length, 5);
+    expect(destinations.map((destination) => destination.label), [
+      'Home',
+      'Products',
+      'Chat',
+      'My Offers',
+      'Account',
+    ]);
+    expect(
+      destinations.map((destination) => destination.label),
+      isNot(contains('My Orders')),
+    );
+  });
+
+  testWidgets('Arabic bottom navigation displays My Offers as عروضي', (
+    tester,
+  ) async {
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+      language: 'ar',
+    );
+    final destinations = tester
+        .widgetList<NavigationDestination>(find.byType(NavigationDestination))
+        .toList();
+    expect(destinations.length, 5);
+    expect(destinations[3].label, '\u0639\u0631\u0648\u0636\u064a');
+  });
+
+  testWidgets('Bottom navigation My Offers opens real Offers list', (
+    tester,
+  ) async {
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
+    await tester.tap(find.byIcon(Icons.local_offer_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Offers'), findsOneWidget);
+    expect(find.text('SUP-2026-000001'), findsOneWidget);
+    expect(find.text('White Sesame'), findsWidgets);
+  });
+
   testWidgets('Selecting Chat opens ChatScreen with composer', (tester) async {
     await pumpBayadApp(
       tester,
@@ -800,25 +853,45 @@ void main() {
       120,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('My Offers'), findsOneWidget);
+    expect(find.text('My Offers'), findsWidgets);
   });
 
-  testWidgets('My Offers opens Offers list', (tester) async {
+  testWidgets('Home My Offers quick action opens Offers list', (tester) async {
     await pumpBayadApp(
       tester,
       initialState: const AuthState.authenticated(testCustomer),
     );
     await tester.scrollUntilVisible(
-      find.text('My Offers'),
+      find.byIcon(Icons.assignment_turned_in_outlined),
       120,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.ensureVisible(find.text('My Offers'));
+    await tester.ensureVisible(
+      find.byIcon(Icons.assignment_turned_in_outlined),
+    );
     await tester.pump();
-    await tester.tap(find.text('My Offers'));
+    await tester.tap(find.byIcon(Icons.assignment_turned_in_outlined));
     await tester.pumpAndSettle();
     expect(find.text('Offers'), findsOneWidget);
     expect(find.text('SUP-2026-000001'), findsOneWidget);
+  });
+
+  testWidgets('Home My Orders quick action still opens Orders', (tester) async {
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
+    await tester.scrollUntilVisible(
+      find.text('My Orders'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('My Orders'));
+    await tester.pump();
+    await tester.tap(find.text('My Orders'));
+    await tester.pumpAndSettle();
+    expect(find.text('ORD-2026-000001'), findsOneWidget);
+    expect(find.text('My Orders'), findsOneWidget);
   });
 
   testWidgets('Home displays unread Offer response count from API summary', (
@@ -855,14 +928,7 @@ void main() {
         initialState: const AuthState.authenticated(testCustomer),
         offerResults: const [testCounterOffer],
       );
-      await tester.scrollUntilVisible(
-        find.text('My Offers'),
-        120,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(find.text('My Offers'));
-      await tester.pump();
-      await tester.tap(find.text('My Offers'));
+      await tester.tap(find.byIcon(Icons.local_offer_outlined));
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.textContaining('Admin Responded'), findsOneWidget);
