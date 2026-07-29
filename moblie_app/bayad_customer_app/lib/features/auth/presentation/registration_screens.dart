@@ -75,7 +75,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       'accept_terms': acceptTerms,
     });
     if (ok && mounted) {
-      context.goNamed(RouteNames.verifyEmail);
+      context.pushNamed(RouteNames.verifyEmail);
     }
   }
 
@@ -252,7 +252,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                   .read(accountFlowControllerProvider.notifier)
                   .verifyEmail(code.text.trim());
               if (ok && context.mounted) {
-                context.goNamed(RouteNames.pendingApproval);
+                context.pushNamed(RouteNames.pendingApproval);
               }
             },
           ),
@@ -348,7 +348,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   .read(accountFlowControllerProvider.notifier)
                   .forgotPassword(email.text.trim());
               if (ok && context.mounted) {
-                context.goNamed(RouteNames.verifyResetCode);
+                context.pushNamed(RouteNames.verifyResetCode);
               }
             },
           ),
@@ -409,7 +409,7 @@ class _VerifyResetCodeScreenState extends ConsumerState<VerifyResetCodeScreen> {
                   .read(accountFlowControllerProvider.notifier)
                   .verifyResetCode(code.text.trim());
               if (ok && context.mounted) {
-                context.goNamed(RouteNames.resetPassword);
+                context.pushNamed(RouteNames.resetPassword);
               }
             },
           ),
@@ -495,6 +495,7 @@ class AuthFlowScaffold extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) {
+    final canPop = context.canPop();
     return Scaffold(
       body: LoginBackground(
         child: SafeArea(
@@ -512,6 +513,10 @@ class AuthFlowScaffold extends StatelessWidget {
                       children: [
                         Row(
                           children: [
+                            if (canPop) ...[
+                              BackButton(onPressed: () => context.pop()),
+                              const SizedBox(width: 4),
+                            ],
                             const BayadMark(size: 48),
                             const SizedBox(width: 12),
                             Expanded(

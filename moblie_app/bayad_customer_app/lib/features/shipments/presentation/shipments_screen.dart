@@ -37,7 +37,7 @@ class ShipmentsScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                   itemBuilder: (context, index) => ShipmentCard(
                     shipment: page.results[index],
-                    onTap: () => context.goNamed(
+                    onTap: () => context.pushNamed(
                       RouteNames.shipmentDetail,
                       pathParameters: {'id': '${page.results[index].id}'},
                     ),

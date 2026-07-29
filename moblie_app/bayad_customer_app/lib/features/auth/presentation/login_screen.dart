@@ -41,7 +41,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       } else if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
         _emailError = l10n.invalidEmail;
       }
-      if (_passwordController.text.trim().isEmpty) _passwordError = l10n.emptyPassword;
+      if (_passwordController.text.trim().isEmpty) {
+        _passwordError = l10n.emptyPassword;
+      }
     });
     return _emailError == null && _passwordError == null;
   }
@@ -165,7 +167,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     Align(
                                       alignment: AlignmentDirectional.centerEnd,
                                       child: TextButton(
-                                        onPressed: isLoading ? null : () => context.goNamed(RouteNames.forgotPassword),
+                                        onPressed: isLoading ? null : () => context.pushNamed(RouteNames.forgotPassword),
                                         style: TextButton.styleFrom(
                                           foregroundColor: AppColors.green,
                                           textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
@@ -200,7 +202,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           ),
                                     ),
                                     TextButton(
-                                      onPressed: isLoading ? null : () => context.goNamed(RouteNames.register),
+                                      onPressed: isLoading ? null : () => context.pushNamed(RouteNames.register),
                                       style: TextButton.styleFrom(
                                         foregroundColor: AppColors.green,
                                         textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),

@@ -37,7 +37,7 @@ class InvoicesScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                   itemBuilder: (context, index) => InvoiceCard(
                     invoice: page.results[index],
-                    onTap: () => context.goNamed(
+                    onTap: () => context.pushNamed(
                       RouteNames.invoiceDetail,
                       pathParameters: {'id': '${page.results[index].id}'},
                     ),

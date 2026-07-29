@@ -26,7 +26,7 @@ class ProductsScreen extends ConsumerWidget {
       currentIndex: 1,
       actions: [
         IconButton(
-          onPressed: () => context.goNamed(RouteNames.cart),
+          onPressed: () => context.pushNamed(RouteNames.cart),
           icon: const Icon(Icons.shopping_cart_outlined),
         ),
       ],
@@ -95,7 +95,7 @@ class ProductsScreen extends ConsumerWidget {
                                 addToCartLabel: l10n.addToCart,
                                 availableLabel: l10n.available,
                                 unavailableLabel: l10n.unavailable,
-                                onDetails: () => context.goNamed(
+                                onDetails: () => context.pushNamed(
                                   RouteNames.productDetail,
                                   pathParameters: {'id': '${product.id}'},
                                 ),
@@ -165,7 +165,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       currentIndex: 1,
       actions: [
         IconButton(
-          onPressed: () => context.goNamed(RouteNames.cart),
+          onPressed: () => context.pushNamed(RouteNames.cart),
           icon: const Icon(Icons.shopping_cart_outlined),
         ),
       ],

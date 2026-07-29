@@ -21,9 +21,11 @@ class AppScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = context.canPop();
     return Scaffold(
       extendBody: currentIndex != null,
       appBar: AppBar(
+        leading: canPop ? BackButton(onPressed: () => context.pop()) : null,
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
         actions: actions,
       ),

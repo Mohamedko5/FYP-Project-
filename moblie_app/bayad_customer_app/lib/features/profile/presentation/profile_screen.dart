@@ -82,7 +82,7 @@ class ProfileScreen extends ConsumerWidget {
               leading: const Icon(Icons.receipt_long_outlined),
               title: Text(l10n.myOrders),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.goNamed(RouteNames.orders),
+              onTap: () => context.pushNamed(RouteNames.orders),
             ),
           ),
           const SizedBox(height: 12),

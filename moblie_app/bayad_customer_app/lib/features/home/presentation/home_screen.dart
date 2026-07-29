@@ -129,7 +129,7 @@ class HomeScreen extends ConsumerWidget {
               BayadSectionHeader(
                 title: l10n.recentOrders,
                 actionLabel: l10n.viewAllOrders,
-                onAction: () => context.goNamed(RouteNames.orders),
+                onAction: () => context.pushNamed(RouteNames.orders),
               ),
               if (data.recentOrders.isEmpty)
                 BayadCard(child: Text(l10n.noOrdersFound))
@@ -139,7 +139,7 @@ class HomeScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: OrderCard(
                       order: order,
-                      onTap: () => context.goNamed(
+                      onTap: () => context.pushNamed(
                         RouteNames.orderDetail,
                         pathParameters: {'id': '${order.id}'},
                       ),

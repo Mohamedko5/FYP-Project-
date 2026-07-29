@@ -54,7 +54,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           );
       ref.read(cartControllerProvider.notifier).clear();
       if (mounted) {
-        context.goNamed(
+        context.pushNamed(
           RouteNames.orderSuccess,
           pathParameters: {'id': '${order.id}'},
         );
@@ -158,7 +158,7 @@ class OrderSuccessScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: () => context.goNamed(
+              onPressed: () => context.pushNamed(
                 RouteNames.orderDetail,
                 pathParameters: {'id': '$orderId'},
               ),

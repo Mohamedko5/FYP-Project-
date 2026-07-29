@@ -979,6 +979,45 @@ void main() {
     expect(find.text('Add Offer Items'), findsOneWidget);
   });
 
+  testWidgets('Create Offer visible Back returns to My Offers', (tester) async {
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
+    await tester.tap(find.byIcon(Icons.local_offer_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sell to Bayad'));
+    await tester.pumpAndSettle();
+    expect(find.text('Create Offer'), findsOneWidget);
+    expect(find.byType(BackButton), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('Offers'), findsOneWidget);
+    expect(find.text('Sell to Bayad'), findsOneWidget);
+    expect(find.text('Create Offer'), findsNothing);
+  });
+
+  testWidgets('Create Offer Android system Back returns to My Offers', (
+    tester,
+  ) async {
+    await pumpBayadApp(
+      tester,
+      initialState: const AuthState.authenticated(testCustomer),
+    );
+    await tester.tap(find.byIcon(Icons.local_offer_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sell to Bayad'));
+    await tester.pumpAndSettle();
+    expect(find.text('Create Offer'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Offers'), findsOneWidget);
+    expect(find.text('Sell to Bayad'), findsOneWidget);
+    expect(find.text('Create Offer'), findsNothing);
+  });
+
   testWidgets('Arabic message can be entered in Chat', (tester) async {
     await pumpBayadApp(
       tester,

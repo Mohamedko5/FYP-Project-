@@ -72,7 +72,7 @@ class OrdersScreen extends ConsumerWidget {
                             const SizedBox(height: 12),
                         itemBuilder: (context, index) => OrderCard(
                           order: page.results[index],
-                          onTap: () => context.goNamed(
+                          onTap: () => context.pushNamed(
                             RouteNames.orderDetail,
                             pathParameters: {'id': '${page.results[index].id}'},
                           ),

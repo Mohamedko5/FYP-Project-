@@ -38,7 +38,7 @@ class CartScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                FilledButton(onPressed: () => context.goNamed(RouteNames.checkout), child: const Text('Proceed to Checkout')),
+                FilledButton(onPressed: () => context.pushNamed(RouteNames.checkout), child: const Text('Proceed to Checkout')),
               ],
             ),
     );

@@ -33,7 +33,8 @@ class SupplyOffersScreen extends ConsumerWidget {
             child: SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: () => context.goNamed(RouteNames.createSupplyOffer),
+                onPressed: () =>
+                    context.pushNamed(RouteNames.createSupplyOffer),
                 icon: const Icon(Icons.agriculture_outlined),
                 label: Text(l10n.sellToBayad),
               ),
@@ -64,12 +65,12 @@ class SupplyOffersScreen extends ConsumerWidget {
                     itemBuilder: (context, index) {
                       final offer = page.results[index];
                       return BayadCard(
-                        onTap: () => context.goNamed(
+                        onTap: () => context.pushNamed(
                           RouteNames.supplyOfferDetail,
                           pathParameters: {'id': offer.id.toString()},
                         ),
                         child: InkWell(
-                          onTap: () => context.goNamed(
+                          onTap: () => context.pushNamed(
                             RouteNames.supplyOfferDetail,
                             pathParameters: {'id': offer.id.toString()},
                           ),
@@ -118,7 +119,7 @@ class SupplyOffersScreen extends ConsumerWidget {
                                   Align(
                                     alignment: AlignmentDirectional.centerEnd,
                                     child: OutlinedButton(
-                                      onPressed: () => context.goNamed(
+                                      onPressed: () => context.pushNamed(
                                         RouteNames.supplyOfferDetail,
                                         pathParameters: {
                                           'id': offer.id.toString(),
@@ -720,7 +721,7 @@ class _CreateSupplyOfferScreenState
           .supplyOfferAction(offer.id, 'submit');
       ref.invalidate(supplyOffersProvider);
       if (mounted) {
-        context.goNamed(
+        context.pushNamed(
           RouteNames.supplyOfferDetail,
           pathParameters: {'id': submitted.id.toString()},
         );
