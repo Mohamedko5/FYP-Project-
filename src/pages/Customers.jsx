@@ -32,6 +32,7 @@ import {
   getWorkerWorkRecords,
   getWorkers,
   markWorkerWorkRecordPaid,
+  updateWorker,
 } from '../services/workersApi.js';
 
 function createCustomerForm() {
@@ -82,9 +83,9 @@ function storedAdminName() {
 function readRole() {
   try {
     const user = JSON.parse(localStorage.getItem('bayadUser') || '{}');
-    return user?.profile?.role || user?.role || 'admin';
+    return user?.profile?.role || user?.role || '';
   } catch {
-    return 'admin';
+    return '';
   }
 }
 
@@ -143,6 +144,7 @@ export default function Customers() {
   const [isLoadingWorkers, setIsLoadingWorkers] = useState(false);
   const [isLoadingWorkerProfile, setIsLoadingWorkerProfile] = useState(false);
   const [isSavingWorker, setIsSavingWorker] = useState(false);
+  const [isSavingWorkerProfile, setIsSavingWorkerProfile] = useState(false);
   const [isSavingWorkRecord, setIsSavingWorkRecord] = useState(false);
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
   const [filters, setFilters] = useState({ search: '', customer_type: '', cash_status: '' });
@@ -150,7 +152,9 @@ export default function Customers() {
   const [workerRecords, setWorkerRecords] = useState([]);
   const [workerStatement, setWorkerStatement] = useState(null);
   const adminName = storedAdminName();
-  const isAdmin = readRole() === 'admin';
+  const currentRole = readRole();
+  const isAdmin = currentRole === 'admin';
+  const canEditWorkerProfile = ['admin', 'manager'].includes(currentRole);
   const addCustomerButtonRef = useRef(null);
   const addWorkerButtonRef = useRef(null);
 
@@ -482,6 +486,22 @@ export default function Customers() {
     }
   }
 
+  async function handleUpdateWorkerProfile(workerId, payload) {
+    if (!workerId) return;
+    setApiError('');
+    setSuccessMessage('');
+    setIsSavingWorkerProfile(true);
+    try {
+      await updateWorker(workerId, payload);
+      await Promise.all([loadWorkers(), loadSelectedWorker(workerId)]);
+      setSuccessMessage(t('informationUpdated'));
+    } catch (error) {
+      throw new Error(error?.message || t('unableToUpdateInformation'));
+    } finally {
+      setIsSavingWorkerProfile(false);
+    }
+  }
+
   async function handleLoadWorkerStatement() {
     if (!selectedWorkerId) return;
     try {
@@ -642,6 +662,7 @@ export default function Customers() {
                 <Button type="button" variant="secondary" onClick={loadWorkers}>{t('retry')}</Button>
               </div>
             )}
+            {successMessage && <div className="form-success" role="status">{successMessage}</div>}
             {isLoadingWorkers ? (
               <p className="muted-text">{t('customers.loadingWorkers')}</p>
             ) : (
@@ -657,6 +678,9 @@ export default function Customers() {
               statement={workerStatement}
               isSavingRecord={isSavingWorkRecord}
               isMarkingPaid={isMarkingPaid}
+              isSavingProfile={isSavingWorkerProfile}
+              canEdit={canEditWorkerProfile}
+              onUpdateProfile={handleUpdateWorkerProfile}
               onAddRecord={handleAddWorkerRecord}
               onMarkPaid={handleMarkWorkerPaid}
               onLoadStatement={handleLoadWorkerStatement}

@@ -13,7 +13,7 @@ from rest_framework.response import Response
 
 from .models import Worker, WorkerWorkRecord
 from .permissions import IsAdminForDeleteOnly
-from .serializers import MarkPaidSerializer, WorkerSerializer, WorkerWorkRecordSerializer
+from .serializers import MarkPaidSerializer, WorkerSerializer, WorkerUpdateSerializer, WorkerWorkRecordSerializer
 from .services import money, soft_delete_work_record, work_totals
 
 
@@ -80,6 +80,11 @@ class WorkerViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminForDeleteOnly]
     pagination_class = WorkerPagination
     allowed_ordering = {'name', '-name', 'created_at', '-created_at', 'unpaid_wage_total', '-unpaid_wage_total'}
+
+    def get_serializer_class(self):
+        if self.action in {'update', 'partial_update'}:
+            return WorkerUpdateSerializer
+        return WorkerSerializer
 
     def get_queryset(self):
         return Worker.objects.filter(is_deleted=False).prefetch_related('work_records')

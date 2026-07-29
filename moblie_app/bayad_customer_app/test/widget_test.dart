@@ -816,77 +816,103 @@ void main() {
     expect(find.text('Send'), findsWidgets);
   });
 
-  testWidgets('Home displays Contact Bayad', (tester) async {
+  testWidgets('Home no longer displays Quick Actions section in English', (
+    tester,
+  ) async {
     await pumpBayadApp(
       tester,
       initialState: const AuthState.authenticated(testCustomer),
     );
-    await tester.scrollUntilVisible(
-      find.text('Contact Bayad'),
-      120,
-      scrollable: find.byType(Scrollable).first,
+    final homeScrollable = find.byType(Scrollable).first;
+    expect(find.text('Quick Actions'), findsNothing);
+    expect(
+      find.descendant(of: homeScrollable, matching: find.text('Contact Bayad')),
+      findsNothing,
     );
-    expect(find.text('Contact Bayad'), findsOneWidget);
+    expect(
+      find.descendant(of: homeScrollable, matching: find.text('Sell to Bayad')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: homeScrollable, matching: find.text('My Offers')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: homeScrollable, matching: find.text('My Orders')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: homeScrollable, matching: find.text('My Invoices')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: homeScrollable,
+        matching: find.text('Track Shipments'),
+      ),
+      findsNothing,
+    );
   });
 
-  testWidgets('Home displays Sell to Bayad', (tester) async {
+  testWidgets('Home no longer displays Quick Actions section in Arabic', (
+    tester,
+  ) async {
     await pumpBayadApp(
       tester,
       initialState: const AuthState.authenticated(testCustomer),
+      language: 'ar',
     );
-    await tester.scrollUntilVisible(
-      find.text('Sell to Bayad'),
-      120,
-      scrollable: find.byType(Scrollable).first,
+    final homeScrollable = find.byType(Scrollable).first;
+    expect(
+      find.text(
+        '\u0627\u0644\u0625\u062c\u0631\u0627\u0621\u0627\u062a \u0627\u0644\u0633\u0631\u064a\u0639\u0629',
+      ),
+      findsNothing,
     );
-    expect(find.text('Sell to Bayad'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: homeScrollable,
+        matching: find.text('\u0637\u0644\u0628\u0627\u062a\u064a'),
+      ),
+      findsNothing,
+    );
+    final directionality = tester.widget<Directionality>(
+      find.byType(Directionality).first,
+    );
+    expect(directionality.textDirection, TextDirection.rtl);
   });
 
-  testWidgets('Home displays My Offers', (tester) async {
+  testWidgets('Home still scrolls to Recent Orders without Quick Actions gap', (
+    tester,
+  ) async {
     await pumpBayadApp(
       tester,
       initialState: const AuthState.authenticated(testCustomer),
     );
     await tester.scrollUntilVisible(
-      find.text('My Offers'),
+      find.text('Recent Orders'),
       120,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('My Offers'), findsWidgets);
+    expect(tester.takeException(), isNull);
+    expect(find.text('Recent Orders'), findsOneWidget);
   });
 
-  testWidgets('Home My Offers quick action opens Offers list', (tester) async {
+  testWidgets('Account My Orders menu item opens Orders', (tester) async {
     await pumpBayadApp(
       tester,
       initialState: const AuthState.authenticated(testCustomer),
     );
-    await tester.scrollUntilVisible(
-      find.byIcon(Icons.assignment_turned_in_outlined),
-      120,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.ensureVisible(
-      find.byIcon(Icons.assignment_turned_in_outlined),
-    );
-    await tester.pump();
-    await tester.tap(find.byIcon(Icons.assignment_turned_in_outlined));
+    await tester.tap(find.byIcon(Icons.person_outline).last);
     await tester.pumpAndSettle();
-    expect(find.text('Offers'), findsOneWidget);
-    expect(find.text('SUP-2026-000001'), findsOneWidget);
-  });
-
-  testWidgets('Home My Orders quick action still opens Orders', (tester) async {
-    await pumpBayadApp(
-      tester,
-      initialState: const AuthState.authenticated(testCustomer),
-    );
     await tester.scrollUntilVisible(
       find.text('My Orders'),
       120,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.ensureVisible(find.text('My Orders'));
-    await tester.pump();
+    expect(find.text('My Orders'), findsOneWidget);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('My Orders'));
     await tester.pumpAndSettle();
     expect(find.text('ORD-2026-000001'), findsOneWidget);
@@ -937,18 +963,15 @@ void main() {
     },
   );
 
-  testWidgets('Sell to Bayad opens Create Offer', (tester) async {
+  testWidgets('Sell to Bayad opens Create Offer from Offers screen', (
+    tester,
+  ) async {
     await pumpBayadApp(
       tester,
       initialState: const AuthState.authenticated(testCustomer),
     );
-    await tester.scrollUntilVisible(
-      find.text('Sell to Bayad'),
-      120,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.ensureVisible(find.text('Sell to Bayad'));
-    await tester.pump();
+    await tester.tap(find.byIcon(Icons.local_offer_outlined));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sell to Bayad'));
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));

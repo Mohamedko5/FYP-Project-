@@ -86,6 +86,14 @@ class WorkerSerializer(serializers.ModelSerializer):
         return instance
 
 
+class WorkerUpdateSerializer(WorkerSerializer):
+    class Meta(WorkerSerializer.Meta):
+        read_only_fields = WorkerSerializer.Meta.read_only_fields + (
+            'default_daily_wage',
+            'default_price_per_bag',
+        )
+
+
 class WorkerWorkRecordSerializer(serializers.ModelSerializer):
     worker_name = serializers.CharField(source='worker.name', read_only=True)
     worker_code = serializers.CharField(source='worker.code', read_only=True)

@@ -2,8 +2,12 @@ from rest_framework.permissions import BasePermission
 
 
 def user_role(user):
+    if not user or not user.is_authenticated:
+        return None
+    if getattr(user, 'is_superuser', False):
+        return 'admin'
     profile = getattr(user, 'profile', None)
-    return getattr(profile, 'role', 'admin')
+    return getattr(profile, 'role', None)
 
 
 class IsAdminOrManager(BasePermission):

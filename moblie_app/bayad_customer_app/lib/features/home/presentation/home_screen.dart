@@ -126,9 +126,6 @@ class HomeScreen extends ConsumerWidget {
                 BayadCard(child: Text(l10n.unpaidInvoiceNotice)),
               ],
               const SizedBox(height: 16),
-              BayadSectionHeader(title: l10n.quickActions),
-              const _ActionGrid(),
-              const SizedBox(height: 16),
               BayadSectionHeader(
                 title: l10n.recentOrders,
                 actionLabel: l10n.viewAllOrders,
@@ -152,54 +149,6 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ActionGrid extends ConsumerWidget {
-  const _ActionGrid();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final unreadCount = ref.watch(chatUnreadCountProvider).valueOrNull ?? 0;
-    final actions = [
-      (l10n.browseProducts, Icons.inventory_2_outlined, RouteNames.products),
-      (
-        l10n.sellToBayad,
-        Icons.handshake_outlined,
-        RouteNames.createSupplyOffer,
-      ),
-      (
-        l10n.mySupplyOffers,
-        Icons.assignment_turned_in_outlined,
-        RouteNames.supplyOffers,
-      ),
-      (l10n.contactBayad, Icons.chat_bubble_outline, RouteNames.chat),
-      (l10n.myOrders, Icons.receipt_long_outlined, RouteNames.orders),
-      (l10n.myInvoices, Icons.request_quote_outlined, RouteNames.invoices),
-      (
-        l10n.trackShipments,
-        Icons.local_shipping_outlined,
-        RouteNames.shipments,
-      ),
-    ];
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.45,
-      children: [
-        for (final action in actions)
-          BayadIconTile(
-            icon: action.$2,
-            label: action.$1,
-            badgeCount: action.$3 == RouteNames.chat ? unreadCount : 0,
-            onTap: () => context.goNamed(action.$3),
-          ),
-      ],
     );
   }
 }

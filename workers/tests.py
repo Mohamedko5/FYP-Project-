@@ -93,6 +93,75 @@ class WorkerAPITests(APITestCase):
         response = self.client.post(reverse('worker-list'), self.worker_payload(), format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_admin_can_update_worker_phone_number(self):
+        worker = self.create_worker()
+        response = self.client.patch(self.detail_url(worker), {'phone': '+249987654321'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        worker.refresh_from_db()
+        self.assertEqual(worker.phone, '+249987654321')
+        self.assertEqual(worker.updated_by, self.admin)
+
+    def test_admin_can_update_worker_type_and_assigned_work(self):
+        worker = self.create_worker()
+        response = self.client.patch(
+            self.detail_url(worker),
+            {'worker_type': Worker.TYPE_BAG, 'assigned_work': 'Bag loading team'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        worker.refresh_from_db()
+        self.assertEqual(worker.worker_type, Worker.TYPE_BAG)
+        self.assertEqual(worker.assigned_work, 'Bag loading team')
+
+    def test_worker_profile_patch_preserves_omitted_fields(self):
+        worker = self.create_worker(secondary_phone='+249900000001', notes='Keep this note')
+        response = self.client.patch(self.detail_url(worker), {'phone': '+249900000002'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        worker.refresh_from_db()
+        self.assertEqual(worker.secondary_phone, '+249900000001')
+        self.assertEqual(worker.notes, 'Keep this note')
+
+    def test_worker_code_cannot_be_changed_by_profile_patch(self):
+        worker = self.create_worker()
+        original_code = worker.code
+        response = self.client.patch(self.detail_url(worker), {'code': 'WRK-9999', 'phone': '+249900000003'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        worker.refresh_from_db()
+        self.assertEqual(worker.code, original_code)
+
+    def test_worker_profile_patch_cannot_edit_default_wage_fields(self):
+        worker = self.create_worker(default_daily_wage='100.00', default_price_per_bag=None)
+        response = self.client.patch(
+            self.detail_url(worker),
+            {'default_daily_wage': '999.00', 'default_price_per_bag': '22.00'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        worker.refresh_from_db()
+        self.assertEqual(worker.default_daily_wage, Decimal('100.00'))
+        self.assertIsNone(worker.default_price_per_bag)
+
+    def test_wage_history_cannot_be_edited_through_worker_profile_patch(self):
+        worker = self.create_worker()
+        record = self.create_record(worker, daily_wage='100.00')
+        response = self.client.patch(
+            self.detail_url(worker),
+            {'work_records': [{'id': record.id, 'daily_wage': '999.00'}]},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        record.refresh_from_db()
+        self.assertEqual(record.daily_wage, Decimal('100.00'))
+        self.assertEqual(record.total_wage, Decimal('100.00'))
+
+    def test_unprivileged_user_cannot_update_worker_profile(self):
+        user = User.objects.create_user(username='ordinary', password='pass')
+        UserProfile.objects.create(user=user, role='customer')
+        worker = self.create_worker()
+        self.client.force_authenticate(user)
+        response = self.client.patch(self.detail_url(worker), {'phone': '+249900000004'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_worker_code_is_generated_automatically(self):
         response = self.client.post(reverse('worker-list'), {**self.worker_payload(), 'code': 'WRK-9999'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

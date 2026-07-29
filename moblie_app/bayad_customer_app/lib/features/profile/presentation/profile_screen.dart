@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:bayad_customer_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/routing/route_names.dart';
 import '../../../core/storage/preferences_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -74,6 +76,16 @@ class ProfileScreen extends ConsumerWidget {
             label: l10n.customerType,
             value: customer?.customerType ?? '',
           ),
+          BayadCard(
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.receipt_long_outlined),
+              title: Text(l10n.myOrders),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.goNamed(RouteNames.orders),
+            ),
+          ),
+          const SizedBox(height: 12),
           BayadCard(
             child: ListTile(
               contentPadding: EdgeInsets.zero,

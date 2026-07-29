@@ -9,6 +9,11 @@ import { formatCurrency } from '../../data/dummyData.js';
 import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import { normalizeWorkerType, workerTypeLabel } from './workerHelpers.js';
 import WorkerTransactionForm from './WorkerTransactionForm.jsx';
+import WorkerProfileEditForm, {
+  createWorkerProfileEditForm,
+  isWorkerProfileEditDirty,
+  validateWorkerProfileEditForm,
+} from './WorkerProfileEditForm.jsx';
 
 function statusDisplay(status) {
   return { available: 'Available', working: 'Working', inactive: 'Inactive', unpaid: 'Unpaid', paid: 'Paid' }[status] || status;
@@ -35,7 +40,10 @@ export default function WorkerProfile({
   statement,
   isSavingRecord = false,
   isMarkingPaid = false,
+  isSavingProfile = false,
+  canEdit = false,
   onClose,
+  onUpdateProfile,
   onAddRecord,
   onMarkPaid,
   onLoadStatement,
@@ -49,13 +57,18 @@ export default function WorkerProfile({
   const [paymentRecord, setPaymentRecord] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentErrors, setPaymentErrors] = useState([]);
+  const [editForm, setEditForm] = useState(createWorkerProfileEditForm(worker));
+  const [editErrors, setEditErrors] = useState([]);
   const recordButtonRef = useRef(null);
   const paymentButtonRef = useRef(null);
+  const editButtonRef = useRef(null);
 
   useEffect(() => {
     setTransactionForm(createTransactionForm(worker, warehouses));
     setTransactionErrors([]);
     setPaymentRecord(null);
+    setEditForm(createWorkerProfileEditForm(worker));
+    setEditErrors([]);
     setActiveSection('');
   }, [worker?.id, warehouses]);
 
@@ -66,6 +79,7 @@ export default function WorkerProfile({
     : <span>{worker.name.slice(0, 1).toUpperCase()}</span>;
   const recordDirty = activeSection === 'record' && JSON.stringify(transactionForm) !== JSON.stringify(createTransactionForm(worker, warehouses));
   const paymentDirty = activeSection === 'payment' && paymentMethod !== 'cash';
+  const editDirty = activeSection === 'edit' && isWorkerProfileEditDirty(editForm, worker);
 
   const columns = [
     { key: 'date', label: t('common.date') },
@@ -102,16 +116,66 @@ export default function WorkerProfile({
     setPaymentErrors([]);
   }
 
+  function openEditForm() {
+    setActiveSection('edit');
+    setEditForm(createWorkerProfileEditForm(worker));
+    setEditErrors([]);
+  }
+
   function closeSection() {
     setActiveSection('');
     setTransactionErrors([]);
     setPaymentErrors([]);
     setPaymentRecord(null);
+    setEditErrors([]);
   }
 
   function handleTransactionChange(event) {
     const { name, value } = event.target;
     setTransactionForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function handleEditChange(event) {
+    const { name, value, files, type } = event.target;
+    if (type === 'file') {
+      const file = files?.[0] || null;
+      setEditForm((current) => ({
+        ...current,
+        photo: file,
+        photoPreview: file ? URL.createObjectURL(file) : '',
+      }));
+      return;
+    }
+    setEditForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function removeSelectedPhoto() {
+    setEditForm((current) => ({ ...current, photo: null, photoPreview: '' }));
+  }
+
+  async function handleEditSubmit(event) {
+    event.preventDefault();
+    const validationErrors = validateWorkerProfileEditForm(editForm, t);
+    if (validationErrors.length) {
+      setEditErrors(validationErrors);
+      return;
+    }
+    setEditErrors([]);
+    try {
+      const payload = new FormData();
+      payload.append('name', editForm.name);
+      payload.append('phone', editForm.phone);
+      payload.append('secondary_phone', editForm.secondaryPhone);
+      payload.append('worker_type', editForm.workerType);
+      payload.append('assigned_work', editForm.assignedWork);
+      payload.append('status', editForm.status);
+      payload.append('notes', editForm.notes);
+      if (editForm.photo) payload.append('photo', editForm.photo);
+      await onUpdateProfile?.(worker.id, payload);
+      closeSection();
+    } catch (error) {
+      setEditErrors([error?.message || t('unableToUpdateInformation')]);
+    }
   }
 
   async function handleTransactionSubmit(event) {
@@ -158,6 +222,7 @@ export default function WorkerProfile({
         </div>
         <div className="customer-profile-header__actions">
           <StatusBadge status={statusDisplay(worker.status)} />
+          {canEdit && <Button variant="secondary" onClick={openEditForm} ref={editButtonRef}>{t('editProfile')}</Button>}
           <Button variant="secondary" onClick={onClose}>{t('customers.closeProfile')}</Button>
         </div>
       </div>
@@ -176,6 +241,29 @@ export default function WorkerProfile({
         <button type="button" className={`customer-profile-tabs__button ${activeSection === 'history' ? 'is-active' : ''}`} onClick={() => setActiveSection('history')}>{t('customers.workerTransactionHistory')}</button>
         <button type="button" className={`customer-profile-tabs__button ${activeSection === 'statement' ? 'is-active' : ''}`} onClick={() => { setActiveSection('statement'); onLoadStatement?.(); }}>{t('customers.printWorkerStatement')}</button>
       </div>
+
+      <AppWindow
+        id="worker-profile-edit"
+        title={t('editProfile')}
+        description={t('customers.editWorkerProfileSubtitle')}
+        isOpen={activeSection === 'edit'}
+        isDirty={editDirty}
+        isSubmitting={isSavingProfile}
+        defaultSize="large"
+        openerRef={editButtonRef}
+        onClose={closeSection}
+      >
+        <WorkerProfileEditForm
+          form={editForm}
+          worker={worker}
+          errors={editErrors}
+          onChange={handleEditChange}
+          onRemovePhoto={removeSelectedPhoto}
+          onSubmit={handleEditSubmit}
+          onCancel={closeSection}
+          isSaving={isSavingProfile}
+        />
+      </AppWindow>
 
       <AppWindow
         id="worker-record"
