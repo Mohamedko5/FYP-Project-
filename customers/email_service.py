@@ -50,14 +50,14 @@ def _customer_name(registration=None, user=None):
 
 def send_customer_verification_email(registration, code):
     _send_template_email(
-        subject='Bayad Customer Account Verification Code',
+        subject='Email Verification Code - Bayad Company / رمز تأكيد البريد الإلكتروني - شركة بياض',
         to_email=registration.email,
         template_name='verify_email',
         context={
             'company_name': 'Bayad Commercial Activities Company',
             'customer_name': _customer_name(registration=registration),
             'code': code,
-            'expires_minutes': 10,
+            'expires_minutes': getattr(settings, 'CUSTOMER_EMAIL_VERIFICATION_EXPIRY_MINUTES', 10),
         },
         safe_detail='We could not send the verification email. Please try again.',
     )

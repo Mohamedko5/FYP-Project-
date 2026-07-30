@@ -143,6 +143,114 @@ class AppLocalizationsAr extends AppLocalizations {
   String get unavailable => 'غير متوفر';
 
   @override
+  String get pending => 'معلق';
+
+  @override
+  String get invoiced => 'مفوتر';
+
+  @override
+  String get processing => 'قيد التنفيذ';
+
+  @override
+  String get readyForShipment => 'جاهز للشحن';
+
+  @override
+  String get cancelled => 'ملغى';
+
+  @override
+  String get paid => 'مدفوع';
+
+  @override
+  String get unpaid => 'غير مدفوع';
+
+  @override
+  String get items => 'العناصر';
+
+  @override
+  String get subtotal => 'المجموع الفرعي';
+
+  @override
+  String get discount => 'الخصم';
+
+  @override
+  String get total => 'الإجمالي';
+
+  @override
+  String get driver => 'السائق';
+
+  @override
+  String get vehicle => 'المركبة';
+
+  @override
+  String get driverPending => 'بانتظار السائق';
+
+  @override
+  String get productDetails => 'تفاصيل المنتج';
+
+  @override
+  String get loadingProduct => 'جاري تحميل المنتج...';
+
+  @override
+  String get productsLoadError =>
+      'تعذر تحميل المنتجات. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get productLoadError => 'تعذر تحميل المنتج. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get loadingOrders => 'جاري تحميل الطلبات...';
+
+  @override
+  String get ordersLoadError => 'تعذر تحميل الطلبات. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get orderDetails => 'تفاصيل الطلب';
+
+  @override
+  String get loadingOrder => 'جاري تحميل الطلب...';
+
+  @override
+  String get orderLoadError => 'تعذر تحميل الطلب. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get loadingInvoices => 'جاري تحميل الفواتير...';
+
+  @override
+  String get invoicesLoadError =>
+      'تعذر تحميل الفواتير. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get invoiceDetails => 'تفاصيل الفاتورة';
+
+  @override
+  String get loadingInvoice => 'جاري تحميل الفاتورة...';
+
+  @override
+  String get invoiceLoadError => 'تعذر تحميل الفاتورة. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get noInvoicesFound => 'لا توجد فواتير بعد.';
+
+  @override
+  String get loadingShipments => 'جاري تحميل الشحنات...';
+
+  @override
+  String get shipmentsLoadError =>
+      'تعذر تحميل الشحنات. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get shipmentTracking => 'تتبع الشحنة';
+
+  @override
+  String get loadingShipment => 'جاري تحميل الشحنة...';
+
+  @override
+  String get shipmentLoadError => 'تعذر تحميل الشحنة. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get noShipmentsFound => 'لا توجد معلومات شحن متاحة.';
+
+  @override
   String get myOrders => 'طلباتي';
 
   @override
@@ -313,6 +421,38 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get enterSixDigitCode => 'أدخل رمز التحقق المكون من 6 أرقام.';
+
+  @override
+  String get verificationCodeSent =>
+      'تم إرسال رمز التحقق إلى بريدك الإلكتروني.';
+
+  @override
+  String get emailVerifiedSuccessfully => 'تم تأكيد البريد الإلكتروني بنجاح.';
+
+  @override
+  String get verificationCodeIncorrect => 'رمز التحقق غير صحيح.';
+
+  @override
+  String get verificationCodeExpired => 'انتهت صلاحية رمز التحقق.';
+
+  @override
+  String get verificationCodeUsed => 'تم استخدام هذا الرمز من قبل.';
+
+  @override
+  String get waitBeforeRequestingCode => 'انتظر قبل طلب رمز آخر.';
+
+  @override
+  String get tooManyVerificationAttempts =>
+      'عدد المحاولات كبير. يرجى طلب رمز جديد لاحقا.';
+
+  @override
+  String get unableToSendVerificationEmail =>
+      'تعذر إرسال البريد الإلكتروني. حاول مرة أخرى.';
+
+  @override
+  String resendCodeWithSeconds(int seconds) {
+    return 'إعادة إرسال الرمز ($secondsث)';
+  }
 
   @override
   String get pendingAdminApproval => 'بانتظار موافقة الإدارة';

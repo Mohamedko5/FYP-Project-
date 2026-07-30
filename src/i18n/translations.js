@@ -7,6 +7,8 @@ export const translations = {
     brandSubtitle: 'Trading ERP',
     companyName: 'Bayad Commercial Activities Company',
     mainNavigation: 'Main navigation',
+    openMenu: 'Open menu',
+    errorAttention: 'Something needs attention',
     currency: {
       label: 'Currency',
       sdg: 'SDG (Sudanese Pound)',
@@ -1505,6 +1507,8 @@ export const translations = {
     brandSubtitle: 'نظام تجاري',
     companyName: 'شركة بياض للأنشطة التجارية',
     mainNavigation: 'القائمة الرئيسية',
+    openMenu: 'فتح القائمة',
+    errorAttention: 'يوجد أمر يحتاج إلى مراجعة',
     currency: {
       label: 'العملة',
       sdg: 'SDG (الجنيه السوداني)',

@@ -240,6 +240,8 @@ class CustomerRegistrationRequest(models.Model):
     verification_code_expires_at = models.DateTimeField(null=True, blank=True)
     verification_attempts = models.PositiveIntegerField(default=0)
     last_verification_sent_at = models.DateTimeField(null=True, blank=True)
+    verification_consumed_at = models.DateTimeField(null=True, blank=True)
+    verification_resend_count = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=40, choices=STATUS_CHOICES, default=STATUS_EMAIL_PENDING)
     rejection_reason = models.TextField(blank=True)
     approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='approved_customer_registrations', null=True, blank=True)
@@ -267,8 +269,9 @@ class CustomerRegistrationRequest(models.Model):
     def set_verification_code(self, raw_code=None):
         code = raw_code or six_digit_code()
         self.verification_code_hash = make_password(code)
-        self.verification_code_expires_at = timezone.now() + timezone.timedelta(minutes=10)
+        self.verification_code_expires_at = timezone.now() + timezone.timedelta(minutes=getattr(settings, 'CUSTOMER_EMAIL_VERIFICATION_EXPIRY_MINUTES', 10))
         self.verification_attempts = 0
+        self.verification_consumed_at = None
         self.last_verification_sent_at = timezone.now()
         return code
 

@@ -23,10 +23,15 @@ class AppScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final canPop = context.canPop();
     return Scaffold(
-      extendBody: currentIndex != null,
+      extendBody: false,
       appBar: AppBar(
         leading: canPop ? BackButton(onPressed: () => context.pop()) : null,
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
         actions: actions,
       ),
       body: SafeArea(bottom: currentIndex == null, child: child),

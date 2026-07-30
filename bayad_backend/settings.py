@@ -150,6 +150,22 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'Ba
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 if EMAIL_USE_TLS and EMAIL_USE_SSL:
     raise ImproperlyConfigured('EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be true.')
+if EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend' and 'test' not in sys.argv:
+    missing_email_settings = [
+        name for name, value in {
+            'EMAIL_HOST': EMAIL_HOST,
+            'EMAIL_HOST_USER': EMAIL_HOST_USER,
+            'EMAIL_HOST_PASSWORD': EMAIL_HOST_PASSWORD,
+            'DEFAULT_FROM_EMAIL': DEFAULT_FROM_EMAIL,
+        }.items()
+        if not value
+    ]
+    if missing_email_settings:
+        raise ImproperlyConfigured(f'SMTP email backend is enabled but these settings are missing: {", ".join(missing_email_settings)}')
+CUSTOMER_EMAIL_VERIFICATION_EXPIRY_MINUTES = env_int('CUSTOMER_EMAIL_VERIFICATION_EXPIRY_MINUTES', 10)
+CUSTOMER_EMAIL_VERIFICATION_MAX_ATTEMPTS = env_int('CUSTOMER_EMAIL_VERIFICATION_MAX_ATTEMPTS', 5)
+CUSTOMER_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = env_int('CUSTOMER_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS', 60)
+CUSTOMER_EMAIL_VERIFICATION_MAX_RESENDS = env_int('CUSTOMER_EMAIL_VERIFICATION_MAX_RESENDS', 5)
 
 
 CORS_ALLOWED_ORIGINS = [

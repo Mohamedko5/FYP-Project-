@@ -24,6 +24,38 @@ String formatQuantity(double value, String unit) =>
 String formatDate(DateTime? date) =>
     date == null ? '-' : intl.DateFormat('dd MMM yyyy').format(date.toLocal());
 
+String localizedStatusLabel(AppLocalizations l10n, String status) {
+  final key = status.trim().toLowerCase().replaceAll('-', '_');
+  return switch (key) {
+    'available' => l10n.available,
+    'unavailable' => l10n.unavailable,
+    'draft' => l10n.draft,
+    'submitted' => l10n.submitted,
+    'under_review' => l10n.underReview,
+    'new_price_proposed' => l10n.newPriceProposed,
+    'customer_accepted' => l10n.customerAccepted,
+    'customer_declined' => l10n.customerDeclined,
+    'approved' => l10n.approved,
+    'rejected' => l10n.rejected,
+    'awaiting_product_receipt' => l10n.awaitingProductReceipt,
+    'received' => l10n.received,
+    'completed' => l10n.completed,
+    'paid' => l10n.paid,
+    'unpaid' => l10n.unpaid,
+    'pending' => l10n.pending,
+    'invoiced' => l10n.invoiced,
+    'processing' => l10n.processing,
+    'ready_for_shipment' => l10n.readyForShipment,
+    'cancelled' => l10n.cancelled,
+    _ =>
+      key
+          .split('_')
+          .where((part) => part.isNotEmpty)
+          .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+          .join(' '),
+  };
+}
+
 int readCountValue(Object? value) {
   if (value is int) return value;
   if (value is num) return value.toInt();
@@ -110,17 +142,9 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final normalized = status.replaceAll('_', ' ');
-    final label =
-        localizedLabel ??
-        normalized
-            .split(' ')
-            .map(
-              (part) => part.isEmpty
-                  ? part
-                  : '${part[0].toUpperCase()}${part.substring(1)}',
-            )
-            .join(' ');
+    final label = localizedLabel ?? localizedStatusLabel(l10n, normalized);
     final color = switch (status) {
       'paid' || 'completed' || 'available' => AppColors.success,
       'processing' ||
@@ -146,6 +170,8 @@ class PriceText extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     formatMoney(value, currency),
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
     style: Theme.of(
       context,
     ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
@@ -176,6 +202,7 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: Text(
@@ -186,7 +213,14 @@ class SectionHeader extends StatelessWidget {
           ),
         ),
         if (actionLabel != null)
-          TextButton(onPressed: onAction, child: Text(actionLabel!)),
+          TextButton(
+            onPressed: onAction,
+            child: Text(
+              actionLabel!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
       ],
     );
   }
@@ -609,7 +643,7 @@ class ShipmentCard extends StatelessWidget {
     title: shipment.shipmentNumber,
     subtitle: '${shipment.orderNumber} • ${shipment.productSummary}',
     amount: shipment.driverName.isEmpty
-        ? 'Driver pending'
+        ? AppLocalizations.of(context).driverPending
         : shipment.driverName,
     status: shipment.status,
     onTap: onTap,
@@ -654,6 +688,7 @@ class _RecordCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Directionality(
@@ -664,7 +699,8 @@ class _RecordCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    StatusBadge(status: status),
+                    const SizedBox(width: 8),
+                    Flexible(child: StatusBadge(status: status)),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -677,6 +713,8 @@ class _RecordCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   amount,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               ],

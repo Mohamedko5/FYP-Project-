@@ -44,12 +44,12 @@ class ProductsScreen extends ConsumerWidget {
             child: products.when(
               loading: () => LoadingView(message: l10n.loadingProducts),
               error: (error, _) => ErrorView(
-                message: 'Unable to load Products. Please try again.',
-                retryLabel: 'Retry',
+                message: l10n.productsLoadError,
+                retryLabel: l10n.retry,
                 onRetry: () => ref.invalidate(productsProvider),
               ),
               data: (page) => page.results.isEmpty
-                  ? const EmptyView(message: 'No Products found.')
+                  ? EmptyView(message: l10n.emptyState)
                   : RefreshIndicator(
                       onRefresh: () async =>
                           ref.refresh(productsProvider.future),
@@ -161,7 +161,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     final l10n = AppLocalizations.of(context);
     final isArabic = Directionality.of(context) == TextDirection.rtl;
     return AppScaffold(
-      title: 'Product Details',
+      title: l10n.productDetails,
       currentIndex: 1,
       actions: [
         IconButton(
@@ -170,10 +170,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         ),
       ],
       child: product.when(
-        loading: () => const LoadingView(message: 'Loading Product...'),
+        loading: () => LoadingView(message: l10n.loadingProduct),
         error: (error, _) => ErrorView(
-          message: 'Unable to load Product. Please try again.',
-          retryLabel: 'Retry',
+          message: l10n.productLoadError,
+          retryLabel: l10n.retry,
           onRetry: () =>
               ref.invalidate(productDetailProvider(widget.productId)),
         ),
@@ -223,7 +223,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int>(
                         initialValue: selected?.id,
-                        decoration: const InputDecoration(labelText: 'Unit'),
+                        decoration: InputDecoration(labelText: l10n.unit),
                         items: [
                           for (final unit in item.units)
                             DropdownMenuItem(
@@ -239,9 +239,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       TextField(
                         controller: _qty,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Quantity',
-                        ),
+                        decoration: InputDecoration(labelText: l10n.quantity),
                       ),
                       const SizedBox(height: 16),
                       FilledButton(

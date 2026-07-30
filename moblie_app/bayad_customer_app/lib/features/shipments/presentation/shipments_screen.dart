@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bayad_customer_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,18 +17,19 @@ class ShipmentsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final shipments = ref.watch(shipmentsProvider);
+    final l10n = AppLocalizations.of(context);
     return AppScaffold(
-      title: 'My Shipments',
+      title: l10n.myShipments,
       currentIndex: 4,
       child: shipments.when(
-        loading: () => const LoadingView(message: 'Loading Shipments...'),
+        loading: () => LoadingView(message: l10n.loadingShipments),
         error: (error, _) => ErrorView(
-          message: 'Unable to load Shipments. Please try again.',
-          retryLabel: 'Retry',
+          message: l10n.shipmentsLoadError,
+          retryLabel: l10n.retry,
           onRetry: () => ref.invalidate(shipmentsProvider),
         ),
         data: (page) => page.results.isEmpty
-            ? const EmptyView(message: 'No Shipment information is available.')
+            ? EmptyView(message: l10n.noShipmentsFound)
             : RefreshIndicator(
                 onRefresh: () async => ref.refresh(shipmentsProvider.future),
                 child: ListView.separated(
@@ -55,14 +57,16 @@ class ShipmentDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final shipment = ref.watch(shipmentDetailProvider(shipmentId));
+    final l10n = AppLocalizations.of(context);
+    final isArabic = Directionality.of(context) == TextDirection.rtl;
     return AppScaffold(
-      title: 'Shipment Tracking',
+      title: l10n.shipmentTracking,
       currentIndex: 4,
       child: shipment.when(
-        loading: () => const LoadingView(message: 'Loading Shipment...'),
+        loading: () => LoadingView(message: l10n.loadingShipment),
         error: (error, _) => ErrorView(
-          message: 'Unable to load Shipment. Please try again.',
-          retryLabel: 'Retry',
+          message: l10n.shipmentLoadError,
+          retryLabel: l10n.retry,
           onRetry: () => ref.invalidate(shipmentDetailProvider(shipmentId)),
         ),
         data: (data) => ListView(
@@ -83,19 +87,19 @@ class ShipmentDetailScreen extends ConsumerWidget {
             BayadCard(child: WorkflowStepper(steps: data.workflowSteps)),
             const SizedBox(height: 12),
             ListTile(
-              title: const Text('Driver'),
+              title: Text(l10n.driver),
               subtitle: Text(data.driverName.isEmpty ? '-' : data.driverName),
             ),
             ListTile(
-              title: const Text('Vehicle'),
+              title: Text(l10n.vehicle),
               subtitle: Text(
                 data.vehicleNumber.isEmpty ? '-' : data.vehicleNumber,
               ),
             ),
-            const SectionHeader(title: 'Items'),
+            SectionHeader(title: l10n.items),
             for (final item in data.items)
               ListTile(
-                title: Text(item.productNameEn),
+                title: Text(item.localizedName(isArabic)),
                 subtitle: QuantityText(value: item.quantity, unit: item.unit),
               ),
           ],

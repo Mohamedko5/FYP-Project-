@@ -22,7 +22,7 @@ export default function Topbar({ headerAddon = null, onMenuClick }) {
   return (
     <header className="topbar">
       <div className="topbar__title-area">
-        <button className="topbar__menu-button" type="button" onClick={onMenuClick} aria-label="Open menu">
+        <button className="topbar__menu-button" type="button" onClick={onMenuClick} aria-label={t('openMenu')}>
           <span />
           <span />
           <span />

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bayad_customer_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,8 +18,19 @@ class OrdersScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final orders = ref.watch(ordersProvider);
+    final l10n = AppLocalizations.of(context);
+    final filterLabels = {
+      'all': l10n.viewAllOrders,
+      'pending': l10n.pending,
+      'received': l10n.received,
+      'invoiced': l10n.invoiced,
+      'ready_for_shipment': l10n.readyForShipment,
+      'processing': l10n.processing,
+      'completed': l10n.completed,
+      'cancelled': l10n.cancelled,
+    };
     return AppScaffold(
-      title: 'My Orders',
+      title: l10n.myOrders,
       child: Column(
         children: [
           SizedBox(
@@ -27,24 +39,17 @@ class OrdersScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               scrollDirection: Axis.horizontal,
               children: [
-                for (final entry in const {
-                  'All': null,
-                  'Pending': 'pending',
-                  'Received': 'received',
-                  'Invoiced': 'invoiced',
-                  'Ready': 'ready_for_shipment',
-                  'Processing': 'processing',
-                  'Completed': 'completed',
-                  'Cancelled': 'cancelled',
-                }.entries)
+                for (final entry in filterLabels.entries)
                   Padding(
                     padding: const EdgeInsetsDirectional.only(end: 8),
                     child: ChoiceChip(
-                      label: Text(entry.key),
-                      selected: ref.watch(orderFilterProvider) == entry.value,
+                      label: Text(entry.value),
+                      selected:
+                          ref.watch(orderFilterProvider) ==
+                          (entry.key == 'all' ? null : entry.key),
                       onSelected: (_) =>
                           ref.read(orderFilterProvider.notifier).state =
-                              entry.value,
+                              entry.key == 'all' ? null : entry.key,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(999),
                       ),
@@ -55,10 +60,10 @@ class OrdersScreen extends ConsumerWidget {
           ),
           Expanded(
             child: orders.when(
-              loading: () => const LoadingView(message: 'Loading Orders...'),
+              loading: () => LoadingView(message: l10n.loadingOrders),
               error: (error, _) => ErrorView(
-                message: 'Unable to load Orders. Please try again.',
-                retryLabel: 'Retry',
+                message: l10n.ordersLoadError,
+                retryLabel: l10n.retry,
                 onRetry: () => ref.invalidate(ordersProvider),
               ),
               data: (page) => page.results.isEmpty
@@ -94,13 +99,15 @@ class OrderDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final order = ref.watch(orderDetailProvider(orderId));
+    final l10n = AppLocalizations.of(context);
+    final isArabic = Directionality.of(context) == TextDirection.rtl;
     return AppScaffold(
-      title: 'Order Details',
+      title: l10n.orderDetails,
       child: order.when(
-        loading: () => const LoadingView(message: 'Loading Order...'),
+        loading: () => LoadingView(message: l10n.loadingOrder),
         error: (error, _) => ErrorView(
-          message: 'Unable to load Order. Please try again.',
-          retryLabel: 'Retry',
+          message: l10n.orderLoadError,
+          retryLabel: l10n.retry,
           onRetry: () => ref.invalidate(orderDetailProvider(orderId)),
         ),
         data: (data) => ListView(
@@ -123,24 +130,24 @@ class OrderDetailScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             BayadCard(child: WorkflowStepper(steps: data.workflowSteps)),
             const SizedBox(height: 12),
-            const SectionHeader(title: 'Items'),
+            SectionHeader(title: l10n.items),
             for (final item in data.items)
               ListTile(
-                title: Text(item.productNameEn),
+                title: Text(item.localizedName(isArabic)),
                 subtitle: QuantityText(value: item.quantity, unit: item.unit),
                 trailing: Text(formatMoney(item.lineTotal)),
               ),
             const Divider(),
             ListTile(
-              title: const Text('Subtotal'),
+              title: Text(l10n.subtotal),
               trailing: Text(formatMoney(data.subtotal, data.currency)),
             ),
             ListTile(
-              title: const Text('Discount'),
+              title: Text(l10n.discount),
               trailing: Text(formatMoney(data.discountAmount, data.currency)),
             ),
             ListTile(
-              title: const Text('Total'),
+              title: Text(l10n.total),
               trailing: PriceText(
                 value: data.totalAmount,
                 currency: data.currency,

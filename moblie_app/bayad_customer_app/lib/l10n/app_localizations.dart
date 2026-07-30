@@ -362,6 +362,216 @@ abstract class AppLocalizations {
   /// **'Unavailable'**
   String get unavailable;
 
+  /// No description provided for @pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get pending;
+
+  /// No description provided for @invoiced.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoiced'**
+  String get invoiced;
+
+  /// No description provided for @processing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get processing;
+
+  /// No description provided for @readyForShipment.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for Shipment'**
+  String get readyForShipment;
+
+  /// No description provided for @cancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get cancelled;
+
+  /// No description provided for @paid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get paid;
+
+  /// No description provided for @unpaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid'**
+  String get unpaid;
+
+  /// No description provided for @items.
+  ///
+  /// In en, this message translates to:
+  /// **'Items'**
+  String get items;
+
+  /// No description provided for @subtotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtotal'**
+  String get subtotal;
+
+  /// No description provided for @discount.
+  ///
+  /// In en, this message translates to:
+  /// **'Discount'**
+  String get discount;
+
+  /// No description provided for @total.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get total;
+
+  /// No description provided for @driver.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver'**
+  String get driver;
+
+  /// No description provided for @vehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle'**
+  String get vehicle;
+
+  /// No description provided for @driverPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver pending'**
+  String get driverPending;
+
+  /// No description provided for @productDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Product Details'**
+  String get productDetails;
+
+  /// No description provided for @loadingProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading product...'**
+  String get loadingProduct;
+
+  /// No description provided for @productsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load Products. Please try again.'**
+  String get productsLoadError;
+
+  /// No description provided for @productLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load Product. Please try again.'**
+  String get productLoadError;
+
+  /// No description provided for @loadingOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading orders...'**
+  String get loadingOrders;
+
+  /// No description provided for @ordersLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load Orders. Please try again.'**
+  String get ordersLoadError;
+
+  /// No description provided for @orderDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Details'**
+  String get orderDetails;
+
+  /// No description provided for @loadingOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading order...'**
+  String get loadingOrder;
+
+  /// No description provided for @orderLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load Order. Please try again.'**
+  String get orderLoadError;
+
+  /// No description provided for @loadingInvoices.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading invoices...'**
+  String get loadingInvoices;
+
+  /// No description provided for @invoicesLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load Invoices. Please try again.'**
+  String get invoicesLoadError;
+
+  /// No description provided for @invoiceDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice Details'**
+  String get invoiceDetails;
+
+  /// No description provided for @loadingInvoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading invoice...'**
+  String get loadingInvoice;
+
+  /// No description provided for @invoiceLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load Invoice. Please try again.'**
+  String get invoiceLoadError;
+
+  /// No description provided for @noInvoicesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'You do not have any Invoices yet.'**
+  String get noInvoicesFound;
+
+  /// No description provided for @loadingShipments.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading shipments...'**
+  String get loadingShipments;
+
+  /// No description provided for @shipmentsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load Shipments. Please try again.'**
+  String get shipmentsLoadError;
+
+  /// No description provided for @shipmentTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Shipment Tracking'**
+  String get shipmentTracking;
+
+  /// No description provided for @loadingShipment.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading shipment...'**
+  String get loadingShipment;
+
+  /// No description provided for @shipmentLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load Shipment. Please try again.'**
+  String get shipmentLoadError;
+
+  /// No description provided for @noShipmentsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No Shipment information is available.'**
+  String get noShipmentsFound;
+
   /// No description provided for @myOrders.
   ///
   /// In en, this message translates to:
@@ -691,6 +901,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter the 6-digit verification code.'**
   String get enterSixDigitCode;
+
+  /// No description provided for @verificationCodeSent.
+  ///
+  /// In en, this message translates to:
+  /// **'The verification code was sent to your email.'**
+  String get verificationCodeSent;
+
+  /// No description provided for @emailVerifiedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Email verified successfully.'**
+  String get emailVerifiedSuccessfully;
+
+  /// No description provided for @verificationCodeIncorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'The verification code is incorrect.'**
+  String get verificationCodeIncorrect;
+
+  /// No description provided for @verificationCodeExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The verification code has expired.'**
+  String get verificationCodeExpired;
+
+  /// No description provided for @verificationCodeUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'This code has already been used.'**
+  String get verificationCodeUsed;
+
+  /// No description provided for @waitBeforeRequestingCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait before requesting another code.'**
+  String get waitBeforeRequestingCode;
+
+  /// No description provided for @tooManyVerificationAttempts.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Please request a new code later.'**
+  String get tooManyVerificationAttempts;
+
+  /// No description provided for @unableToSendVerificationEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to send the email. Try again.'**
+  String get unableToSendVerificationEmail;
+
+  /// No description provided for @resendCodeWithSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend Code ({seconds}s)'**
+  String resendCodeWithSeconds(int seconds);
 
   /// No description provided for @pendingAdminApproval.
   ///

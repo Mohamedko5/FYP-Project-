@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AppTextField extends StatelessWidget {
   const AppTextField({
@@ -13,6 +14,7 @@ class AppTextField extends StatelessWidget {
     this.enabled = true,
     this.suffixIcon,
     this.onSubmitted,
+    this.inputFormatters,
   });
 
   final TextEditingController controller;
@@ -25,6 +27,7 @@ class AppTextField extends StatelessWidget {
   final bool enabled;
   final Widget? suffixIcon;
   final ValueChanged<String>? onSubmitted;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +38,7 @@ class AppTextField extends StatelessWidget {
       obscureText: obscureText,
       enabled: enabled,
       onSubmitted: onSubmitted,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,

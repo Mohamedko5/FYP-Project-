@@ -142,6 +142,112 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unavailable => 'Unavailable';
 
   @override
+  String get pending => 'Pending';
+
+  @override
+  String get invoiced => 'Invoiced';
+
+  @override
+  String get processing => 'Processing';
+
+  @override
+  String get readyForShipment => 'Ready for Shipment';
+
+  @override
+  String get cancelled => 'Cancelled';
+
+  @override
+  String get paid => 'Paid';
+
+  @override
+  String get unpaid => 'Unpaid';
+
+  @override
+  String get items => 'Items';
+
+  @override
+  String get subtotal => 'Subtotal';
+
+  @override
+  String get discount => 'Discount';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get driver => 'Driver';
+
+  @override
+  String get vehicle => 'Vehicle';
+
+  @override
+  String get driverPending => 'Driver pending';
+
+  @override
+  String get productDetails => 'Product Details';
+
+  @override
+  String get loadingProduct => 'Loading product...';
+
+  @override
+  String get productsLoadError => 'Unable to load Products. Please try again.';
+
+  @override
+  String get productLoadError => 'Unable to load Product. Please try again.';
+
+  @override
+  String get loadingOrders => 'Loading orders...';
+
+  @override
+  String get ordersLoadError => 'Unable to load Orders. Please try again.';
+
+  @override
+  String get orderDetails => 'Order Details';
+
+  @override
+  String get loadingOrder => 'Loading order...';
+
+  @override
+  String get orderLoadError => 'Unable to load Order. Please try again.';
+
+  @override
+  String get loadingInvoices => 'Loading invoices...';
+
+  @override
+  String get invoicesLoadError => 'Unable to load Invoices. Please try again.';
+
+  @override
+  String get invoiceDetails => 'Invoice Details';
+
+  @override
+  String get loadingInvoice => 'Loading invoice...';
+
+  @override
+  String get invoiceLoadError => 'Unable to load Invoice. Please try again.';
+
+  @override
+  String get noInvoicesFound => 'You do not have any Invoices yet.';
+
+  @override
+  String get loadingShipments => 'Loading shipments...';
+
+  @override
+  String get shipmentsLoadError =>
+      'Unable to load Shipments. Please try again.';
+
+  @override
+  String get shipmentTracking => 'Shipment Tracking';
+
+  @override
+  String get loadingShipment => 'Loading shipment...';
+
+  @override
+  String get shipmentLoadError => 'Unable to load Shipment. Please try again.';
+
+  @override
+  String get noShipmentsFound => 'No Shipment information is available.';
+
+  @override
   String get myOrders => 'My Orders';
 
   @override
@@ -311,6 +417,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get enterSixDigitCode => 'Enter the 6-digit verification code.';
+
+  @override
+  String get verificationCodeSent =>
+      'The verification code was sent to your email.';
+
+  @override
+  String get emailVerifiedSuccessfully => 'Email verified successfully.';
+
+  @override
+  String get verificationCodeIncorrect => 'The verification code is incorrect.';
+
+  @override
+  String get verificationCodeExpired => 'The verification code has expired.';
+
+  @override
+  String get verificationCodeUsed => 'This code has already been used.';
+
+  @override
+  String get waitBeforeRequestingCode => 'Wait before requesting another code.';
+
+  @override
+  String get tooManyVerificationAttempts =>
+      'Too many attempts. Please request a new code later.';
+
+  @override
+  String get unableToSendVerificationEmail =>
+      'Unable to send the email. Try again.';
+
+  @override
+  String resendCodeWithSeconds(int seconds) {
+    return 'Resend Code (${seconds}s)';
+  }
 
   @override
   String get pendingAdminApproval => 'Pending Admin Approval';

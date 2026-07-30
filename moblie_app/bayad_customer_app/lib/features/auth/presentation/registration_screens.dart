@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:bayad_customer_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -204,17 +207,102 @@ class VerifyEmailScreen extends ConsumerStatefulWidget {
 
 class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   final code = TextEditingController();
+  Timer? _cooldownTimer;
+  int _cooldownRemaining = 0;
+  bool _resending = false;
   String? error;
+
   @override
   void dispose() {
+    _cooldownTimer?.cancel();
     code.dispose();
     super.dispose();
+  }
+
+  void _startCooldown(int seconds) {
+    _cooldownTimer?.cancel();
+    if (seconds <= 0) {
+      setState(() => _cooldownRemaining = 0);
+      return;
+    }
+    setState(() => _cooldownRemaining = seconds);
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_cooldownRemaining <= 1) {
+        timer.cancel();
+        setState(() => _cooldownRemaining = 0);
+        return;
+      }
+      setState(() => _cooldownRemaining -= 1);
+    });
+  }
+
+  String? _localizedVerificationError(
+    AppLocalizations l10n,
+    AccountFlowState state,
+  ) {
+    if (error != null) return error;
+    return switch (state.errorCode) {
+      'invalid_code' => l10n.verificationCodeIncorrect,
+      'code_expired' => l10n.verificationCodeExpired,
+      'code_used' => l10n.verificationCodeUsed,
+      'resend_cooldown' => l10n.waitBeforeRequestingCode,
+      'attempt_limit' => l10n.tooManyVerificationAttempts,
+      'resend_limit' => l10n.tooManyVerificationAttempts,
+      'email_delivery_failed' => l10n.unableToSendVerificationEmail,
+      _ => state.error,
+    };
+  }
+
+  Future<void> _submitVerification(AccountFlowState state) async {
+    final l10n = AppLocalizations.of(context);
+    if (state.isLoading) return;
+    setState(() => error = null);
+    final enteredCode = code.text.trim();
+    if (!RegExp(r'^\d{6}$').hasMatch(enteredCode)) {
+      setState(() => error = l10n.enterSixDigitCode);
+      return;
+    }
+    final ok = await ref
+        .read(accountFlowControllerProvider.notifier)
+        .verifyEmail(enteredCode);
+    if (!mounted || !ok) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.emailVerifiedSuccessfully)));
+    context.goNamed(RouteNames.pendingApproval);
+  }
+
+  Future<void> _resendCode(AccountFlowState state) async {
+    final l10n = AppLocalizations.of(context);
+    if (state.isLoading || _resending || _cooldownRemaining > 0) return;
+    setState(() {
+      error = null;
+      _resending = true;
+    });
+    final ok = await ref
+        .read(accountFlowControllerProvider.notifier)
+        .resendVerification();
+    if (!mounted) return;
+    final updatedState = ref.read(accountFlowControllerProvider);
+    setState(() => _resending = false);
+    if (!ok) return;
+    _startCooldown(updatedState.resendCooldownSeconds);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.verificationCodeSent)));
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(accountFlowControllerProvider);
+    final visibleError = _localizedVerificationError(l10n, state);
+    final canResend =
+        !state.isLoading && !_resending && _cooldownRemaining == 0;
     return AuthFlowScaffold(
       title: l10n.emailVerification,
       child: Column(
@@ -231,38 +319,31 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
             label: l10n.verificationCode,
             hint: '123456',
             keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            enabled: !state.isLoading,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
+            onSubmitted: (_) => _submitVerification(state),
           ),
-          if (error != null || state.error != null) ...[
+          if (visibleError != null) ...[
             const SizedBox(height: 12),
-            Text(
-              error ?? state.error!,
-              style: const TextStyle(color: AppColors.danger),
-            ),
+            Text(visibleError, style: const TextStyle(color: AppColors.danger)),
           ],
           const SizedBox(height: 16),
           AppButton(
             label: state.isLoading ? l10n.verifying : l10n.verifyEmail,
             isLoading: state.isLoading,
-            onPressed: () async {
-              if (!RegExp(r'^\d{6}$').hasMatch(code.text.trim())) {
-                setState(() => error = l10n.enterSixDigitCode);
-                return;
-              }
-              final ok = await ref
-                  .read(accountFlowControllerProvider.notifier)
-                  .verifyEmail(code.text.trim());
-              if (ok && context.mounted) {
-                context.pushNamed(RouteNames.pendingApproval);
-              }
-            },
+            onPressed: () => _submitVerification(state),
           ),
           TextButton(
-            onPressed: state.isLoading
-                ? null
-                : () => ref
-                      .read(accountFlowControllerProvider.notifier)
-                      .resendVerification(),
-            child: Text(l10n.resendCode),
+            onPressed: canResend ? () => _resendCode(state) : null,
+            child: Text(
+              _cooldownRemaining > 0
+                  ? l10n.resendCodeWithSeconds(_cooldownRemaining)
+                  : l10n.resendCode,
+            ),
           ),
         ],
       ),

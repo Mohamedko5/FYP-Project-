@@ -4,6 +4,7 @@ from datetime import datetime, time
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Sum
 from django.utils import timezone
@@ -121,6 +122,10 @@ class MobileRegisterView(APIView):
             'message': 'A verification code has been sent to your email.',
             'registration_id': registration.id,
             'email_masked': mask_email(registration.email),
+            'email': registration.email,
+            'verification_required': True,
+            'next': 'verify_email',
+            'resend_cooldown_seconds': getattr(settings, 'CUSTOMER_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS', 60),
         }, status=status.HTTP_201_CREATED)
 
 
@@ -135,6 +140,7 @@ class MobileVerifyEmailView(APIView):
         return Response({
             'message': 'Your email has been verified. Your account is waiting for administrator approval.',
             'status': registration.status,
+            'next': 'pending_approval',
         })
 
 
@@ -146,7 +152,10 @@ class MobileResendVerificationView(APIView):
         serializer = MobileResendVerificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({'message': 'If a verification is pending, a new code has been sent.'})
+        return Response({
+            'message': 'If a verification is pending, a new code has been sent.',
+            'resend_cooldown_seconds': getattr(settings, 'CUSTOMER_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS', 60),
+        })
 
 
 class MobileRegistrationStatusView(APIView):

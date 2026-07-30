@@ -1,5 +1,6 @@
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -163,6 +164,10 @@ def email_delivery_validation_error(detail):
     })
 
 
+def verification_error(detail, code='invalid_code'):
+    return serializers.ValidationError({'code': code, 'detail': detail})
+
+
 class MobileRegistrationSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=150)
     business_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
@@ -183,7 +188,7 @@ class MobileRegistrationSerializer(serializers.Serializer):
             CustomerRegistrationRequest.STATUS_EMAIL_PENDING,
             CustomerRegistrationRequest.STATUS_PENDING_APPROVAL,
         ]).exists():
-            raise serializers.ValidationError('A registration request is already being reviewed.')
+            raise serializers.ValidationError('A registration request is already pending. Please verify your email or request a new code.')
         return email
 
     def validate_phone(self, value):
@@ -226,32 +231,44 @@ class MobileRegistrationSerializer(serializers.Serializer):
         try:
             send_customer_verification_email(registration, code)
         except EmailDeliveryError as exc:
+            registration.last_verification_sent_at = None
+            registration.save(update_fields=['last_verification_sent_at', 'updated_at'])
             raise email_delivery_validation_error(exc.detail) from exc
         return registration
 
 
 class MobileVerifyEmailSerializer(serializers.Serializer):
-    registration_id = serializers.IntegerField()
-    verification_code = serializers.RegexField(r'^\d{6}$')
+    email = serializers.EmailField()
+    code = serializers.RegexField(r'^\d{6}$', required=False)
+    verification_code = serializers.RegexField(r'^\d{6}$', required=False)
+
+    def validate(self, attrs):
+        attrs['email'] = attrs['email'].strip().lower()
+        attrs['verification_code'] = attrs.get('code') or attrs.get('verification_code')
+        if not attrs['verification_code']:
+            raise serializers.ValidationError({'code': 'Enter the verification code.'})
+        return attrs
 
     def save(self):
-        try:
-            registration = CustomerRegistrationRequest.objects.get(pk=self.validated_data['registration_id'])
-        except CustomerRegistrationRequest.DoesNotExist as exc:
-            raise serializers.ValidationError({'detail': 'Invalid or expired verification code.'}) from exc
-        if registration.status != CustomerRegistrationRequest.STATUS_EMAIL_PENDING or registration.is_verification_expired:
-            raise serializers.ValidationError({'detail': 'Invalid or expired verification code.'})
-        if registration.verification_attempts >= 5:
-            raise serializers.ValidationError({'detail': 'Too many verification attempts. Please request a new code.'})
+        registration = CustomerRegistrationRequest.objects.filter(email__iexact=self.validated_data['email'], status=CustomerRegistrationRequest.STATUS_EMAIL_PENDING).order_by('-created_at').first()
+        if not registration:
+            raise verification_error('Invalid or expired verification code.', 'invalid_code')
+        if registration.verification_consumed_at:
+            raise verification_error('This verification code has already been used.', 'code_used')
+        if registration.is_verification_expired:
+            raise verification_error('The verification code has expired.', 'code_expired')
+        if registration.verification_attempts >= getattr(settings, 'CUSTOMER_EMAIL_VERIFICATION_MAX_ATTEMPTS', 5):
+            raise verification_error('Too many verification attempts. Please request a new code.', 'attempt_limit')
         if not registration.check_verification_code(self.validated_data['verification_code']):
             registration.verification_attempts += 1
             registration.save(update_fields=['verification_attempts', 'updated_at'])
-            raise serializers.ValidationError({'detail': 'Invalid or expired verification code.'})
+            raise verification_error('The verification code is incorrect.', 'invalid_code')
         registration.email_verified = True
         registration.status = CustomerRegistrationRequest.STATUS_PENDING_APPROVAL
         registration.verification_code_hash = ''
         registration.verification_code_expires_at = None
-        registration.save(update_fields=['email_verified', 'status', 'verification_code_hash', 'verification_code_expires_at', 'updated_at'])
+        registration.verification_consumed_at = timezone.now()
+        registration.save(update_fields=['email_verified', 'status', 'verification_code_hash', 'verification_code_expires_at', 'verification_consumed_at', 'updated_at'])
         return registration
 
 
@@ -262,11 +279,22 @@ class MobileResendVerificationSerializer(serializers.Serializer):
         email = self.validated_data['email'].strip().lower()
         registration = CustomerRegistrationRequest.objects.filter(email__iexact=email, status=CustomerRegistrationRequest.STATUS_EMAIL_PENDING).order_by('-created_at').first()
         if registration:
+            now = timezone.now()
+            cooldown = getattr(settings, 'CUSTOMER_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS', 60)
+            max_resends = getattr(settings, 'CUSTOMER_EMAIL_VERIFICATION_MAX_RESENDS', 5)
+            if registration.last_verification_sent_at and now < registration.last_verification_sent_at + timezone.timedelta(seconds=cooldown):
+                raise verification_error('Wait before requesting another code.', 'resend_cooldown')
+            if registration.verification_resend_count >= max_resends:
+                raise verification_error('Too many verification code requests. Please try again later.', 'resend_limit')
             code = registration.set_verification_code()
-            registration.save(update_fields=['verification_code_hash', 'verification_code_expires_at', 'verification_attempts', 'last_verification_sent_at', 'updated_at'])
+            registration.verification_resend_count += 1
+            registration.save(update_fields=['verification_code_hash', 'verification_code_expires_at', 'verification_attempts', 'last_verification_sent_at', 'verification_consumed_at', 'verification_resend_count', 'updated_at'])
             try:
                 send_customer_verification_email(registration, code)
             except EmailDeliveryError as exc:
+                registration.last_verification_sent_at = None
+                registration.verification_resend_count = max(registration.verification_resend_count - 1, 0)
+                registration.save(update_fields=['last_verification_sent_at', 'verification_resend_count', 'updated_at'])
                 raise email_delivery_validation_error(exc.detail) from exc
         return None
 

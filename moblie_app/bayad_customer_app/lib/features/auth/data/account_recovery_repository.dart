@@ -5,13 +5,23 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/network/api_exception.dart';
 
-final accountRecoveryRepositoryProvider = Provider<AccountRecoveryRepository>((ref) => AccountRecoveryRepository(ref.watch(dioProvider)));
+final accountRecoveryRepositoryProvider = Provider<AccountRecoveryRepository>(
+  (ref) => AccountRecoveryRepository(ref.watch(dioProvider)),
+);
 
 class RegistrationResult {
-  const RegistrationResult({required this.registrationId, required this.emailMasked, required this.message});
+  const RegistrationResult({
+    required this.registrationId,
+    required this.email,
+    required this.emailMasked,
+    required this.message,
+    required this.resendCooldownSeconds,
+  });
   final int registrationId;
+  final String email;
   final String emailMasked;
   final String message;
+  final int resendCooldownSeconds;
 }
 
 class AccountRecoveryRepository {
@@ -22,17 +32,25 @@ class AccountRecoveryRepository {
     final data = await _post(ApiEndpoints.mobileRegister, payload);
     return RegistrationResult(
       registrationId: data['registration_id'] as int? ?? 0,
+      email: data['email'] as String? ?? payload['email']?.toString() ?? '',
       emailMasked: data['email_masked'] as String? ?? '',
       message: data['message'] as String? ?? '',
+      resendCooldownSeconds: data['resend_cooldown_seconds'] as int? ?? 60,
     );
   }
 
-  Future<String> verifyEmail({required int registrationId, required String code}) async {
-    final data = await _post(ApiEndpoints.mobileVerifyEmail, {'registration_id': registrationId, 'verification_code': code});
-    return data['status'] as String? ?? '';
+  Future<Map<String, dynamic>> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    return _post(ApiEndpoints.mobileVerifyEmail, {
+      'email': email,
+      'code': code,
+    });
   }
 
-  Future<void> resendVerification(String email) => _post(ApiEndpoints.mobileResendVerification, {'email': email});
+  Future<Map<String, dynamic>> resendVerification(String email) =>
+      _post(ApiEndpoints.mobileResendVerification, {'email': email});
 
   Future<Map<String, dynamic>> registrationStatus(String email) async {
     try {
@@ -47,14 +65,25 @@ class AccountRecoveryRepository {
     }
   }
 
-  Future<void> forgotPassword(String email) => _post(ApiEndpoints.mobileForgotPassword, {'email': email});
+  Future<void> forgotPassword(String email) =>
+      _post(ApiEndpoints.mobileForgotPassword, {'email': email});
 
-  Future<String> verifyResetCode({required String email, required String code}) async {
-    final data = await _post(ApiEndpoints.mobileVerifyResetCode, {'email': email, 'verification_code': code});
+  Future<String> verifyResetCode({
+    required String email,
+    required String code,
+  }) async {
+    final data = await _post(ApiEndpoints.mobileVerifyResetCode, {
+      'email': email,
+      'verification_code': code,
+    });
     return data['reset_token'] as String? ?? '';
   }
 
-  Future<void> resetPassword({required String token, required String password, required String confirmPassword}) {
+  Future<void> resetPassword({
+    required String token,
+    required String password,
+    required String confirmPassword,
+  }) {
     return _post(ApiEndpoints.mobileResetPassword, {
       'reset_token': token,
       'new_password': password,
@@ -62,9 +91,16 @@ class AccountRecoveryRepository {
     });
   }
 
-  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> _post(
+    String path,
+    Map<String, dynamic> data,
+  ) async {
     try {
-      final response = await _dio.post<Map<String, dynamic>>(path, data: data, options: Options(extra: {'skipAuth': true}));
+      final response = await _dio.post<Map<String, dynamic>>(
+        path,
+        data: data,
+        options: Options(extra: {'skipAuth': true}),
+      );
       return response.data ?? const {};
     } on DioException catch (error) {
       throw _mapDioError(error);
@@ -74,10 +110,26 @@ class AccountRecoveryRepository {
   ApiException _mapDioError(DioException error) {
     final data = error.response?.data;
     if (data is Map<String, dynamic>) {
-      final detail = data['detail'] ?? (data.values.isNotEmpty ? data.values.first : null);
-      if (detail != null) return ApiException(detail.toString(), statusCode: error.response?.statusCode);
+      final code = data['code'] is List
+          ? (data['code'] as List).first?.toString()
+          : data['code']?.toString();
+      final detail =
+          data['detail'] ?? (data.values.isNotEmpty ? data.values.first : null);
+      if (detail != null) {
+        final message = detail is List && detail.isNotEmpty
+            ? detail.first.toString()
+            : detail.toString();
+        return ApiException(
+          message,
+          statusCode: error.response?.statusCode,
+          code: code,
+        );
+      }
     }
-    if (error.type == DioExceptionType.connectionError || error.type == DioExceptionType.connectionTimeout || error.type == DioExceptionType.receiveTimeout || error.type == DioExceptionType.sendTimeout) {
+    if (error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout) {
       return const ApiException('Unable to connect to the server.');
     }
     return const ApiException('Something went wrong. Please try again.');

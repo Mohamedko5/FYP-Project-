@@ -340,13 +340,6 @@ export default function Invoices() {
         <SummaryCard label={label.outstanding} value={money(summary?.total_outstanding_value)} note={label.paymentBreakdown} />
       </StatGrid>
 
-      <Card title={label.paymentBreakdown} subtitle={`${label.paidValue}: ${money(summary?.total_paid_value)}`}>
-        <div className="module-mini-breakdown">
-          <span>{label.cash}: <strong>{money(summary?.cash_payments)}</strong></span>
-          <span>{label.online}: <strong>{money(summary?.online_payments)}</strong></span>
-        </div>
-      </Card>
-
       <Card className="module-card-flat">
         <div className="module-tabs" role="tablist" aria-label="Invoice status">
           {tabs.map(([tab, text]) => (

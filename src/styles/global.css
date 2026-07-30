@@ -9463,3 +9463,482 @@ textarea:focus-visible {
   }
 }
 
+/* ------------------------------------------------------------------
+   Bayad professional UI consolidation pass
+   Shared fixes for typography, icons, buttons, tables, modals and RTL.
+   ------------------------------------------------------------------ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 0;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-latin);
+  font-size: 16px;
+  text-rendering: optimizeLegibility;
+}
+
+html[dir="rtl"] {
+  font-family: var(--font-arabic);
+}
+
+body {
+  min-width: 0;
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--color-background);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+html[dir="rtl"] body,
+html[dir="rtl"] button,
+html[dir="rtl"] input,
+html[dir="rtl"] select,
+html[dir="rtl"] textarea {
+  line-height: 1.6;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.app-shell {
+  min-width: 0;
+  background: var(--color-background);
+}
+
+.app-shell__main,
+.content,
+.module-page,
+.card,
+.app-window__body {
+  min-width: 0;
+}
+
+.content {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
+.topbar {
+  min-width: 0;
+  gap: 16px;
+}
+
+.topbar__title-area,
+.topbar__addon,
+.topbar__meta {
+  min-width: 0;
+}
+
+.topbar h1,
+.module-page-header h1 {
+  color: var(--color-text);
+  font-size: clamp(1.55rem, 2vw, 1.95rem);
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+}
+
+.module-page-header {
+  align-items: flex-start;
+}
+
+.module-page-header__side {
+  min-width: min(100%, 260px);
+}
+
+.sidebar__brand,
+.sidebar__link,
+.sidebar__logout {
+  min-width: 0;
+}
+
+.sidebar__brand strong,
+.sidebar__brand small,
+.sidebar__link span:not(.sidebar__badge),
+.sidebar__logout span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+}
+
+.sidebar__logout svg {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.sidebar__badge {
+  display: inline-grid;
+  flex: 0 0 auto;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.button,
+button.button,
+.language-toggle,
+.sidebar__logout,
+.app-window__control,
+.topbar__menu-button,
+.module-tabs button,
+.journal-type-selector__button {
+  touch-action: manipulation;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  padding-inline: 18px;
+  border-radius: 12px;
+  font-size: 0.9375rem;
+  font-weight: 850;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.button:active:not(:disabled),
+.language-toggle:active:not(:disabled),
+.sidebar__link:active {
+  transform: translateY(1px);
+}
+
+.button:disabled,
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.tooltip--inline-flex {
+  min-width: 0;
+}
+
+.card,
+.module-summary-card,
+.module-record-card,
+.report-chart-card,
+.report-selector-card,
+.module-dialog,
+.app-window {
+  border-color: rgba(222, 219, 210, 0.85);
+  box-shadow: var(--shadow-soft);
+}
+
+.card {
+  border-radius: 18px;
+  overflow: visible;
+}
+
+.section-header,
+.card .section-header,
+.module-detail-section__header {
+  min-width: 0;
+  padding: 0;
+  overflow: visible;
+  border-radius: 0;
+}
+
+.section-header__content {
+  min-width: 0;
+}
+
+.section-header__content h3,
+.module-detail-section h3 {
+  font-size: clamp(1rem, 1.35vw, 1.25rem);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.module-summary-card {
+  min-width: 0;
+  border-radius: 16px;
+}
+
+.module-summary-card strong {
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+}
+
+.module-record-meta {
+  min-width: 0;
+}
+
+.module-record-meta > div,
+.module-record-card,
+.shipment-item-card {
+  min-width: 0;
+}
+
+.module-record-meta strong,
+.module-record-card strong,
+.module-record-card p,
+.module-record-card span,
+.shipment-item-card strong,
+.shipment-item-card p,
+.shipment-item-card span {
+  overflow-wrap: anywhere;
+}
+
+.module-filter-toolbar__fields > *,
+.module-filter-toolbar label,
+.module-dialog-field {
+  min-width: min(100%, 190px);
+}
+
+.module-filter-toolbar input,
+.module-filter-toolbar select,
+.module-dialog input,
+.module-dialog select,
+.module-dialog textarea,
+.app-window input,
+.app-window select,
+.app-window textarea {
+  min-height: 44px;
+  border-radius: 12px;
+  line-height: 1.35;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.table-wrap,
+.module-desktop-table {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.data-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.925rem;
+}
+
+.data-table th,
+.data-table td {
+  max-width: 320px;
+  padding: 12px 14px;
+  line-height: 1.45;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+.data-table th {
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.data-table td:has(.button-row),
+.data-table td:has(.button),
+.data-table td:last-child {
+  white-space: nowrap;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.module-state {
+  min-width: 0;
+  border-radius: 16px;
+}
+
+.module-state--empty,
+.module-state--loading {
+  justify-content: center;
+}
+
+.module-state p,
+.module-state strong {
+  overflow-wrap: anywhere;
+}
+
+.app-window-backdrop,
+.module-dialog-backdrop {
+  padding: clamp(10px, 2vw, 24px);
+}
+
+.app-window {
+  max-width: min(1180px, calc(100vw - 32px));
+  max-height: min(860px, calc(100dvh - 32px));
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.app-window--small {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.app-window--medium {
+  width: min(760px, calc(100vw - 32px));
+}
+
+.app-window--large {
+  width: min(980px, calc(100vw - 32px));
+}
+
+.app-window--xlarge {
+  width: min(1180px, calc(100vw - 32px));
+}
+
+.app-window__titlebar {
+  min-width: 0;
+}
+
+.app-window__title {
+  min-width: 0;
+}
+
+.app-window__title h2,
+.app-window__title p {
+  overflow-wrap: anywhere;
+}
+
+.app-window__controls {
+  flex: 0 0 auto;
+}
+
+.app-window__control {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.app-window__body {
+  overflow: auto;
+}
+
+.report-chart-wrapper {
+  overflow: hidden;
+}
+
+.report-chart-card svg text {
+  font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .content {
+    padding: 22px;
+  }
+
+  .data-table {
+    min-width: 680px;
+  }
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: 18px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+  }
+
+  .topbar__meta {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  html[dir="rtl"] .topbar__meta {
+    justify-content: flex-end;
+  }
+
+  .module-page-header__side,
+  .module-page-header__actions,
+  .module-page-header__actions .tooltip,
+  .module-page-header__actions .button,
+  .module-filter-toolbar__actions,
+  .module-filter-toolbar__actions .tooltip,
+  .module-filter-toolbar__actions .button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 14px;
+  }
+
+  .topbar h1,
+  .module-page-header h1 {
+    font-size: 1.45rem;
+  }
+
+  .button {
+    width: 100%;
+    min-height: 46px;
+    white-space: normal;
+  }
+
+  .data-table {
+    min-width: 620px;
+    font-size: 0.875rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 10px 12px;
+  }
+}
+

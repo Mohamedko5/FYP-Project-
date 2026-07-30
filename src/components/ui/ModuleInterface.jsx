@@ -66,12 +66,12 @@ export function EmptyState({ title = 'No records found.', description }) {
 }
 
 export function ErrorState({ errors, onRetry, retryLabel = 'Retry' }) {
-  const { isArabic } = useLanguage();
+  const { t } = useLanguage();
   if (!errors?.length) return null;
   return (
     <div className="module-state module-state--error" role="alert">
       <div>
-        <strong>{isArabic ? 'يوجد أمر يحتاج إلى مراجعة' : 'Something needs attention'}</strong>
+        <strong>{t('errorAttention')}</strong>
         {errors.map((error) => <p key={error}>{error}</p>)}
       </div>
       {onRetry && <Button variant="secondary" onClick={onRetry}>{retryLabel}</Button>}

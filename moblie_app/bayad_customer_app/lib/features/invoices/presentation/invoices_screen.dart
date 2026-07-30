@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bayad_customer_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,18 +17,19 @@ class InvoicesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final invoices = ref.watch(invoicesProvider);
+    final l10n = AppLocalizations.of(context);
     return AppScaffold(
-      title: 'My Invoices',
+      title: l10n.myInvoices,
       currentIndex: 4,
       child: invoices.when(
-        loading: () => const LoadingView(message: 'Loading Invoices...'),
+        loading: () => LoadingView(message: l10n.loadingInvoices),
         error: (error, _) => ErrorView(
-          message: 'Unable to load Invoices. Please try again.',
-          retryLabel: 'Retry',
+          message: l10n.invoicesLoadError,
+          retryLabel: l10n.retry,
           onRetry: () => ref.invalidate(invoicesProvider),
         ),
         data: (page) => page.results.isEmpty
-            ? const EmptyView(message: 'You do not have any Invoices yet.')
+            ? EmptyView(message: l10n.noInvoicesFound)
             : RefreshIndicator(
                 onRefresh: () async => ref.refresh(invoicesProvider.future),
                 child: ListView.separated(
@@ -55,14 +57,16 @@ class InvoiceDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final invoice = ref.watch(invoiceDetailProvider(invoiceId));
+    final l10n = AppLocalizations.of(context);
+    final isArabic = Directionality.of(context) == TextDirection.rtl;
     return AppScaffold(
-      title: 'Invoice Details',
+      title: l10n.invoiceDetails,
       currentIndex: 4,
       child: invoice.when(
-        loading: () => const LoadingView(message: 'Loading Invoice...'),
+        loading: () => LoadingView(message: l10n.loadingInvoice),
         error: (error, _) => ErrorView(
-          message: 'Unable to load Invoice. Please try again.',
-          retryLabel: 'Retry',
+          message: l10n.invoiceLoadError,
+          retryLabel: l10n.retry,
           onRetry: () => ref.invalidate(invoiceDetailProvider(invoiceId)),
         ),
         data: (data) => ListView(
@@ -82,32 +86,28 @@ class InvoiceDetailScreen extends ConsumerWidget {
               ),
             ),
             if (data.paymentStatus == 'unpaid')
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: BayadCard(
-                  child: Text(
-                    'Please contact Bayad Company to complete payment.',
-                  ),
-                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: BayadCard(child: Text(l10n.unpaidInvoiceNotice)),
               ),
-            const SectionHeader(title: 'Items'),
+            SectionHeader(title: l10n.items),
             for (final item in data.items)
               ListTile(
-                title: Text(item.productNameEn),
+                title: Text(item.localizedName(isArabic)),
                 subtitle: QuantityText(value: item.quantity, unit: item.unit),
                 trailing: Text(formatMoney(item.lineTotal)),
               ),
             const Divider(),
             ListTile(
-              title: const Text('Subtotal'),
+              title: Text(l10n.subtotal),
               trailing: Text(formatMoney(data.subtotal, data.currency)),
             ),
             ListTile(
-              title: const Text('Discount'),
+              title: Text(l10n.discount),
               trailing: Text(formatMoney(data.discountAmount, data.currency)),
             ),
             ListTile(
-              title: const Text('Total'),
+              title: Text(l10n.total),
               trailing: PriceText(
                 value: data.totalAmount,
                 currency: data.currency,

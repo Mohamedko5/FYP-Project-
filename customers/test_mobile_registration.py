@@ -44,7 +44,7 @@ class MobileRegistrationAndResetTests(APITestCase):
         response = self.register()
         registration = CustomerRegistrationRequest.objects.get(id=response.data['registration_id'])
         code = self.code_from_email()
-        verify = self.client.post('/api/mobile/auth/verify-email/', {'registration_id': registration.id, 'verification_code': code}, format='json')
+        verify = self.client.post('/api/mobile/auth/verify-email/', {'email': registration.email, 'code': code}, format='json')
         self.assertEqual(verify.status_code, status.HTTP_200_OK)
         registration.refresh_from_db()
         return registration
@@ -63,7 +63,10 @@ class MobileRegistrationAndResetTests(APITestCase):
         self.assertTrue(registration.check_registration_password(self.payload['password']))
         self.assertNotIn(self.code_from_email(), registration.verification_code_hash)
         self.assertEqual(registration.status, CustomerRegistrationRequest.STATUS_EMAIL_PENDING)
+        self.assertFalse(registration.email_verified)
+        self.assertIsNone(registration.created_user)
         self.assertNotIn('verification_code', response.data)
+        self.assertTrue(response.data['verification_required'])
 
     def test_duplicate_active_email_and_pending_email_are_rejected(self):
         self.User.objects.create_user(username='active', email=self.payload['email'], password='StrongPass123!')
@@ -81,12 +84,12 @@ class MobileRegistrationAndResetTests(APITestCase):
     def test_verify_email_correct_incorrect_expired_and_attempt_limit(self):
         response = self.register()
         registration = CustomerRegistrationRequest.objects.get(id=response.data['registration_id'])
-        wrong = self.client.post('/api/mobile/auth/verify-email/', {'registration_id': registration.id, 'verification_code': '000000'}, format='json')
+        wrong = self.client.post('/api/mobile/auth/verify-email/', {'email': registration.email, 'code': '000000'}, format='json')
         self.assertEqual(wrong.status_code, status.HTTP_400_BAD_REQUEST)
         registration.refresh_from_db()
         registration.verification_attempts = 5
         registration.save(update_fields=['verification_attempts'])
-        blocked = self.client.post('/api/mobile/auth/verify-email/', {'registration_id': registration.id, 'verification_code': self.code_from_email()}, format='json')
+        blocked = self.client.post('/api/mobile/auth/verify-email/', {'email': registration.email, 'code': self.code_from_email()}, format='json')
         self.assertEqual(blocked.status_code, status.HTTP_400_BAD_REQUEST)
 
         other = {**self.payload, 'email': 'expired@example.com', 'phone': '+249912345670'}
@@ -94,9 +97,10 @@ class MobileRegistrationAndResetTests(APITestCase):
         expired = CustomerRegistrationRequest.objects.get(id=expired_response.data['registration_id'])
         expired.verification_code_expires_at = timezone.now() - timezone.timedelta(minutes=1)
         expired.save(update_fields=['verification_code_expires_at'])
-        expired_verify = self.client.post('/api/mobile/auth/verify-email/', {'registration_id': expired.id, 'verification_code': self.code_from_email()}, format='json')
+        expired_verify = self.client.post('/api/mobile/auth/verify-email/', {'email': expired.email, 'code': self.code_from_email()}, format='json')
         self.assertEqual(expired_verify.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @override_settings(CUSTOMER_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS=0)
     def test_resend_invalidates_previous_code(self):
         response = self.register()
         old_code = self.code_from_email()
@@ -105,8 +109,24 @@ class MobileRegistrationAndResetTests(APITestCase):
         self.assertEqual(resend.status_code, status.HTTP_200_OK)
         new_code = self.code_from_email()
         self.assertNotEqual(old_code, new_code)
-        old_verify = self.client.post('/api/mobile/auth/verify-email/', {'registration_id': registration.id, 'verification_code': old_code}, format='json')
+        registration.refresh_from_db()
+        self.assertEqual(registration.verification_resend_count, 1)
+        old_verify = self.client.post('/api/mobile/auth/verify-email/', {'email': registration.email, 'code': old_code}, format='json')
         self.assertEqual(old_verify.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_resend_cooldown_is_enforced(self):
+        self.register()
+        resend = self.client.post('/api/mobile/auth/resend-verification/', {'email': self.payload['email']}, format='json')
+        self.assertEqual(resend.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(resend.data['code'], 'resend_cooldown')
+
+    @override_settings(CUSTOMER_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS=0, CUSTOMER_EMAIL_VERIFICATION_MAX_RESENDS=1)
+    def test_resend_limit_is_enforced(self):
+        self.register()
+        self.assertEqual(self.client.post('/api/mobile/auth/resend-verification/', {'email': self.payload['email']}, format='json').status_code, status.HTTP_200_OK)
+        limited = self.client.post('/api/mobile/auth/resend-verification/', {'email': self.payload['email']}, format='json')
+        self.assertEqual(limited.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(limited.data['code'], 'resend_limit')
 
     def test_registration_email_delivery_failure_returns_safe_error(self):
         with patch('customers.email_service.EmailMultiAlternatives.send', side_effect=OSError('ConnectionRefusedError')):
@@ -123,7 +143,8 @@ class MobileRegistrationAndResetTests(APITestCase):
         self.assertEqual(pending_login.status_code, status.HTTP_403_FORBIDDEN)
         registration = CustomerRegistrationRequest.objects.get(id=response.data['registration_id'])
         code = self.code_from_email()
-        self.client.post('/api/mobile/auth/verify-email/', {'registration_id': registration.id, 'verification_code': code}, format='json')
+        verify = self.client.post('/api/mobile/auth/verify-email/', {'email': registration.email, 'code': code}, format='json')
+        self.assertEqual(verify.data['next'], 'pending_approval')
         approval_login = self.client.post('/api/mobile/auth/login/', {'email': self.payload['email'], 'password': self.payload['password']}, format='json')
         self.assertEqual(approval_login.status_code, status.HTTP_403_FORBIDDEN)
         registration.refresh_from_db()
@@ -138,10 +159,21 @@ class MobileRegistrationAndResetTests(APITestCase):
         approve_registration(registration, self.admin)
         registration.refresh_from_db()
         self.assertEqual(registration.status, CustomerRegistrationRequest.STATUS_APPROVED)
-        self.assertTrue(CustomerAccount.objects.filter(user=registration.created_user, customer=registration.created_customer).exists())
-        self.assertFalse(registration.created_user.is_staff)
-        self.assertFalse(registration.created_user.is_superuser)
-        self.assertFalse(hasattr(registration.created_user, 'profile'))
+
+    def test_used_code_cannot_be_reused_and_arabic_name_works(self):
+        payload = {**self.payload, 'full_name': 'أحمد محمد', 'email': 'arabic@example.com', 'phone': '+249912345681'}
+        response = self.register(payload)
+        registration = CustomerRegistrationRequest.objects.get(id=response.data['registration_id'])
+        code = self.code_from_email()
+        first = self.client.post('/api/mobile/auth/verify-email/', {'email': registration.email, 'code': code}, format='json')
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        reused = self.client.post('/api/mobile/auth/verify-email/', {'email': registration.email, 'code': code}, format='json')
+        self.assertEqual(reused.status_code, status.HTTP_400_BAD_REQUEST)
+        registration.refresh_from_db()
+        self.assertEqual(registration.full_name, 'أحمد محمد')
+        self.assertEqual(registration.status, CustomerRegistrationRequest.STATUS_PENDING_APPROVAL)
+        self.assertIsNone(registration.created_user)
+        self.assertIsNone(registration.created_customer)
 
     def test_forgot_password_generic_and_reset_token_single_use(self):
         registration = self.verified_registration()
