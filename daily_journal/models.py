@@ -45,9 +45,11 @@ class JournalTransaction(models.Model):
 
     WAREHOUSE_STOCK_IN = 'stock_in'
     WAREHOUSE_MANUAL_WITHDRAWAL = 'manual_withdrawal'
+    WAREHOUSE_SHIPMENT_OUT = 'shipment_out'
     WAREHOUSE_OPERATION_CHOICES = [
         (WAREHOUSE_STOCK_IN, 'Add Stock'),
         (WAREHOUSE_MANUAL_WITHDRAWAL, 'Manual Withdrawal'),
+        (WAREHOUSE_SHIPMENT_OUT, 'Shipment Withdrawal'),
     ]
 
     PRODUCT_WHITE_SESAME = 'White Sesame'

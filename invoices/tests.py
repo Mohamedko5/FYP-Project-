@@ -2,6 +2,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -117,13 +118,35 @@ class InvoiceAPITests(APITestCase):
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.STATUS_READY_FOR_SHIPMENT)
         self.assertTrue(Shipment.objects.filter(invoice=invoice, status='ready_for_shipment').exists())
+        self.assertEqual(InventoryMovement.objects.count(), 0)
         twice = self.client.post(f'{self.url}{invoice_id}/mark-paid/', {'payment_method': 'cash'}, format='json')
-        self.assertEqual(twice.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(twice.status_code, status.HTTP_200_OK, twice.data)
+        self.assertEqual(InvoicePayment.objects.filter(invoice=invoice).count(), 1)
+        self.assertEqual(CustomerCashTransaction.objects.filter(transaction_type=CustomerCashTransaction.PAYMENT_RECEIVED, source_reference=invoice.invoice_number).count(), 1)
+        self.assertEqual(JournalTransaction.objects.filter(journal_type=JournalTransaction.JOURNAL_CASH, source_reference=invoice.invoice_number).count(), 1)
 
         second_order = create_order(user=self.admin, customer_id=self.customer.id, discount_amount='0', items=[{'product_id': self.white.id, 'product_unit_id': self.unit.id, 'quantity': '1.000'}])
         second = self.create_invoice(order=second_order)
-        online = self.client.post(f'{self.url}{second.data["id"]}/mark-paid/', {'payment_method': 'online', 'payment_reference': 'ONLINE-1'}, format='json')
+        receipt = SimpleUploadedFile('receipt.png', b'fake-image-content', content_type='image/png')
+        online = self.client.post(
+            f'{self.url}{second.data["id"]}/mark-paid/',
+            {
+                'payment_method': 'online',
+                'payment_reference': 'ONLINE-1',
+                'payment_date': '2026-07-30',
+                'payment_receipt': receipt,
+            },
+            format='multipart',
+        )
         self.assertEqual(online.status_code, status.HTTP_200_OK, online.data)
+        online_invoice = Invoice.objects.get(id=second.data['id'])
+        payment = online_invoice.payment
+        self.assertEqual(payment.payment_reference, 'ONLINE-1')
+        self.assertTrue(payment.payment_receipt.name)
+        journal = payment.linked_journal_transaction
+        self.assertEqual(journal.payment_method, JournalTransaction.PAYMENT_ELECTRONIC)
+        self.assertEqual(journal.electronic_reference, 'ONLINE-1')
+        self.assertTrue(journal.payment_receipt.name)
 
     def test_invalid_payment_and_atomic_failure(self):
         response = self.create_invoice()

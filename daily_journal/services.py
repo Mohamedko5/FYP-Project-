@@ -73,7 +73,8 @@ def journal_reference(journal):
 
 
 def validate_common(*, warehouse_operation, party, description):
-    if warehouse_operation not in dict(JournalTransaction.WAREHOUSE_OPERATION_CHOICES):
+    manual_operations = {JournalTransaction.WAREHOUSE_STOCK_IN, JournalTransaction.WAREHOUSE_MANUAL_WITHDRAWAL}
+    if warehouse_operation not in manual_operations:
         raise ValidationError({'warehouse_operation': 'Choose Add Stock or Manual Withdrawal.'})
     if not (party or '').strip():
         raise ValidationError({'party': 'Party is required.'})

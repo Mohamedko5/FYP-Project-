@@ -7,6 +7,7 @@ from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 from customers.models import Customer
+from daily_journal.models import JournalTransaction
 from inventory.models import Inventory, InventoryMovement, Product, Warehouse
 from invoices.models import Invoice
 from invoices.services import create_invoice_from_order, mark_invoice_paid
@@ -115,10 +116,19 @@ class ShipmentAPITests(APITestCase):
         movement = InventoryMovement.objects.get()
         self.assertEqual(movement.quantity_before, Decimal('100.000'))
         self.assertEqual(movement.quantity_after, Decimal('90.000'))
+        journal = JournalTransaction.objects.get(journal_type=JournalTransaction.JOURNAL_COMMODITY)
+        self.assertEqual(journal.linked_inventory_movement, movement)
+        self.assertEqual(journal.source_type, JournalTransaction.SOURCE_SHIPMENT)
+        self.assertEqual(journal.warehouse_operation, JournalTransaction.WAREHOUSE_SHIPMENT_OUT)
+        self.assertEqual(journal.product_name, self.white.name_en)
+        self.assertEqual(journal.quantity, Decimal('10.000'))
+        self.assertEqual(journal.unit, 'Qintar')
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.STATUS_COMPLETED)
         again = self.client.post(f'{self.url}{self.shipment.id}/complete/', {}, format='json')
         self.assertEqual(again.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(InventoryMovement.objects.count(), 1)
+        self.assertEqual(JournalTransaction.objects.filter(journal_type=JournalTransaction.JOURNAL_COMMODITY).count(), 1)
 
     def test_completion_is_atomic_when_stock_changes(self):
         self.auth_admin()
@@ -127,6 +137,7 @@ class ShipmentAPITests(APITestCase):
             with self.assertRaises(RuntimeError):
                 self.client.post(f'{self.url}{self.shipment.id}/complete/', {}, format='json')
         self.assertEqual(Inventory.objects.get(warehouse=self.warehouse).quantity, Decimal('100.000'))
+        self.assertEqual(JournalTransaction.objects.filter(journal_type=JournalTransaction.JOURNAL_COMMODITY).count(), 0)
 
     def test_cancellation_rules(self):
         self.auth_manager()

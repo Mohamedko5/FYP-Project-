@@ -103,6 +103,7 @@ class InvoicePayment(models.Model):
     amount = models.DecimalField(max_digits=18, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
     payment_reference = models.CharField(max_length=120, blank=True)
+    payment_receipt = models.FileField(upload_to='invoice_payments/receipts/', null=True, blank=True)
     linked_customer_transaction = models.ForeignKey('customers.CustomerCashTransaction', on_delete=models.PROTECT, related_name='invoice_payments', null=True, blank=True)
     linked_journal_transaction = models.ForeignKey('daily_journal.JournalTransaction', on_delete=models.PROTECT, related_name='invoice_payments', null=True, blank=True)
     received_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='received_invoice_payments')

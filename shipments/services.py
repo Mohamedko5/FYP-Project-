@@ -5,6 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import UserProfile
+from daily_journal.models import JournalTransaction
 from inventory.models import Inventory, InventoryMovement, Warehouse
 from orders.models import Order
 
@@ -30,6 +31,36 @@ def user_name(user):
     if not user:
         return ''
     return user.get_full_name() or user.username or user.email
+
+
+def shipment_item_description(shipment, item):
+    return (
+        f'Shipment {shipment.shipment_number} completed for Invoice {shipment.invoice.invoice_number}: '
+        f'{item.actual_quantity} {item.unit_snapshot} of {item.product.name_en} withdrawn from {item.warehouse.warehouse_name} '
+        f'for {shipment.customer.name}.'
+    )
+
+
+def create_shipment_commodity_journal(shipment, item, movement, user):
+    existing = getattr(movement, 'journal_transaction', None)
+    if existing:
+        return existing
+    return JournalTransaction.objects.create(
+        journal_type=JournalTransaction.JOURNAL_COMMODITY,
+        party=shipment.customer.name,
+        description=shipment_item_description(shipment, item),
+        source_type=JournalTransaction.SOURCE_SHIPMENT,
+        source_reference=f'{shipment.shipment_number}-{item.id}',
+        is_system_generated=True,
+        linked_inventory_movement=movement,
+        warehouse_operation=JournalTransaction.WAREHOUSE_SHIPMENT_OUT,
+        warehouse=item.warehouse,
+        product_name=item.product.name_en,
+        quantity=item.actual_quantity,
+        unit=item.unit_snapshot,
+        estimated_value=item.invoice_item.line_total if item.invoice_item_id else Decimal('0.00'),
+        created_by=user,
+    )
 
 
 @transaction.atomic
@@ -133,7 +164,7 @@ def complete_shipment(shipment, user):
         after = before - item.actual_quantity
         stock.quantity = after
         stock.save(update_fields=['quantity', 'updated_at'])
-        InventoryMovement.objects.create(
+        movement = InventoryMovement.objects.create(
             warehouse=item.warehouse,
             product=item.product,
             movement_type=InventoryMovement.SHIPMENT_OUT,
@@ -147,6 +178,7 @@ def complete_shipment(shipment, user):
             source_reference=shipment.shipment_number,
             created_by=user,
         )
+        create_shipment_commodity_journal(shipment, item, movement, user)
     shipment.status = Shipment.STATUS_COMPLETED
     shipment.completed_by = user
     shipment.completed_at = timezone.now()

@@ -27,9 +27,18 @@ export function createInvoiceFromOrder(orderId, data = {}) {
 }
 
 export function markInvoicePaid(id, data) {
+  const hasReceipt = data?.payment_receipt instanceof File;
+  const body = hasReceipt ? new FormData() : JSON.stringify(data);
+  if (hasReceipt) {
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        body.append(key, value);
+      }
+    });
+  }
   return apiRequest(`/api/invoices/${id}/mark-paid/`, {
     method: 'POST',
-    body: JSON.stringify(data),
+    body,
   });
 }
 

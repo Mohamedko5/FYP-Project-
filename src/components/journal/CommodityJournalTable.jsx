@@ -26,6 +26,7 @@ export default function CommodityJournalTable({ entries, onEdit, onDelete, t, st
   function operationLabel(operation) {
     if (operation === 'stock_in') return t('journal.addStock');
     if (operation === 'manual_withdrawal') return t('journal.manualWithdrawal');
+    if (operation === 'shipment_out') return t('journal.shipmentWithdrawal');
     return '-';
   }
 

@@ -8,6 +8,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from accounts.models import UserProfile
@@ -43,6 +44,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     serializer_class = InvoiceSerializer
     permission_classes = [IsAdminOrManager]
     pagination_class = InvoicePagination
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
     allowed_ordering = {'issued_at', '-issued_at', 'invoice_number', '-invoice_number', 'total_amount', '-total_amount'}
 
     def filter_queryset(self, queryset):

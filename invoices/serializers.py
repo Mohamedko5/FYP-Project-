@@ -7,6 +7,9 @@ from orders.models import Order
 from .models import Invoice, InvoiceItem, InvoicePayment
 from .services import cancel_invoice, create_invoice_from_order, mark_invoice_paid, user_name
 
+ALLOWED_RECEIPT_CONTENT_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
+ALLOWED_RECEIPT_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.webp')
+
 
 class InvoiceItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -21,14 +24,32 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
 
 class InvoicePaymentSerializer(serializers.ModelSerializer):
     received_by_name = serializers.SerializerMethodField()
+    payment_receipt_url = serializers.SerializerMethodField()
+    customer_transaction_id = serializers.IntegerField(source='linked_customer_transaction_id', read_only=True)
+    journal_transaction_id = serializers.IntegerField(source='linked_journal_transaction_id', read_only=True)
+    journal_reference = serializers.CharField(source='linked_journal_transaction.source_reference', read_only=True)
 
     class Meta:
         model = InvoicePayment
-        fields = ('id', 'amount', 'payment_method', 'payment_reference', 'received_by', 'received_by_name', 'received_at')
+        fields = (
+            'id', 'amount', 'payment_method', 'payment_reference', 'payment_receipt',
+            'payment_receipt_url', 'received_by', 'received_by_name', 'received_at',
+            'customer_transaction_id', 'journal_transaction_id', 'journal_reference',
+        )
         read_only_fields = fields
 
     def get_received_by_name(self, obj):
         return user_name(obj.received_by)
+
+    def get_payment_receipt_url(self, obj):
+        if not obj.payment_receipt:
+            return None
+        try:
+            request = self.context.get('request')
+            url = obj.payment_receipt.url
+            return request.build_absolute_uri(url) if request else url
+        except ValueError:
+            return None
 
 
 class InvoiceSerializer(serializers.ModelSerializer):
@@ -120,14 +141,34 @@ class CreateInvoiceFromOrderSerializer(serializers.Serializer):
 class MarkPaidSerializer(serializers.Serializer):
     payment_method = serializers.ChoiceField(choices=InvoicePayment.PAYMENT_METHOD_CHOICES)
     payment_reference = serializers.CharField(required=False, allow_blank=True)
+    amount = serializers.DecimalField(max_digits=18, decimal_places=2, required=False)
+    payment_date = serializers.DateField(required=False)
+    payment_receipt = serializers.FileField(required=False, allow_empty_file=False)
+    idempotency_key = serializers.CharField(required=False, allow_blank=True, max_length=120)
+
+    def validate_payment_receipt(self, value):
+        if value in (None, ''):
+            return value
+        content_type = getattr(value, 'content_type', '')
+        name = getattr(value, 'name', '').lower()
+        if content_type and content_type not in ALLOWED_RECEIPT_CONTENT_TYPES:
+            raise serializers.ValidationError('Upload a JPEG, PNG, or WebP receipt image.')
+        if name and not name.endswith(ALLOWED_RECEIPT_EXTENSIONS):
+            raise serializers.ValidationError('Upload a JPEG, PNG, or WebP receipt image.')
+        return value
 
     def save(self, **kwargs):
         try:
+            request = self.context['request']
             return mark_invoice_paid(
                 self.context['invoice'],
-                self.context['request'].user,
+                request.user,
                 self.validated_data['payment_method'],
                 self.validated_data.get('payment_reference', ''),
+                self.validated_data.get('amount'),
+                self.validated_data.get('payment_date'),
+                self.validated_data.get('payment_receipt'),
+                idempotency_key=request.headers.get('Idempotency-Key') or self.validated_data.get('idempotency_key', ''),
             )
         except DjangoValidationError as exc:
             raise serializers.ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc

@@ -72,6 +72,11 @@ const copy = {
     receivedAt: 'Received At',
     receivedBy: 'Received By',
     paymentReference: 'Payment Reference',
+    paymentAmount: 'Payment Amount',
+    paymentDate: 'Payment Date',
+    paymentReceipt: 'Payment Receipt',
+    journalTransaction: 'Cash Journal Transaction',
+    customerTransaction: 'Customer Account Transaction',
   },
   ar: {
     title: 'الفواتير',
@@ -129,6 +134,16 @@ function statusText(value, isArabic = false) {
   return labels[isArabic ? 'ar' : 'en'][value] || value || '-';
 }
 
+function paymentDefaults(invoice) {
+  return {
+    payment_method: 'cash',
+    payment_reference: '',
+    amount: invoice?.total_amount || '',
+    payment_date: new Date().toISOString().slice(0, 10),
+    payment_receipt: null,
+  };
+}
+
 function readRole() {
   try {
     const user = JSON.parse(localStorage.getItem('bayadUser') || '{}');
@@ -151,7 +166,7 @@ export default function Invoices() {
   const [filters, setFilters] = useState({ search: '', customer: '', payment_method: '', date_from: '', date_to: '' });
   const [paymentDialog, setPaymentDialog] = useState(null);
   const [cancelDialog, setCancelDialog] = useState(null);
-  const [paymentForm, setPaymentForm] = useState({ payment_method: 'cash', payment_reference: '' });
+  const [paymentForm, setPaymentForm] = useState({ payment_method: 'cash', payment_reference: '', amount: '', payment_date: '', payment_receipt: null });
   const [cancelReason, setCancelReason] = useState('');
   const [dialogErrors, setDialogErrors] = useState([]);
   const [errors, setErrors] = useState([]);
@@ -162,7 +177,14 @@ export default function Invoices() {
   const cancelButtonRef = useRef(null);
   const role = readRole();
   const isAdmin = role === 'admin';
-  const paymentDirty = Boolean(paymentDialog) && JSON.stringify(paymentForm) !== JSON.stringify({ payment_method: 'cash', payment_reference: '' });
+  const paymentBaseline = paymentDefaults(paymentDialog);
+  const paymentDirty = Boolean(paymentDialog) && (
+    paymentForm.payment_method !== paymentBaseline.payment_method
+    || paymentForm.payment_reference !== paymentBaseline.payment_reference
+    || String(paymentForm.amount || '') !== String(paymentBaseline.amount || '')
+    || paymentForm.payment_date !== paymentBaseline.payment_date
+    || Boolean(paymentForm.payment_receipt)
+  );
   const cancelDirty = Boolean(cancelDialog) && Boolean(cancelReason.trim());
 
   const loadInvoices = useCallback(async (nextFilters = filters, tab = activeTab) => {
@@ -225,7 +247,7 @@ export default function Invoices() {
 
   function openPaymentDialog(invoice) {
     setPaymentDialog(invoice);
-    setPaymentForm({ payment_method: 'cash', payment_reference: '' });
+    setPaymentForm(paymentDefaults(invoice));
     setDialogErrors([]);
   }
 
@@ -410,9 +432,13 @@ export default function Invoices() {
             <RecordMeta items={selectedInvoice.payment_status === 'paid' ? [
               { label: t('orders.paymentStatus'), value: <StatusBadge status="Paid" /> },
               { label: t('common.method'), value: statusText(paymentInfo?.payment_method, isArabic) },
+              { label: label.paymentAmount || 'Payment Amount', value: money(paymentInfo?.amount, selectedInvoice.currency) },
               { label: label.reference, value: paymentInfo?.payment_reference || '-' },
+              { label: label.paymentReceipt || 'Payment Receipt', value: paymentInfo?.payment_receipt_url ? <a href={paymentInfo.payment_receipt_url} target="_blank" rel="noreferrer">{label.paymentReceipt || 'Payment Receipt'}</a> : '-' },
               { label: label.receivedAt, value: paymentInfo?.received_at ? new Date(paymentInfo.received_at).toLocaleString() : '-' },
               { label: label.receivedBy, value: paymentInfo?.received_by_name || '-' },
+              { label: label.customerTransaction || 'Customer Account Transaction', value: paymentInfo?.customer_transaction_id || '-' },
+              { label: label.journalTransaction || 'Cash Journal Transaction', value: paymentInfo?.journal_reference || paymentInfo?.journal_transaction_id || '-' },
             ] : [
               { label: t('orders.paymentStatus'), value: <StatusBadge status="Unpaid" /> },
               { label: label.outstanding, value: money(selectedInvoice.outstanding_amount, selectedInvoice.currency) },
@@ -443,7 +469,12 @@ export default function Invoices() {
           ]} />
           <div className="form-grid">
             <label>{t('common.method')}<select value={paymentForm.payment_method} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_method: event.target.value }))}><option value="cash">{label.cash}</option><option value="online">{label.online}</option></select></label>
+            <label>{label.paymentAmount || 'Payment Amount'}<input type="number" step="0.01" value={paymentForm.amount} onChange={(event) => setPaymentForm((current) => ({ ...current, amount: event.target.value }))} /></label>
+            <label>{label.paymentDate || 'Payment Date'}<input type="date" value={paymentForm.payment_date} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_date: event.target.value }))} /></label>
             <label>{label.paymentReference}<input value={paymentForm.payment_reference} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_reference: event.target.value }))} /></label>
+            {paymentForm.payment_method === 'online' && (
+              <label>{label.paymentReceipt || 'Payment Receipt'}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPaymentForm((current) => ({ ...current, payment_receipt: event.target.files?.[0] || null }))} /></label>
+            )}
           </div>
           <ErrorState errors={dialogErrors} />
           <div className="workflow-actions">
