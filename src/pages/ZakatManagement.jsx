@@ -5,6 +5,8 @@ import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 import Table from '../components/ui/Table.jsx';
+import { productLabel as localizedProductLabel } from '../components/customers/customerHelpers.js';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
 import { getManagedProducts } from '../services/productsApi.js';
 import {
   approveCropZakatAssessment,
@@ -44,11 +46,12 @@ function money(value, currency = 'SDG') {
   return `${currency} ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function chartData(rows, key, valueKey = 'count') {
-  return (rows || []).map((row) => ({ name: row[key] || 'Unknown', value: Number(row[valueKey] || 0) }));
+function localizedChartData(rows, key, statusLabel, fallback, valueKey = 'count') {
+  return (rows || []).map((row) => ({ name: statusLabel(row[key] || fallback), value: Number(row[valueKey] || 0) }));
 }
 
 export default function ZakatManagement() {
+  const { t, statusLabel, direction, language, isArabic } = useLanguage();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dashboard, setDashboard] = useState({});
   const [reports, setReports] = useState({});
@@ -105,11 +108,11 @@ export default function ZakatManagement() {
       setAuditRows(list(auditResponse));
       setProducts(list(productResponse));
     } catch (err) {
-      setError(err.message || 'Unable to load Zakat module data.');
+      setError(err.message || t('zakat.loadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -119,46 +122,46 @@ export default function ZakatManagement() {
       await handler();
       await load();
     } catch (err) {
-      setError(err.message || 'Action failed.');
+      setError(err.message || t('zakat.actionError'));
     }
   }
 
   const statCards = useMemo(() => ([
-    ['Pending crop assessments', dashboard.pending_crop_assessments],
-    ['Awaiting verification', dashboard.awaiting_verification],
-    ['Unpaid assessments', dashboard.unpaid_assessments],
-    ['Valid receipts', dashboard.valid_receipts],
-    ['Certificates expiring soon', dashboard.certificates_expiring_soon],
-    ['Expired certificates', dashboard.expired_certificates],
-    ['Active movement permits', dashboard.active_movement_permits],
-    ['Permits expiring soon', dashboard.permits_expiring_soon],
-  ]), [dashboard]);
+    [t('zakat.stats.pendingCropAssessments'), dashboard.pending_crop_assessments],
+    [t('zakat.stats.awaitingVerification'), dashboard.awaiting_verification],
+    [t('zakat.stats.unpaidAssessments'), dashboard.unpaid_assessments],
+    [t('zakat.stats.validReceipts'), dashboard.valid_receipts],
+    [t('zakat.stats.certificatesExpiringSoon'), dashboard.certificates_expiring_soon],
+    [t('zakat.stats.expiredCertificates'), dashboard.expired_certificates],
+    [t('zakat.stats.activeMovementPermits'), dashboard.active_movement_permits],
+    [t('zakat.stats.permitsExpiringSoon'), dashboard.permits_expiring_soon],
+  ]), [dashboard, t]);
 
   return (
-    <div className="module-page zakat-page">
+    <div className="module-page zakat-page" dir={direction} lang={language}>
       <header className="module-page-header">
         <div>
-          <span className="module-page-header__eyebrow">Compliance</span>
-          <h1>Zakat Management</h1>
-          <p>Configurable Zakat rules, crop and trade assessments, receipts, certificates, movement permits, audit, and reports.</p>
-          <p className="zakat-notice">{dashboard.notice || 'Rates and official documents must be confirmed by the competent Zakat Chamber before production use.'}</p>
+          <span className="module-page-header__eyebrow">{t('zakat.eyebrow')}</span>
+          <h1>{t('zakat.title')}</h1>
+          <p>{t('zakat.subtitle')}</p>
+          <p className="zakat-notice">{dashboard.notice ? t('zakat.confirmationNotice') : t('zakat.fallbackNotice')}</p>
         </div>
         <div className="module-page-header__actions">
-          <Button type="button" variant="secondary" onClick={load}>Refresh</Button>
-          <Button type="button" onClick={() => setAction('crop')}>New Crop Assessment</Button>
+          <Button type="button" variant="secondary" onClick={load}>{t('zakat.actions.refresh')}</Button>
+          <Button type="button" onClick={() => setAction('crop')}>{t('zakat.actions.newCropAssessment')}</Button>
         </div>
       </header>
 
-      <div className="module-tabs" role="tablist" aria-label="Zakat sections">
+      <div className="module-tabs" role="tablist" aria-label={t('zakat.sectionsLabel')}>
         {tabs.map((tab) => (
           <button key={tab} type="button" aria-selected={activeTab === tab} className={activeTab === tab ? 'is-active' : ''} onClick={() => setActiveTab(tab)}>
-            {tabLabels[tab]}
+            {t(`zakat.tabs.${tab}`)}
           </button>
         ))}
       </div>
 
       {error && <div className="form-error"><p>{error}</p></div>}
-      {loading && <Card><p className="module-muted">Loading Zakat records...</p></Card>}
+      {loading && <Card><p className="module-muted">{t('zakat.loading')}</p></Card>}
 
       {activeTab === 'dashboard' && !loading && (
         <>
@@ -170,131 +173,131 @@ export default function ZakatManagement() {
               </section>
             ))}
           </div>
-          <Card title="Recent Crop Assessments" subtitle="Latest assessment workflow status">
+          <Card title={t('zakat.cards.recentCropAssessments')} subtitle={t('zakat.cards.latestWorkflow')}>
             <CropTable rows={cropAssessments.slice(0, 8)} onCalculate={(row) => runAction(() => calculateCropZakatAssessment(row.id))} onApprove={(row) => runAction(() => approveCropZakatAssessment(row.id))} />
           </Card>
         </>
       )}
 
       {activeTab === 'crop' && (
-        <Card title="Crop Zakat Assessments" subtitle="Assess crop Zakat without changing inventory balances">
+        <Card title={t('zakat.cards.cropTitle')} subtitle={t('zakat.cards.cropSubtitle')}>
           <div className="button-row">
-            <Button type="button" onClick={() => setAction('crop')}>New Crop Assessment</Button>
-            <Button type="button" variant="secondary" onClick={() => setAction('previousReceipt')}>Previous Receipt Evidence</Button>
+            <Button type="button" onClick={() => setAction('crop')}>{t('zakat.actions.newCropAssessment')}</Button>
+            <Button type="button" variant="secondary" onClick={() => setAction('previousReceipt')}>{t('zakat.actions.previousReceiptEvidence')}</Button>
           </div>
           <CropTable rows={cropAssessments} onCalculate={(row) => runAction(() => calculateCropZakatAssessment(row.id))} onApprove={(row) => runAction(() => approveCropZakatAssessment(row.id))} />
         </Card>
       )}
 
       {activeTab === 'trade' && (
-        <Card title="Trade Zakat Assessments" subtitle="Separate business/trade Zakat calculation">
-          <div className="button-row"><Button type="button" onClick={() => setAction('trade')}>New Trade Assessment</Button></div>
+        <Card title={t('zakat.cards.tradeTitle')} subtitle={t('zakat.cards.tradeSubtitle')}>
+          <div className="button-row"><Button type="button" onClick={() => setAction('trade')}>{t('zakat.actions.newTradeAssessment')}</Button></div>
           <Table
             rows={tradeAssessments}
             columns={[
-              { key: 'assessment_number', label: 'Number' },
-              { key: 'company', label: 'Company' },
-              { key: 'zakat_year', label: 'Year' },
-              { key: 'net_assessable_base', label: 'Base', render: (row) => money(row.net_assessable_base, row.currency) },
-              { key: 'zakat_due', label: 'Due', render: (row) => money(row.zakat_due, row.currency) },
-              { key: 'status', label: 'Status', render: (row) => <StatusBadge status={row.status} /> },
-              { key: 'action', label: 'Action', render: (row) => <Button type="button" variant="secondary" onClick={() => runAction(() => calculateTradeZakatAssessment(row.id))}>Calculate</Button> },
+              { key: 'assessment_number', label: t('zakat.table.number') },
+              { key: 'company', label: t('zakat.table.company') },
+              { key: 'zakat_year', label: t('zakat.table.year') },
+              { key: 'net_assessable_base', label: t('zakat.table.base'), render: (row) => money(row.net_assessable_base, row.currency) },
+              { key: 'zakat_due', label: t('zakat.table.due'), render: (row) => money(row.zakat_due, row.currency) },
+              { key: 'status', label: t('zakat.table.status'), render: (row) => <StatusBadge status={row.status} /> },
+              { key: 'action', label: t('zakat.table.actions'), render: (row) => <Button type="button" variant="secondary" onClick={() => runAction(() => calculateTradeZakatAssessment(row.id))}>{t('zakat.actions.calculate')}</Button> },
             ]}
           />
         </Card>
       )}
 
       {activeTab === 'receipts' && (
-        <Card title="Receipts and Previous Evidence" subtitle="Official receipts and proof already paid elsewhere">
+        <Card title={t('zakat.cards.receiptsTitle')} subtitle={t('zakat.cards.receiptsSubtitle')}>
           <div className="button-row">
-            <Button type="button" onClick={() => setAction('receipt')}>New Zakat Receipt</Button>
-            <Button type="button" variant="secondary" onClick={() => setAction('previousReceipt')}>New Previous Evidence</Button>
+            <Button type="button" onClick={() => setAction('receipt')}>{t('zakat.actions.newZakatReceipt')}</Button>
+            <Button type="button" variant="secondary" onClick={() => setAction('previousReceipt')}>{t('zakat.actions.newPreviousEvidence')}</Button>
           </div>
           <Table
             rows={receipts}
             columns={[
-              { key: 'receipt_number', label: 'Receipt' },
-              { key: 'receipt_type', label: 'Type' },
-              { key: 'issue_date', label: 'Date' },
-              { key: 'amount_paid', label: 'Amount', render: (row) => money(row.amount_paid, row.currency) },
-              { key: 'verification_status', label: 'Verification', render: (row) => <StatusBadge status={row.verification_status} /> },
-              { key: 'action', label: 'Action', render: (row) => <Button type="button" variant="secondary" onClick={() => runAction(() => verifyZakatReceipt(row.id))}>Verify</Button> },
+              { key: 'receipt_number', label: t('zakat.table.receipt') },
+              { key: 'receipt_type', label: t('zakat.table.type'), render: (row) => statusLabel(row.receipt_type) },
+              { key: 'issue_date', label: t('zakat.table.date') },
+              { key: 'amount_paid', label: t('zakat.table.amount'), render: (row) => money(row.amount_paid, row.currency) },
+              { key: 'verification_status', label: t('zakat.table.verification'), render: (row) => <StatusBadge status={row.verification_status} /> },
+              { key: 'action', label: t('zakat.table.actions'), render: (row) => <Button type="button" variant="secondary" onClick={() => runAction(() => verifyZakatReceipt(row.id))}>{t('zakat.actions.verify')}</Button> },
             ]}
           />
-          <h3 className="zakat-subtitle">Previous Zakat Receipt Evidence</h3>
+          <h3 className="zakat-subtitle">{t('zakat.actions.previousReceiptEvidence')}</h3>
           <Table
             rows={previousReceipts}
             columns={[
-              { key: 'receipt_number', label: 'Receipt' },
-              { key: 'payer', label: 'Payer' },
-              { key: 'issuing_office', label: 'Office' },
-              { key: 'verification_status', label: 'Verification', render: (row) => <StatusBadge status={row.verification_status} /> },
-              { key: 'action', label: 'Action', render: (row) => <Button type="button" variant="secondary" onClick={() => runAction(() => verifyPreviousZakatReceipt(row.id))}>Verify</Button> },
+              { key: 'receipt_number', label: t('zakat.table.receipt') },
+              { key: 'payer', label: t('zakat.table.payer') },
+              { key: 'issuing_office', label: t('zakat.table.office') },
+              { key: 'verification_status', label: t('zakat.table.verification'), render: (row) => <StatusBadge status={row.verification_status} /> },
+              { key: 'action', label: t('zakat.table.actions'), render: (row) => <Button type="button" variant="secondary" onClick={() => runAction(() => verifyPreviousZakatReceipt(row.id))}>{t('zakat.actions.verify')}</Button> },
             ]}
           />
         </Card>
       )}
 
       {activeTab === 'certificates' && (
-        <Card title="Performance Certificates" subtitle="Validity and expiry monitoring">
-          <div className="button-row"><Button type="button" onClick={() => setAction('certificate')}>New Certificate</Button></div>
+        <Card title={t('zakat.cards.certificatesTitle')} subtitle={t('zakat.cards.certificatesSubtitle')}>
+          <div className="button-row"><Button type="button" onClick={() => setAction('certificate')}>{t('zakat.actions.newCertificate')}</Button></div>
           <Table rows={certificates} columns={[
-            { key: 'certificate_number', label: 'Certificate' },
-            { key: 'party_name', label: 'Party' },
-            { key: 'zakat_year', label: 'Year' },
-            { key: 'expiry_date', label: 'Expiry' },
-            { key: 'computed_status', label: 'Status', render: (row) => <StatusBadge status={row.computed_status || row.status} /> },
+            { key: 'certificate_number', label: t('zakat.table.certificate') },
+            { key: 'party_name', label: t('zakat.table.party') },
+            { key: 'zakat_year', label: t('zakat.table.year') },
+            { key: 'expiry_date', label: t('zakat.table.expiry') },
+            { key: 'computed_status', label: t('zakat.table.status'), render: (row) => <StatusBadge status={row.computed_status || row.status} /> },
           ]} />
         </Card>
       )}
 
       {activeTab === 'permits' && (
-        <Card title="Crop Movement Permits" subtitle="Permit checks linked to Zakat evidence">
-          <div className="button-row"><Button type="button" onClick={() => setAction('permit')}>New Movement Permit</Button></div>
+        <Card title={t('zakat.cards.permitsTitle')} subtitle={t('zakat.cards.permitsSubtitle')}>
+          <div className="button-row"><Button type="button" onClick={() => setAction('permit')}>{t('zakat.actions.newMovementPermit')}</Button></div>
           <Table rows={permits} columns={[
-            { key: 'permit_number', label: 'Permit' },
-            { key: 'source_location', label: 'Source' },
-            { key: 'destination_location', label: 'Destination' },
-            { key: 'expiry_date', label: 'Expiry' },
-            { key: 'computed_status', label: 'Status', render: (row) => <StatusBadge status={row.computed_status || row.status} /> },
+            { key: 'permit_number', label: t('zakat.table.permit') },
+            { key: 'source_location', label: t('zakat.table.source') },
+            { key: 'destination_location', label: t('zakat.table.destination') },
+            { key: 'expiry_date', label: t('zakat.table.expiry') },
+            { key: 'computed_status', label: t('zakat.table.status'), render: (row) => <StatusBadge status={row.computed_status || row.status} /> },
           ]} />
         </Card>
       )}
 
       {activeTab === 'rules' && (
-        <Card title="Rules and Rates" subtitle="Draft local rule configuration until official confirmation">
+        <Card title={t('zakat.cards.rulesTitle')} subtitle={t('zakat.cards.rulesSubtitle')}>
           <div className="button-row">
-            <Button type="button" onClick={() => setAction('rule')}>New Rule</Button>
-            <Button type="button" variant="secondary" onClick={() => runAction(seedDraftZakatRules)}>Seed Draft Rules</Button>
+            <Button type="button" onClick={() => setAction('rule')}>{t('zakat.actions.newRule')}</Button>
+            <Button type="button" variant="secondary" onClick={() => runAction(seedDraftZakatRules)}>{t('zakat.actions.seedDraftRules')}</Button>
           </div>
           <Table rows={rules} columns={[
-            { key: 'rule_code', label: 'Code' },
-            { key: 'name_en', label: 'Name' },
-            { key: 'zakat_type', label: 'Type' },
-            { key: 'irrigation_method', label: 'Irrigation' },
-            { key: 'rate_percentage', label: 'Rate %' },
-            { key: 'verification_status', label: 'Verification', render: (row) => <StatusBadge status={row.verification_status} /> },
+            { key: 'rule_code', label: t('zakat.table.code') },
+            { key: 'name_en', label: t('zakat.table.name'), render: (row) => isArabic ? (row.name_ar || row.name_en) : (row.name_en || row.name_ar) },
+            { key: 'zakat_type', label: t('zakat.table.type'), render: (row) => statusLabel(row.zakat_type) },
+            { key: 'irrigation_method', label: t('zakat.table.irrigation'), render: (row) => row.irrigation_method ? statusLabel(row.irrigation_method) : t('zakat.options.notSpecific') },
+            { key: 'rate_percentage', label: t('zakat.table.rate') },
+            { key: 'verification_status', label: t('zakat.table.verification'), render: (row) => <StatusBadge status={row.verification_status} /> },
           ]} />
         </Card>
       )}
 
       {activeTab === 'reports' && (
         <div className="zakat-report-grid">
-          <ChartCard title="Assessments by Status" data={chartData(reports.assessments_by_status, 'assessment_status')} />
-          <ChartCard title="Irrigation Distribution" data={chartData(reports.irrigation_distribution, 'irrigation_method')} />
-          <BarCard title="Calculated Amount by Crop" data={(reports.calculated_amount_by_crop || []).map((row) => ({ name: row.product_name_snapshot || 'Crop', value: Number(row.amount || 0) }))} />
-          <BarCard title="Trade Zakat by Year" data={(reports.trade_zakat_by_year || []).map((row) => ({ name: String(row.zakat_year || 'Year'), value: Number(row.amount || 0) }))} />
+          <ChartCard title={t('zakat.charts.assessmentsByStatus')} data={localizedChartData(reports.assessments_by_status, 'assessment_status', statusLabel, 'unknown')} />
+          <ChartCard title={t('zakat.charts.irrigationDistribution')} data={localizedChartData(reports.irrigation_distribution, 'irrigation_method', statusLabel, 'unknown')} />
+          <BarCard title={t('zakat.charts.calculatedAmountByCrop')} data={(reports.calculated_amount_by_crop || []).map((row) => ({ name: row.product_name_snapshot ? localizedProductLabel(row.product_name_snapshot, isArabic) : t('zakat.options.cropFallback'), value: Number(row.amount || 0) }))} />
+          <BarCard title={t('zakat.charts.tradeZakatByYear')} data={(reports.trade_zakat_by_year || []).map((row) => ({ name: String(row.zakat_year || t('zakat.options.yearFallback')), value: Number(row.amount || 0) }))} />
         </div>
       )}
 
       {activeTab === 'audit' && (
-        <Card title="Audit History" subtitle="Sensitive Zakat actions and calculation events">
+        <Card title={t('zakat.cards.auditTitle')} subtitle={t('zakat.cards.auditSubtitle')}>
           <Table rows={auditRows} columns={[
-            { key: 'created_at', label: 'Date', render: (row) => new Date(row.created_at).toLocaleString() },
-            { key: 'actor_name', label: 'User' },
-            { key: 'action', label: 'Action' },
-            { key: 'record_type', label: 'Record' },
-            { key: 'reason', label: 'Reason' },
+            { key: 'created_at', label: t('zakat.table.date'), render: (row) => new Date(row.created_at).toLocaleString() },
+            { key: 'actor_name', label: t('zakat.table.user') },
+            { key: 'action', label: t('zakat.table.actions') },
+            { key: 'record_type', label: t('zakat.table.record') },
+            { key: 'reason', label: t('zakat.table.reason') },
           ]} />
         </Card>
       )}
@@ -313,36 +316,25 @@ export default function ZakatManagement() {
   );
 }
 
-const tabLabels = {
-  dashboard: 'Dashboard',
-  crop: 'Crop Assessments',
-  trade: 'Trade Assessments',
-  receipts: 'Receipts',
-  certificates: 'Certificates',
-  permits: 'Movement Permits',
-  rules: 'Rules and Rates',
-  reports: 'Reports',
-  audit: 'Audit',
-};
-
 function CropTable({ rows, onCalculate, onApprove }) {
+  const { t, statusLabel } = useLanguage();
   return (
     <Table
       rows={rows}
       columns={[
-        { key: 'assessment_number', label: 'Number' },
-        { key: 'seller_name_snapshot', label: 'Seller' },
-        { key: 'agricultural_season', label: 'Season' },
-        { key: 'irrigation_method', label: 'Irrigation' },
-        { key: 'total_zakat_value', label: 'Due', render: (row) => money(row.total_zakat_value, row.currency) },
-        { key: 'assessment_status', label: 'Status', render: (row) => <StatusBadge status={row.assessment_status} /> },
+        { key: 'assessment_number', label: t('zakat.table.number') },
+        { key: 'seller_name_snapshot', label: t('zakat.table.seller') },
+        { key: 'agricultural_season', label: t('zakat.table.season') },
+        { key: 'irrigation_method', label: t('zakat.table.irrigation'), render: (row) => statusLabel(row.irrigation_method) },
+        { key: 'total_zakat_value', label: t('zakat.table.due'), render: (row) => money(row.total_zakat_value, row.currency) },
+        { key: 'assessment_status', label: t('zakat.table.status'), render: (row) => <StatusBadge status={row.assessment_status} /> },
         {
           key: 'actions',
-          label: 'Actions',
+          label: t('zakat.table.actions'),
           render: (row) => (
             <div className="button-row button-row--compact">
-              <Button type="button" variant="secondary" onClick={() => onCalculate(row)}>Calculate</Button>
-              <Button type="button" variant="secondary" onClick={() => onApprove(row)}>Approve</Button>
+              <Button type="button" variant="secondary" onClick={() => onCalculate(row)}>{t('zakat.actions.calculate')}</Button>
+              <Button type="button" variant="secondary" onClick={() => onApprove(row)}>{t('zakat.actions.approve')}</Button>
             </div>
           ),
         },
@@ -387,6 +379,7 @@ function BarCard({ title, data }) {
 }
 
 function ZakatActionWindow({ action, products, cropAssessments, tradeAssessments, receipts, previousReceipts, onClose, onDone }) {
+  const { t, isArabic } = useLanguage();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({});
@@ -417,119 +410,119 @@ function ZakatActionWindow({ action, products, cropAssessments, tradeAssessments
       if (action === 'permit') await createCropMovementPermit(permitPayload(form));
       await onDone();
     } catch (err) {
-      setError(err.message || 'Unable to save Zakat record.');
+      setError(err.message || t('zakat.saveError'));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <AppWindow id={`zakat-${action}`} title={windowTitles[action]} description={windowDescriptions[action]} isOpen onClose={onClose} isSubmitting={saving}>
+    <AppWindow id={`zakat-${action}`} title={t(windowTitleKeys[action])} description={t(windowDescriptionKeys[action])} isOpen onClose={onClose} isSubmitting={saving}>
       <form className="module-dialog zakat-form" onSubmit={submit}>
         {error && <div className="form-error"><p>{error}</p></div>}
         {action === 'rule' && (
           <>
-            <Field label="Rule Code" value={form.rule_code} onChange={(value) => update('rule_code', value)} required />
-            <Field label="Arabic Name" value={form.name_ar} onChange={(value) => update('name_ar', value)} required />
-            <Field label="English Name" value={form.name_en} onChange={(value) => update('name_en', value)} required />
-            <Select label="Type" value={form.zakat_type} onChange={(value) => update('zakat_type', value)} options={[['crop', 'Crop'], ['trade', 'Trade']]} />
-            <Select label="Calculation" value={form.calculation_method} onChange={(value) => update('calculation_method', value)} options={[['quantity_percentage', 'Quantity %'], ['monetary_percentage', 'Monetary %'], ['manual_official_assessment', 'Manual Official']]} />
-            <Select label="Irrigation" value={form.irrigation_method} onChange={(value) => update('irrigation_method', value)} options={[['', 'Not specific'], ['natural', 'Natural'], ['artificial', 'Artificial'], ['mixed', 'Mixed']]} />
-            <Select label="Crop Product" value={form.crop_product || ''} onChange={(value) => update('crop_product', value)} options={[['', 'Any crop'], ...productOptions.map((product) => [product.id, product.name_en || product.name_ar || product.name])]} />
-            <Field label="Rate %" type="number" step="0.0001" value={form.rate_percentage} onChange={(value) => update('rate_percentage', value)} required />
-            <Field label="Threshold Quantity" type="number" step="0.001" value={form.threshold_quantity} onChange={(value) => update('threshold_quantity', value)} />
-            <Field label="Threshold Unit" value={form.threshold_unit} onChange={(value) => update('threshold_unit', value)} />
-            <Field label="Monetary Threshold" type="number" step="0.01" value={form.monetary_threshold} onChange={(value) => update('monetary_threshold', value)} />
-            <Field label="Official Valuation Price" type="number" step="0.01" value={form.official_valuation_price} onChange={(value) => update('official_valuation_price', value)} />
-            <Field label="Effective From" type="date" value={form.effective_from} onChange={(value) => update('effective_from', value)} required />
-            <Field label="Issuing Authority" value={form.issuing_authority} onChange={(value) => update('issuing_authority', value)} />
-            <Field label="Official Reference" value={form.official_reference} onChange={(value) => update('official_reference', value)} />
+            <Field label={t('zakat.forms.ruleCode')} value={form.rule_code} onChange={(value) => update('rule_code', value)} required />
+            <Field label={t('zakat.forms.arabicName')} value={form.name_ar} onChange={(value) => update('name_ar', value)} required />
+            <Field label={t('zakat.forms.englishName')} value={form.name_en} onChange={(value) => update('name_en', value)} required />
+            <Select label={t('common.type')} value={form.zakat_type} onChange={(value) => update('zakat_type', value)} options={[['crop', t('zakat.options.crop')], ['trade', t('zakat.options.trade')]]} />
+            <Select label={t('zakat.forms.calculation')} value={form.calculation_method} onChange={(value) => update('calculation_method', value)} options={[['quantity_percentage', t('zakat.options.quantityPercentage')], ['monetary_percentage', t('zakat.options.monetaryPercentage')], ['manual_official_assessment', t('zakat.options.manualOfficial')]]} />
+            <Select label={t('zakat.table.irrigation')} value={form.irrigation_method} onChange={(value) => update('irrigation_method', value)} options={[['', t('zakat.options.notSpecific')], ['natural', t('zakat.options.natural')], ['artificial', t('zakat.options.artificial')], ['mixed', t('zakat.options.mixed')]]} />
+            <Select label={t('zakat.forms.cropProduct')} value={form.crop_product || ''} onChange={(value) => update('crop_product', value)} options={[['', t('zakat.options.anyCrop')], ...productOptions.map((product) => [product.id, productName(product, isArabic)])]} />
+            <Field label={t('zakat.forms.rate')} type="number" step="0.0001" value={form.rate_percentage} onChange={(value) => update('rate_percentage', value)} required />
+            <Field label={t('zakat.forms.thresholdQuantity')} type="number" step="0.001" value={form.threshold_quantity} onChange={(value) => update('threshold_quantity', value)} />
+            <UnitSelect label={t('zakat.forms.thresholdUnit')} value={form.threshold_unit} onChange={(value) => update('threshold_unit', value)} />
+            <Field label={t('zakat.forms.monetaryThreshold')} type="number" step="0.01" value={form.monetary_threshold} onChange={(value) => update('monetary_threshold', value)} />
+            <Field label={t('zakat.forms.officialValuationPrice')} type="number" step="0.01" value={form.official_valuation_price} onChange={(value) => update('official_valuation_price', value)} />
+            <Field label={t('zakat.forms.effectiveFrom')} type="date" value={form.effective_from} onChange={(value) => update('effective_from', value)} required />
+            <Field label={t('zakat.forms.issuingAuthority')} value={form.issuing_authority} onChange={(value) => update('issuing_authority', value)} />
+            <Field label={t('zakat.forms.officialReference')} value={form.official_reference} onChange={(value) => update('official_reference', value)} />
           </>
         )}
         {action === 'crop' && (
           <>
-            <Field label="Seller Name" value={form.seller_name_snapshot} onChange={(value) => update('seller_name_snapshot', value)} required />
-            <Field label="Assessment Date" type="date" value={form.assessment_date} onChange={(value) => update('assessment_date', value)} required />
-            <Field label="Season" value={form.agricultural_season} onChange={(value) => update('agricultural_season', value)} required />
-            <Select label="Irrigation" value={form.irrigation_method} onChange={(value) => update('irrigation_method', value)} options={[['natural', 'Natural'], ['artificial', 'Artificial'], ['mixed', 'Mixed'], ['unknown', 'Unknown']]} />
-            <Field label="State" value={form.state} onChange={(value) => update('state', value)} />
-            <Field label="Locality" value={form.locality} onChange={(value) => update('locality', value)} />
-            <Select label="Product" value={form.product} onChange={(value) => update('product', value)} options={productOptions.map((product) => [product.id, product.name_en || product.name_ar || product.name])} required />
-            <Field label="Net Quantity" type="number" step="0.001" value={form.net_quantity} onChange={(value) => update('net_quantity', value)} required />
-            <Field label="Unit" value={form.unit} onChange={(value) => update('unit', value)} required />
-            <Select label="Previous Zakat Paid" value={form.previous_zakat_paid} onChange={(value) => update('previous_zakat_paid', value)} options={[[false, 'No'], [true, 'Yes']]} />
-            <Select label="Previous Receipt" value={form.previous_receipt || ''} onChange={(value) => update('previous_receipt', value)} options={[['', 'None'], ...previousReceipts.map((receipt) => [receipt.id, receipt.receipt_number])]} />
+            <Field label={t('zakat.forms.sellerName')} value={form.seller_name_snapshot} onChange={(value) => update('seller_name_snapshot', value)} required />
+            <Field label={t('zakat.forms.assessmentDate')} type="date" value={form.assessment_date} onChange={(value) => update('assessment_date', value)} required />
+            <Field label={t('zakat.table.season')} value={form.agricultural_season} onChange={(value) => update('agricultural_season', value)} required />
+            <Select label={t('zakat.table.irrigation')} value={form.irrigation_method} onChange={(value) => update('irrigation_method', value)} options={[['natural', t('zakat.options.natural')], ['artificial', t('zakat.options.artificial')], ['mixed', t('zakat.options.mixed')], ['unknown', t('zakat.options.unknown')]]} />
+            <Field label={t('zakat.forms.state')} value={form.state} onChange={(value) => update('state', value)} />
+            <Field label={t('zakat.forms.locality')} value={form.locality} onChange={(value) => update('locality', value)} />
+            <Select label={t('common.product')} value={form.product} onChange={(value) => update('product', value)} options={productOptions.map((product) => [product.id, productName(product, isArabic)])} required />
+            <Field label={t('zakat.forms.netQuantity')} type="number" step="0.001" value={form.net_quantity} onChange={(value) => update('net_quantity', value)} required />
+            <UnitSelect label={t('common.unit')} value={form.unit} onChange={(value) => update('unit', value)} required />
+            <Select label={t('zakat.forms.previousZakatPaid')} value={form.previous_zakat_paid} onChange={(value) => update('previous_zakat_paid', value)} options={[[false, t('zakat.options.no')], [true, t('zakat.options.yes')]]} />
+            <Select label={t('zakat.forms.previousReceipt')} value={form.previous_receipt || ''} onChange={(value) => update('previous_receipt', value)} options={[['', t('zakat.options.none')], ...previousReceipts.map((receipt) => [receipt.id, receipt.receipt_number])]} />
           </>
         )}
         {action === 'trade' && (
           <>
-            <Field label="Company Name" value={form.company} onChange={(value) => update('company', value)} required />
-            <Field label="Assessment Date" type="date" value={form.assessment_date} onChange={(value) => update('assessment_date', value)} required />
-            <Field label="Zakat Year" type="number" value={form.zakat_year} onChange={(value) => update('zakat_year', value)} required />
-            <Field label="Period Start" type="date" value={form.period_start} onChange={(value) => update('period_start', value)} required />
-            <Field label="Period End" type="date" value={form.period_end} onChange={(value) => update('period_end', value)} required />
-            <Field label="Cash Balance" type="number" step="0.01" value={form.cash_balance} onChange={(value) => update('cash_balance', value)} />
-            <Field label="Trade Inventory Value" type="number" step="0.01" value={form.trade_inventory_value} onChange={(value) => update('trade_inventory_value', value)} />
-            <Field label="Receivables" type="number" step="0.01" value={form.receivables_value} onChange={(value) => update('receivables_value', value)} />
-            <Field label="Liabilities" type="number" step="0.01" value={form.allowed_liabilities} onChange={(value) => update('allowed_liabilities', value)} />
-            <Field label="Other Assets" type="number" step="0.01" value={form.other_assessable_assets} onChange={(value) => update('other_assessable_assets', value)} />
+            <Field label={t('zakat.forms.companyName')} value={form.company} onChange={(value) => update('company', value)} required />
+            <Field label={t('zakat.forms.assessmentDate')} type="date" value={form.assessment_date} onChange={(value) => update('assessment_date', value)} required />
+            <Field label={t('zakat.forms.zakatYear')} type="number" value={form.zakat_year} onChange={(value) => update('zakat_year', value)} required />
+            <Field label={t('zakat.forms.periodStart')} type="date" value={form.period_start} onChange={(value) => update('period_start', value)} required />
+            <Field label={t('zakat.forms.periodEnd')} type="date" value={form.period_end} onChange={(value) => update('period_end', value)} required />
+            <Field label={t('zakat.forms.cashBalance')} type="number" step="0.01" value={form.cash_balance} onChange={(value) => update('cash_balance', value)} />
+            <Field label={t('zakat.forms.tradeInventoryValue')} type="number" step="0.01" value={form.trade_inventory_value} onChange={(value) => update('trade_inventory_value', value)} />
+            <Field label={t('zakat.forms.receivables')} type="number" step="0.01" value={form.receivables_value} onChange={(value) => update('receivables_value', value)} />
+            <Field label={t('zakat.forms.liabilities')} type="number" step="0.01" value={form.allowed_liabilities} onChange={(value) => update('allowed_liabilities', value)} />
+            <Field label={t('zakat.forms.otherAssets')} type="number" step="0.01" value={form.other_assessable_assets} onChange={(value) => update('other_assessable_assets', value)} />
           </>
         )}
         {action === 'previousReceipt' && (
           <>
-            <Field label="Receipt Number" value={form.receipt_number} onChange={(value) => update('receipt_number', value)} required />
-            <Field label="Issue Date" type="date" value={form.issue_date} onChange={(value) => update('issue_date', value)} required />
-            <Field label="Payer Name" value={form.payer} onChange={(value) => update('payer', value)} required />
-            <Field label="Issuing State" value={form.issuing_state} onChange={(value) => update('issuing_state', value)} />
-            <Field label="Issuing Locality" value={form.issuing_locality} onChange={(value) => update('issuing_locality', value)} />
-            <Field label="Issuing Office" value={form.issuing_office} onChange={(value) => update('issuing_office', value)} required />
-            <Select label="Crop" value={form.crop || ''} onChange={(value) => update('crop', value)} options={[['', 'None'], ...productOptions.map((product) => [product.id, product.name_en || product.name_ar || product.name])]} />
-            <Field label="Paid Quantity" type="number" step="0.001" value={form.paid_quantity} onChange={(value) => update('paid_quantity', value)} />
-            <Field label="Paid Amount" type="number" step="0.01" value={form.paid_amount} onChange={(value) => update('paid_amount', value)} />
+            <Field label={t('zakat.forms.receiptNumber')} value={form.receipt_number} onChange={(value) => update('receipt_number', value)} required />
+            <Field label={t('zakat.forms.issueDate')} type="date" value={form.issue_date} onChange={(value) => update('issue_date', value)} required />
+            <Field label={t('zakat.forms.payerName')} value={form.payer} onChange={(value) => update('payer', value)} required />
+            <Field label={t('zakat.forms.issuingState')} value={form.issuing_state} onChange={(value) => update('issuing_state', value)} />
+            <Field label={t('zakat.forms.issuingLocality')} value={form.issuing_locality} onChange={(value) => update('issuing_locality', value)} />
+            <Field label={t('zakat.forms.issuingOffice')} value={form.issuing_office} onChange={(value) => update('issuing_office', value)} required />
+            <Select label={t('zakat.options.crop')} value={form.crop || ''} onChange={(value) => update('crop', value)} options={[['', t('zakat.options.none')], ...productOptions.map((product) => [product.id, productName(product, isArabic)])]} />
+            <Field label={t('zakat.forms.paidQuantity')} type="number" step="0.001" value={form.paid_quantity} onChange={(value) => update('paid_quantity', value)} />
+            <Field label={t('zakat.forms.paidAmount')} type="number" step="0.01" value={form.paid_amount} onChange={(value) => update('paid_amount', value)} />
           </>
         )}
         {action === 'receipt' && (
           <>
-            <Field label="Receipt Number" value={form.receipt_number} onChange={(value) => update('receipt_number', value)} required />
-            <Select label="Receipt Type" value={form.receipt_type} onChange={(value) => update('receipt_type', value)} options={[['crop_zakat', 'Crop Zakat'], ['trade_zakat', 'Trade Zakat'], ['official_external_receipt', 'External Official'], ['internal_payment_record', 'Internal Payment']]} />
-            <Select label="Crop Assessment" value={form.crop_assessment || ''} onChange={(value) => update('crop_assessment', value)} options={[['', 'None'], ...cropAssessments.map((row) => [row.id, row.assessment_number])]} />
-            <Select label="Trade Assessment" value={form.trade_assessment || ''} onChange={(value) => update('trade_assessment', value)} options={[['', 'None'], ...tradeAssessments.map((row) => [row.id, row.assessment_number])]} />
-            <Field label="Issue Date" type="date" value={form.issue_date} onChange={(value) => update('issue_date', value)} required />
-            <Field label="Issuing Authority" value={form.issuing_authority} onChange={(value) => update('issuing_authority', value)} required />
-            <Field label="Issuing Office" value={form.issuing_office} onChange={(value) => update('issuing_office', value)} />
-            <Field label="Amount Paid" type="number" step="0.01" value={form.amount_paid} onChange={(value) => update('amount_paid', value)} />
-            <Field label="Quantity Paid" type="number" step="0.001" value={form.quantity_paid} onChange={(value) => update('quantity_paid', value)} />
-            <Field label="Unit" value={form.unit} onChange={(value) => update('unit', value)} />
+            <Field label={t('zakat.forms.receiptNumber')} value={form.receipt_number} onChange={(value) => update('receipt_number', value)} required />
+            <Select label={t('zakat.forms.receiptType')} value={form.receipt_type} onChange={(value) => update('receipt_type', value)} options={[['crop_zakat', t('zakat.options.cropZakat')], ['trade_zakat', t('zakat.options.tradeZakat')], ['official_external_receipt', t('zakat.options.externalOfficial')], ['internal_payment_record', t('zakat.options.internalPayment')]]} />
+            <Select label={t('zakat.forms.cropAssessment')} value={form.crop_assessment || ''} onChange={(value) => update('crop_assessment', value)} options={[['', t('zakat.options.none')], ...cropAssessments.map((row) => [row.id, row.assessment_number])]} />
+            <Select label={t('zakat.forms.tradeAssessment')} value={form.trade_assessment || ''} onChange={(value) => update('trade_assessment', value)} options={[['', t('zakat.options.none')], ...tradeAssessments.map((row) => [row.id, row.assessment_number])]} />
+            <Field label={t('zakat.forms.issueDate')} type="date" value={form.issue_date} onChange={(value) => update('issue_date', value)} required />
+            <Field label={t('zakat.forms.issuingAuthority')} value={form.issuing_authority} onChange={(value) => update('issuing_authority', value)} required />
+            <Field label={t('zakat.forms.issuingOffice')} value={form.issuing_office} onChange={(value) => update('issuing_office', value)} />
+            <Field label={t('zakat.forms.amountPaid')} type="number" step="0.01" value={form.amount_paid} onChange={(value) => update('amount_paid', value)} />
+            <Field label={t('zakat.forms.quantityPaid')} type="number" step="0.001" value={form.quantity_paid} onChange={(value) => update('quantity_paid', value)} />
+            <UnitSelect label={t('common.unit')} value={form.unit} onChange={(value) => update('unit', value)} allowBlank />
           </>
         )}
         {action === 'certificate' && (
           <>
-            <Field label="Certificate Number" value={form.certificate_number} onChange={(value) => update('certificate_number', value)} required />
-            <Field label="Party Name" value={form.party_name} onChange={(value) => update('party_name', value)} required />
-            <Field label="Zakat Year" type="number" value={form.zakat_year} onChange={(value) => update('zakat_year', value)} required />
-            <Field label="Issue Date" type="date" value={form.issue_date} onChange={(value) => update('issue_date', value)} required />
-            <Field label="Expiry Date" type="date" value={form.expiry_date} onChange={(value) => update('expiry_date', value)} required />
-            <Field label="Issuing Authority" value={form.issuing_authority} onChange={(value) => update('issuing_authority', value)} required />
+            <Field label={t('zakat.forms.certificateNumber')} value={form.certificate_number} onChange={(value) => update('certificate_number', value)} required />
+            <Field label={t('zakat.forms.partyName')} value={form.party_name} onChange={(value) => update('party_name', value)} required />
+            <Field label={t('zakat.forms.zakatYear')} type="number" value={form.zakat_year} onChange={(value) => update('zakat_year', value)} required />
+            <Field label={t('zakat.forms.issueDate')} type="date" value={form.issue_date} onChange={(value) => update('issue_date', value)} required />
+            <Field label={t('zakat.forms.expiryDate')} type="date" value={form.expiry_date} onChange={(value) => update('expiry_date', value)} required />
+            <Field label={t('zakat.forms.issuingAuthority')} value={form.issuing_authority} onChange={(value) => update('issuing_authority', value)} required />
           </>
         )}
         {action === 'permit' && (
           <>
-            <Field label="Permit Number" value={form.permit_number} onChange={(value) => update('permit_number', value)} required />
-            <Field label="Issue Date" type="date" value={form.issue_date} onChange={(value) => update('issue_date', value)} required />
-            <Field label="Expiry Date" type="date" value={form.expiry_date} onChange={(value) => update('expiry_date', value)} required />
-            <Field label="Source Location" value={form.source_location} onChange={(value) => update('source_location', value)} required />
-            <Field label="Destination Location" value={form.destination_location} onChange={(value) => update('destination_location', value)} required />
-            <Field label="Vehicle Number" value={form.vehicle_number} onChange={(value) => update('vehicle_number', value)} />
-            <Select label="Assessment" value={form.related_zakat_assessment || ''} onChange={(value) => update('related_zakat_assessment', value)} options={[['', 'None'], ...cropAssessments.map((row) => [row.id, row.assessment_number])]} />
-            <Select label="Receipt" value={form.related_zakat_receipt || ''} onChange={(value) => update('related_zakat_receipt', value)} options={[['', 'None'], ...receipts.map((row) => [row.id, row.receipt_number])]} />
-            <Select label="Product" value={form.product || ''} onChange={(value) => update('product', value)} options={productOptions.map((product) => [product.id, product.name_en || product.name_ar || product.name])} />
-            <Field label="Quantity" type="number" step="0.001" value={form.quantity} onChange={(value) => update('quantity', value)} />
-            <Field label="Unit" value={form.unit} onChange={(value) => update('unit', value)} />
+            <Field label={t('zakat.forms.permitNumber')} value={form.permit_number} onChange={(value) => update('permit_number', value)} required />
+            <Field label={t('zakat.forms.issueDate')} type="date" value={form.issue_date} onChange={(value) => update('issue_date', value)} required />
+            <Field label={t('zakat.forms.expiryDate')} type="date" value={form.expiry_date} onChange={(value) => update('expiry_date', value)} required />
+            <Field label={t('zakat.forms.sourceLocation')} value={form.source_location} onChange={(value) => update('source_location', value)} required />
+            <Field label={t('zakat.forms.destinationLocation')} value={form.destination_location} onChange={(value) => update('destination_location', value)} required />
+            <Field label={t('zakat.forms.vehicleNumber')} value={form.vehicle_number} onChange={(value) => update('vehicle_number', value)} />
+            <Select label={t('zakat.forms.assessment')} value={form.related_zakat_assessment || ''} onChange={(value) => update('related_zakat_assessment', value)} options={[['', t('zakat.options.none')], ...cropAssessments.map((row) => [row.id, row.assessment_number])]} />
+            <Select label={t('zakat.table.receipt')} value={form.related_zakat_receipt || ''} onChange={(value) => update('related_zakat_receipt', value)} options={[['', t('zakat.options.none')], ...receipts.map((row) => [row.id, row.receipt_number])]} />
+            <Select label={t('common.product')} value={form.product || ''} onChange={(value) => update('product', value)} options={productOptions.map((product) => [product.id, productName(product, isArabic)])} />
+            <Field label={t('common.quantity')} type="number" step="0.001" value={form.quantity} onChange={(value) => update('quantity', value)} />
+            <UnitSelect label={t('common.unit')} value={form.unit} onChange={(value) => update('unit', value)} />
           </>
         )}
         <div className="button-row">
-          <Button type="submit" disabled={saving}>Save</Button>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{t('zakat.actions.save')}</Button>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>{t('zakat.actions.cancel')}</Button>
         </div>
       </form>
     </AppWindow>
@@ -556,34 +549,53 @@ function Select({ label, value, onChange, options, required = false }) {
   );
 }
 
-const windowTitles = {
-  rule: 'New Zakat Rule',
-  crop: 'New Crop Assessment',
-  trade: 'New Trade Assessment',
-  previousReceipt: 'Previous Receipt Evidence',
-  receipt: 'New Zakat Receipt',
-  certificate: 'New Performance Certificate',
-  permit: 'New Movement Permit',
+function UnitSelect({ label, value, onChange, required = false, allowBlank = false }) {
+  const { t } = useLanguage();
+  const unitOptions = ['Bag', 'KG', 'Qintar', 'Bale', 'Unit'].map((unit) => [unit, t(`zakat.options.${unit}`)]);
+  return (
+    <Select
+      label={label}
+      value={value ?? ''}
+      onChange={onChange}
+      required={required}
+      options={allowBlank ? [['', t('zakat.options.none')], ...unitOptions] : unitOptions}
+    />
+  );
+}
+
+function productName(product, isArabic) {
+  const name = isArabic ? (product.name_ar || product.name_en || product.name) : (product.name_en || product.name_ar || product.name);
+  return localizedProductLabel(name, isArabic);
+}
+
+const windowTitleKeys = {
+  rule: 'zakat.windows.ruleTitle',
+  crop: 'zakat.windows.cropTitle',
+  trade: 'zakat.windows.tradeTitle',
+  previousReceipt: 'zakat.windows.previousReceiptTitle',
+  receipt: 'zakat.windows.receiptTitle',
+  certificate: 'zakat.windows.certificateTitle',
+  permit: 'zakat.windows.permitTitle',
 };
 
-const windowDescriptions = {
-  rule: 'Configure draft rates and thresholds pending official confirmation.',
-  crop: 'Record crop quantities for assessment. Inventory is not deducted.',
-  trade: 'Record business balances for separate trade Zakat calculation.',
-  previousReceipt: 'Capture evidence of Zakat paid outside this ERP.',
-  receipt: 'Record a Zakat receipt or payment proof.',
-  certificate: 'Track validity of Zakat performance certificates.',
-  permit: 'Track crop movement permit validity and linked Zakat evidence.',
+const windowDescriptionKeys = {
+  rule: 'zakat.windows.ruleDescription',
+  crop: 'zakat.windows.cropDescription',
+  trade: 'zakat.windows.tradeDescription',
+  previousReceipt: 'zakat.windows.previousReceiptDescription',
+  receipt: 'zakat.windows.receiptDescription',
+  certificate: 'zakat.windows.certificateDescription',
+  permit: 'zakat.windows.permitDescription',
 };
 
 function defaultForm(action, productId) {
   const base = { assessment_date: today, issue_date: today, effective_from: today, currency: 'SDG', unit: 'Bag' };
-  if (action === 'rule') return { ...base, rule_code: '', name_ar: '', name_en: '', zakat_type: 'crop', calculation_method: 'quantity_percentage', irrigation_method: 'natural', crop_product: '', rate_percentage: '10', threshold_quantity: '0', threshold_unit: 'Bag', official_valuation_price: '0', monetary_threshold: '0', issuing_authority: 'Zakat Chamber' };
-  if (action === 'crop') return { ...base, seller_name_snapshot: '', agricultural_season: String(new Date().getFullYear()), irrigation_method: 'natural', state: 'White Nile', locality: 'Kosti', product: productId || '', net_quantity: '', previous_zakat_paid: false, previous_receipt: '' };
+  if (action === 'rule') return { ...base, rule_code: '', name_ar: '', name_en: '', zakat_type: 'crop', calculation_method: 'quantity_percentage', irrigation_method: 'natural', crop_product: '', rate_percentage: '10', threshold_quantity: '0', threshold_unit: 'Bag', official_valuation_price: '0', monetary_threshold: '0', issuing_authority: '' };
+  if (action === 'crop') return { ...base, seller_name_snapshot: '', agricultural_season: String(new Date().getFullYear()), irrigation_method: 'natural', state: '', locality: '', product: productId || '', net_quantity: '', previous_zakat_paid: false, previous_receipt: '' };
   if (action === 'trade') return { ...base, company: '', zakat_year: new Date().getFullYear(), period_start: `${new Date().getFullYear()}-01-01`, period_end: `${new Date().getFullYear()}-12-31`, cash_balance: '0', trade_inventory_value: '0', receivables_value: '0', allowed_liabilities: '0', other_assessable_assets: '0' };
-  if (action === 'previousReceipt') return { ...base, receipt_number: '', payer: '', issuing_state: 'White Nile', issuing_locality: 'Kosti', issuing_office: '', crop: productId || '', paid_quantity: '', paid_amount: '' };
-  if (action === 'receipt') return { ...base, receipt_number: '', receipt_type: 'crop_zakat', crop_assessment: '', trade_assessment: '', issuing_authority: 'Zakat Chamber', issuing_office: '', amount_paid: '0', quantity_paid: '', unit: '' };
-  if (action === 'certificate') return { ...base, certificate_number: '', party_name: '', zakat_year: new Date().getFullYear(), expiry_date: today, issuing_authority: 'Zakat Chamber' };
+  if (action === 'previousReceipt') return { ...base, receipt_number: '', payer: '', issuing_state: '', issuing_locality: '', issuing_office: '', crop: productId || '', paid_quantity: '', paid_amount: '' };
+  if (action === 'receipt') return { ...base, receipt_number: '', receipt_type: 'crop_zakat', crop_assessment: '', trade_assessment: '', issuing_authority: '', issuing_office: '', amount_paid: '0', quantity_paid: '', unit: '' };
+  if (action === 'certificate') return { ...base, certificate_number: '', party_name: '', zakat_year: new Date().getFullYear(), expiry_date: today, issuing_authority: '' };
   if (action === 'permit') return { ...base, permit_number: '', expiry_date: today, source_location: '', destination_location: '', vehicle_number: '', related_zakat_assessment: '', related_zakat_receipt: '', product: productId || '', quantity: '', unit: 'Bag' };
   return base;
 }

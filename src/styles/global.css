@@ -269,6 +269,19 @@ textarea:focus-visible {
   font-weight: 800;
 }
 
+.zakat-page[dir="rtl"] {
+  text-align: right;
+}
+
+.zakat-page[dir="ltr"] {
+  text-align: left;
+}
+
+.zakat-page .data-table th,
+.zakat-page .data-table td {
+  text-align: inherit;
+}
+
 .zakat-report-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
