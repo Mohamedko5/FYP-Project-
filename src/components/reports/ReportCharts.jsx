@@ -2,6 +2,7 @@ import React from 'react';
 import {
   BarChart,
   Bar,
+  CartesianGrid,
   LineChart,
   Line,
   PieChart,
@@ -15,12 +16,16 @@ import {
 } from 'recharts';
 
 const COLORS = ['#4d6b4a', '#8a6c2f', '#7a6043', '#8a4b3f', '#4a6b68', '#684a6b', '#354b33', '#9c826b'];
+const INCOME_COLOR = '#4d6b4a';
+const EXPENSE_COLOR = '#8a4b3f';
+const NEUTRAL_COLOR = '#7a6043';
+const GRID_COLOR = '#e7dfd5';
 
 const chartTitles = {
   en: {
     incomeVsExpenses: 'Income vs Expenses',
-    balanceTrend: 'Daily Movement Trend',
-    paymentMethods: 'Payment Methods Distribution',
+    balanceTrend: 'Daily Balance Movement',
+    paymentMethods: 'Payment Method Distribution',
     stockByWarehouse: 'Stock Quantity by Warehouse',
     topProducts: 'Top Products by Quantity',
     warehouseStockDistribution: 'Stock Distribution by Warehouse',
@@ -69,12 +74,29 @@ const chartTitles = {
   },
 };
 
+function money(value) {
+  return `SDG ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function paymentMethodLabel(value, isArabic) {
+  const normalized = value === 'online' ? 'electronic' : value;
+  const labels = {
+    cash: isArabic ? 'Ù†Ù‚Ø¯Ø§Ù‹' : 'Cash',
+    electronic: isArabic ? 'Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ' : 'Electronic Payment',
+    bank_of_khartoum: isArabic ? 'Ø¨Ù†Ùƒ Ø§Ù„Ø®Ø±Ø·ÙˆÙ…' : 'Bank of Khartoum',
+    visa: isArabic ? 'ÙÙŠØ²Ø§' : 'Visa',
+    mastercard: isArabic ? 'Ù…Ø§Ø³ØªØ±ÙƒØ§Ø±Ø¯' : 'Mastercard',
+  };
+  return labels[normalized] || normalized || (isArabic ? 'ØºÙŠØ± Ù…Ø­Ø¯Ø¯' : 'Unspecified');
+}
+
 function ChartContainer({ title, children, hasData, emptyText }) {
   return (
     <div className="report-chart-card">
       {title && <h3 className="report-chart-card__title">{title}</h3>}
       {!hasData ? (
         <div className="report-chart-empty">
+          <span aria-hidden="true">--</span>
           <p>{emptyText}</p>
         </div>
       ) : (
@@ -88,10 +110,86 @@ function ChartContainer({ title, children, hasData, emptyText }) {
   );
 }
 
+function DailyJournalCharts({ summary, isArabic, titles }) {
+  const income = Number(summary?.total_income || 0);
+  const expenses = Number(summary?.total_expenses || 0);
+  const opening = Number(summary?.opening_balance || 0);
+  const closing = Number(summary?.closing_balance || 0);
+  const hasIncExp = income > 0 || expenses > 0;
+  const incExpData = [
+    { name: isArabic ? 'Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯Ø§Øª' : 'Income', amount: income, fill: INCOME_COLOR },
+    { name: isArabic ? 'Ø§Ù„Ù…ØµØ±ÙˆÙØ§Øª' : 'Expenses', amount: expenses, fill: EXPENSE_COLOR },
+  ];
+
+  const movementData = [
+    { name: isArabic ? 'Ø§Ù„Ø§ÙØªØªØ§Ø­ÙŠ' : 'Opening', amount: opening, fill: NEUTRAL_COLOR },
+    { name: isArabic ? 'Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯Ø§Øª' : 'Income', amount: income, fill: INCOME_COLOR },
+    { name: isArabic ? 'Ø§Ù„Ù…ØµØ±ÙˆÙØ§Øª' : 'Expenses', amount: expenses, fill: EXPENSE_COLOR },
+    { name: isArabic ? 'Ø§Ù„Ø®ØªØ§Ù…ÙŠ' : 'Closing', amount: closing, fill: INCOME_COLOR },
+  ];
+  const hasMovement = opening > 0 || income > 0 || expenses > 0 || closing > 0;
+
+  const payMethodData = (summary?.payment_methods || [])
+    .map((row) => ({
+      name: paymentMethodLabel(row.payment_method, isArabic),
+      value: Number(row.total || 0),
+      count: Number(row.count || 0),
+    }))
+    .filter((row) => row.value > 0 || row.count > 0);
+  const paymentTotal = payMethodData.reduce((total, row) => total + row.value, 0);
+  const paymentCount = payMethodData.reduce((total, row) => total + row.count, 0);
+  const hasPayMethod = payMethodData.length > 0 && paymentTotal > 0;
+
+  return (
+    <div className="report-charts-grid">
+      <ChartContainer title={titles.incomeVsExpenses} hasData={hasIncExp} emptyText={titles.emptyData}>
+        <BarChart data={incExpData} margin={{ top: 16, right: 20, bottom: 8, left: 12 }}>
+          <CartesianGrid stroke={GRID_COLOR} vertical={false} />
+          <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} />
+          <YAxis tickFormatter={(value) => Number(value).toLocaleString()} width={82} />
+          <RechartsTooltip formatter={(value) => [money(value), '']} />
+          <Legend verticalAlign="top" height={28} />
+          <Bar dataKey="amount" name={isArabic ? 'Ø§Ù„Ù…Ø¨Ù„Øº' : 'Amount'} radius={[8, 8, 0, 0]} maxBarSize={72}>
+            {incExpData.map((entry, index) => <Cell key={`daily-compare-${index}`} fill={entry.fill} />)}
+          </Bar>
+        </BarChart>
+      </ChartContainer>
+
+      <ChartContainer title={isArabic ? 'Ø­Ø±ÙƒØ© Ø§Ù„Ø±ØµÙŠØ¯ Ø§Ù„ÙŠÙˆÙ…ÙŠØ©' : 'Daily Balance Movement'} hasData={hasMovement} emptyText={titles.emptyData}>
+        <BarChart data={movementData} margin={{ top: 16, right: 20, bottom: 8, left: 12 }}>
+          <CartesianGrid stroke={GRID_COLOR} vertical={false} />
+          <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} />
+          <YAxis tickFormatter={(value) => Number(value).toLocaleString()} width={82} />
+          <RechartsTooltip formatter={(value) => [money(value), '']} />
+          <Bar dataKey="amount" name={isArabic ? 'Ø§Ù„Ù…Ø¨Ù„Øº' : 'Amount'} radius={[8, 8, 0, 0]} maxBarSize={58}>
+            {movementData.map((entry, index) => <Cell key={`daily-movement-${index}`} fill={entry.fill} />)}
+          </Bar>
+        </BarChart>
+      </ChartContainer>
+
+      <ChartContainer title={titles.paymentMethods} hasData={hasPayMethod} emptyText={titles.emptyData}>
+        <PieChart margin={{ top: 4, right: 8, bottom: 4, left: 8 }}>
+          <Pie data={payMethodData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={88} paddingAngle={payMethodData.length > 1 ? 3 : 0}>
+            {payMethodData.map((entry, index) => <Cell key={`daily-payment-${index}`} fill={index === 0 ? INCOME_COLOR : COLORS[index % COLORS.length]} />)}
+          </Pie>
+          <text x="50%" y="48%" textAnchor="middle" dominantBaseline="middle" className="report-chart-center-value">{paymentCount}</text>
+          <text x="50%" y="58%" textAnchor="middle" dominantBaseline="middle" className="report-chart-center-label">{isArabic ? 'Ù…Ø¹Ø§Ù…Ù„Ø§Øª' : 'transactions'}</text>
+          <RechartsTooltip formatter={(value, name, item) => {
+            const percent = paymentTotal ? (Number(value) / paymentTotal) * 100 : 0;
+            return [`${money(value)} (${percent.toFixed(1)}%)`, item?.payload?.name || name];
+          }} />
+          <Legend verticalAlign="bottom" formatter={(value) => <span className="report-chart-legend-label">{value}</span>} />
+        </PieChart>
+      </ChartContainer>
+    </div>
+  );
+}
+
 export default function ReportCharts({ reportId, summary, rows = [], isArabic = false }) {
   const titles = chartTitles[isArabic ? 'ar' : 'en'];
 
   if (!reportId) return null;
+  if (reportId === 'daily-journal') return <DailyJournalCharts summary={summary} isArabic={isArabic} titles={titles} />;
 
   // 1. DAILY JOURNAL CHARTS
   if (reportId === 'daily-journal') {
@@ -111,16 +209,7 @@ export default function ReportCharts({ reportId, summary, rows = [], isArabic = 
       { name: isArabic ? 'إلكتروني' : 'Electronic / Online', value: onlineTot },
     ].filter((d) => d.value > 0);
 
-    const dateMap = {};
-    (rows || []).forEach((row) => {
-      const d = row.date ? row.date.split('T')[0] : 'Unknown';
-      if (!dateMap[d]) dateMap[d] = { date: d, income: 0, expense: 0 };
-      const amt = Number(row.amount || 0);
-      if (row.type === 'income') dateMap[d].income += amt;
-      else dateMap[d].expense += amt;
-    });
-    const trendData = Object.values(dateMap).sort((a, b) => a.date.localeCompare(b.date));
-    const hasTrend = trendData.length > 0;
+    const hasTrend = false;
 
     return (
       <div className="report-charts-grid">
@@ -150,7 +239,7 @@ export default function ReportCharts({ reportId, summary, rows = [], isArabic = 
         </ChartContainer>
 
         <ChartContainer title={titles.balanceTrend} hasData={hasTrend} emptyText={titles.emptyData}>
-          <LineChart data={trendData}>
+          <LineChart data={[]}>
             <XAxis dataKey="date" />
             <YAxis />
             <RechartsTooltip formatter={(value) => [`SDG ${Number(value).toLocaleString()}`, '']} />

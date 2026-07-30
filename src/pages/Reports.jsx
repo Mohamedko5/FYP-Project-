@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   EmptyState,
   ErrorState,
@@ -41,7 +41,7 @@ const reportTypesAr = [
 ];
 
 const relevantFilters = {
-  'daily-journal': ['date_from', 'date_to', 'payment_method', 'transaction_type'],
+  'daily-journal': ['date', 'payment_method', 'transaction_type'],
   inventory: ['warehouse', 'product', 'unit'],
   'customer-accounts': ['customer'],
   workers: ['worker'],
@@ -50,6 +50,37 @@ const relevantFilters = {
   shipments: ['date_from', 'date_to', 'customer', 'product', 'warehouse', 'shipment_status'],
   'financial-summary': ['date_from', 'date_to'],
 };
+
+function toLocalDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatCurrencyValue(value, currency = 'SDG') {
+  return `${currency} ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatReportDate(value) {
+  if (!value) return '-';
+  const [year, month, day] = String(value).slice(0, 10).split('-');
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year}`;
+}
+
+function formatReportDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
 
 const copy = {
   en: {
@@ -72,6 +103,7 @@ const copy = {
     noRecords: 'No records found.',
     worker: 'Worker',
     cash: 'Cash',
+    electronic: 'Electronic Payment',
     online: 'Online',
     unpaid: 'Unpaid',
     paid: 'Paid',
@@ -114,6 +146,7 @@ const copy = {
     noRecords: 'لا توجد سجلات.',
     worker: 'العامل',
     cash: 'نقداً',
+    electronic: 'إلكتروني',
     online: 'إلكتروني',
     unpaid: 'غير مدفوع',
     paid: 'مدفوع',
@@ -154,6 +187,7 @@ function statusText(value, isArabic = false) {
       income: 'Income',
       expense: 'Expense',
       cash: 'Cash',
+      electronic: 'Electronic Payment',
       online: 'Online',
       Low: 'Low Stock',
       Good: 'Good',
@@ -174,6 +208,7 @@ function statusText(value, isArabic = false) {
       income: 'إيراد',
       expense: 'مصروف',
       cash: 'نقداً',
+      electronic: 'إلكتروني',
       online: 'إلكتروني',
       Low: 'منخفض المخزون',
       Good: 'جيد',
@@ -217,6 +252,7 @@ function flattenSummary(value, prefix = '', isArabic = false) {
 
 function defaultFilters() {
   return {
+    date: toLocalDateString(),
     date_from: '',
     date_to: '',
     customer: '',
@@ -245,7 +281,7 @@ function PrintableReport({ columns, companyName, currency, filters, generatedAt,
           <h2>{report.title}</h2>
         </header>
         <div className="print-report__meta">
-          <div><span>{label.generatedAt}</span><strong>{generatedAt || new Date().toLocaleString()}</strong></div>
+          <div><span>{label.generatedAt}</span><strong>{formatReportDateTime(generatedAt) || new Date().toLocaleString()}</strong></div>
           <div><span>{label.currency}</span><strong>{currency}</strong></div>
           <div><span>{label.administrator}</span><strong>{isArabic ? 'المسؤول' : 'Admin'}</strong></div>
         </div>
@@ -279,13 +315,15 @@ export default function Reports() {
   const { currency } = useCurrency();
   const label = copy[isArabic ? 'ar' : 'en'];
   const reportTypeOptions = isArabic ? reportTypesAr : reportTypes;
-  const [selectedReportId, setSelectedReportId] = useState('');
+  const [selectedReportId, setSelectedReportId] = useState('daily-journal');
   const [reportData, setReportData] = useState(null);
   const [options, setOptions] = useState({ customers: [], products: [], warehouses: [], workers: [] });
   const [filters, setFilters] = useState(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState(defaultFilters);
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState('');
+  const autoLoadAttemptedRef = useRef(false);
 
   useEffect(() => {
     getReportOptions().then((data) => setOptions(data?.results || { customers: [], products: [], warehouses: [], workers: [] })).catch(() => {});
@@ -298,11 +336,11 @@ export default function Reports() {
 
   const columnsByReport = useMemo(() => ({
     'daily-journal': [
-      { key: 'date', label: t('common.date') },
+      { key: 'date', label: t('common.date'), render: (row) => formatReportDate(row.date), printRender: (row) => formatReportDate(row.date) },
       { key: 'type', label: t('common.type'), render: (row) => <StatusBadge status={statusText(row.type, isArabic)} />, printRender: (row) => statusText(row.type, isArabic) },
       { key: 'payment_method', label: t('common.method'), render: (row) => statusText(row.payment_method, isArabic), printRender: (row) => statusText(row.payment_method, isArabic) },
       { key: 'party', label: t('common.customerSupplier') },
-      { key: 'amount', label: t('common.amount') },
+      { key: 'amount', label: t('common.amount'), render: (row) => formatCurrencyValue(row.amount, currency), printRender: (row) => formatCurrencyValue(row.amount, currency) },
       { key: 'description', label: t('common.description') },
     ],
     inventory: [
@@ -363,7 +401,7 @@ export default function Reports() {
       { key: 'label', label: t('reports.report') },
       { key: 'value', label: t('common.mainValue') },
     ],
-  }), [isArabic, label, t]);
+  }), [currency, isArabic, label, t]);
 
   const tableRows = selectedReportId === 'financial-summary' ? flattenSummary(summary, '', isArabic).map((item, index) => ({ id: index, ...item })) : rows;
   const columns = columnsByReport[selectedReportId] || [];
@@ -373,9 +411,11 @@ export default function Reports() {
   function selectReport(reportId) {
     setSelectedReportId(reportId);
     setReportData(null);
+    autoLoadAttemptedRef.current = false;
     setErrors([]);
-    setFilters(defaultFilters());
-    setAppliedFilters(defaultFilters());
+    const nextFilters = defaultFilters();
+    setFilters(nextFilters);
+    setAppliedFilters(nextFilters);
   }
 
   function updateFilter(event) {
@@ -395,10 +435,12 @@ export default function Reports() {
     }
     setLoading(true);
     setErrors([]);
+    setReportData(null);
     const scopedFilters = Object.fromEntries(Object.entries(filters).filter(([key, value]) => activeFilterKeys.includes(key) && value));
     try {
       setReportData(await getReport(selectedReportId, scopedFilters));
       setAppliedFilters({ ...filters });
+      setLastRefresh(new Date().toISOString());
     } catch (error) {
       setErrors(String(error.message || label.loadError).split('\n'));
     } finally {
@@ -406,15 +448,47 @@ export default function Reports() {
     }
   }, [activeFilterKeys, filters, selectedReportId]);
 
+  useEffect(() => {
+    if (selectedReportId === 'daily-journal' && !reportData && !loading && !autoLoadAttemptedRef.current) {
+      autoLoadAttemptedRef.current = true;
+      loadReport();
+    }
+  }, [loadReport, loading, reportData, selectedReportId]);
+
+  useEffect(() => {
+    function refreshVisibleReport() {
+      if (document.visibilityState !== 'visible' || selectedReportId !== 'daily-journal') return;
+      loadReport();
+    }
+
+    document.addEventListener('visibilitychange', refreshVisibleReport);
+    const intervalId = window.setInterval(() => {
+      if (selectedReportId !== 'daily-journal') return;
+      const currentBusinessDate = toLocalDateString();
+      if (filters.date === appliedFilters.date && filters.date !== currentBusinessDate) {
+        const nextFilters = { ...filters, date: currentBusinessDate };
+        setFilters(nextFilters);
+        setAppliedFilters(nextFilters);
+        setReportData(null);
+        autoLoadAttemptedRef.current = false;
+      }
+    }, 60 * 1000);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshVisibleReport);
+      window.clearInterval(intervalId);
+    };
+  }, [appliedFilters, filters, loadReport, selectedReportId]);
+
   function renderFilter(key) {
     const commonProps = { name: key, value: filters[key], onChange: updateFilter };
+    if (key === 'date') return <label key={key}>{t('common.date')}<input type="date" {...commonProps} /></label>;
     if (key === 'date_from') return <label key={key}>{t('reports.fromDate')}<input type="date" {...commonProps} /></label>;
     if (key === 'date_to') return <label key={key}>{t('reports.toDate')}<input type="date" {...commonProps} min={filters.date_from || undefined} /></label>;
     if (key === 'customer') return <label key={key}>{t('common.customer')}<select {...commonProps}><option value="">{t('reports.all')}</option>{options.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>;
     if (key === 'product') return <label key={key}>{t('common.product')}<select {...commonProps}><option value="">{t('reports.all')}</option>{options.products.map((product) => <option key={product.id} value={product.id}>{isArabic ? product.name_ar : product.name_en}</option>)}</select></label>;
     if (key === 'warehouse') return <label key={key}>{t('warehouse.warehouse')}<select {...commonProps}><option value="">{t('reports.all')}</option>{options.warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.warehouse_name}</option>)}</select></label>;
     if (key === 'worker') return <label key={key}>{label.worker}<select {...commonProps}><option value="">{t('reports.all')}</option>{options.workers.map((worker) => <option key={worker.id} value={worker.id}>{worker.name}</option>)}</select></label>;
-    if (key === 'payment_method') return <label key={key}>{t('common.method')}<select {...commonProps}><option value="">{t('reports.all')}</option><option value="cash">{label.cash}</option><option value="online">{label.online}</option></select></label>;
+    if (key === 'payment_method') return <label key={key}>{t('common.method')}<select {...commonProps}><option value="">{t('reports.all')}</option><option value="cash">{label.cash}</option><option value="electronic">{label.online}</option></select></label>;
     if (key === 'payment_status') return <label key={key}>{t('orders.paymentStatus')}<select {...commonProps}><option value="">{t('reports.all')}</option><option value="unpaid">{label.unpaid}</option><option value="paid">{label.paid}</option></select></label>;
     if (key === 'transaction_type') return <label key={key}>{t('common.type')}<select {...commonProps}><option value="">{t('reports.all')}</option><option value="income">{label.income}</option><option value="expense">{label.expense}</option></select></label>;
     if (key === 'unit') {
@@ -446,7 +520,8 @@ export default function Reports() {
       <ModulePageHeader
         title={label.title}
         description={selectedReport ? `${label.description} ${label.selected}: ${selectedReport.title}` : label.description}
-        actions={reportData && <Button variant="secondary" onClick={() => window.print()}>{t('reports.printPdf')}</Button>}
+        meta={selectedReportId === 'daily-journal' ? `${isArabic ? 'ØªØ§Ø±ÙŠØ® Ø§Ù„ØªÙ‚Ø±ÙŠØ±' : 'Report Date'}: ${formatReportDate(reportData?.report_date || filters.date)}` : undefined}
+        actions={reportData && <><Button variant="secondary" onClick={loadReport}>{label.generate}</Button><Button variant="secondary" onClick={() => window.print()}>{t('reports.printPdf')}</Button></>}
       />
 
       <Card title={label.choose} subtitle={label.noReport}>
@@ -476,7 +551,7 @@ export default function Reports() {
       )}
 
       {selectedReport && (
-        <Card title={label.results} subtitle={reportData?.generated_at || selectedReport.title}>
+        <Card title={label.results} subtitle={reportData ? `${isArabic ? 'Ø¢Ø®Ø± ØªØ­Ø¯ÙŠØ«' : 'Last Updated'}: ${formatReportDateTime(reportData.generated_at || lastRefresh)}` : selectedReport.title}>
           <ErrorState errors={errors} onRetry={loadReport} retryLabel={t('retry')} />
           {loading && <LoadingState message={t('orders.loading')} />}
           {!loading && !reportData && <EmptyState title={label.generate} description={label.noReport} />}
@@ -484,11 +559,11 @@ export default function Reports() {
             <>
               {summaryCards.length > 0 && (
                 <StatGrid>
-                  {summaryCards.map((item) => <SummaryCard key={item.label} label={item.label} value={item.value} note={item.note} tone={item.tone} />)}
+                  {summaryCards.map((item) => <SummaryCard key={item.label} icon={item.icon} label={item.label} value={item.value} note={item.note} tone={item.tone} />)}
                 </StatGrid>
               )}
               <ReportCharts reportId={selectedReportId} summary={summary} rows={tableRows} isArabic={isArabic} />
-              {tableRows.length === 0 ? <EmptyState title={label.noData} /> : <Table columns={columns} rows={tableRows} />}
+              {tableRows.length === 0 ? <EmptyState title={selectedReportId === 'daily-journal' ? (isArabic ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø¹Ø§Ù…Ù„Ø§Øª Ù…Ø³Ø¬Ù„Ø© Ù„Ù‡Ø°Ø§ Ø§Ù„ØªØ§Ø±ÙŠØ®.' : 'No transactions were recorded for this date.') : label.noData} /> : <Table columns={columns} rows={tableRows} />}
             </>
           )}
           <PrintableReport columns={columns} companyName={t('companyName')} currency={currency} filters={appliedFilters} generatedAt={reportData?.generated_at} isArabic={isArabic} label={label} report={selectedReport} rows={tableRows} summary={summary} />
@@ -570,11 +645,12 @@ function summaryHighlights(reportId, summary, isArabic = false, rows = []) {
   };
 
   if (reportId === 'daily-journal') {
+    const reportDate = formatReportDate(summary.report_date);
     return [
-      { label: labels.openingBalance, value: summary.opening_balance ? `SDG ${summary.opening_balance}` : '-' },
-      { label: labels.income, value: summary.total_income ? `SDG ${summary.total_income}` : '-', tone: 'good' },
-      { label: labels.expenses, value: summary.total_expenses ? `SDG ${summary.total_expenses}` : '-', tone: 'warning' },
-      { label: labels.closingBalance, value: summary.closing_balance ? `SDG ${summary.closing_balance}` : '-' },
+      { label: labels.openingBalance, value: formatCurrencyValue(summary.opening_balance), note: reportDate, icon: 'O' },
+      { label: labels.income, value: formatCurrencyValue(summary.total_income), note: reportDate, tone: 'good', icon: '+' },
+      { label: labels.expenses, value: formatCurrencyValue(summary.total_expenses), note: reportDate, tone: 'warning', icon: '-' },
+      { label: labels.closingBalance, value: formatCurrencyValue(summary.closing_balance), note: reportDate, tone: 'good', icon: '=' },
     ];
   }
 

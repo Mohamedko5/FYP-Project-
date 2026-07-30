@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from customers.models import Customer
 from customers.services import customer_cash_balance, customer_cash_status, customer_cash_totals, customer_commodity_balances
-from daily_journal.models import JournalTransaction
+from daily_journal.models import DailyOpeningBalance, JournalTransaction
 from inventory.models import Inventory, Product, Warehouse
 from invoices.models import Invoice, InvoicePayment
 from orders.models import Order
@@ -28,6 +28,14 @@ def qty(value):
 
 def local_dt(value):
     return timezone.localtime(value).isoformat() if value else None
+
+
+def local_date(value):
+    return timezone.localtime(value).date().isoformat() if value else None
+
+
+def local_time(value):
+    return timezone.localtime(value).strftime('%H:%M') if value else None
 
 
 def parse_date(value, field):
@@ -60,6 +68,7 @@ def apply_created_range(queryset, params, field='created_at'):
 def report_response(report_type, request, summary, results):
     return Response({
         'report_type': report_type,
+        **({'report_date': summary['report_date']} if summary.get('report_date') else {}),
         'generated_at': timezone.localtime(timezone.now()).isoformat(),
         'filters': dict(request.query_params),
         'summary': summary,
@@ -82,29 +91,58 @@ def options(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def daily_journal(request):
-    rows = JournalTransaction.objects.filter(is_deleted=False, journal_type=JournalTransaction.JOURNAL_CASH)
+    rows = JournalTransaction.objects.filter(
+        is_deleted=False,
+        is_reversed=False,
+        journal_type=JournalTransaction.JOURNAL_CASH,
+    )
     start, _ = date_bounds(request.query_params)
-    opening_qs = rows.filter(created_at__lt=start) if start else rows.none()
-    opening_income = opening_qs.filter(cash_type=JournalTransaction.CASH_INCOME).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    opening_expenses = opening_qs.filter(cash_type=JournalTransaction.CASH_EXPENSE).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    report_day = parse_date(request.query_params['date'], 'date') if request.query_params.get('date') else timezone.localdate(start) if start else timezone.localdate()
+    opening_record = DailyOpeningBalance.objects.filter(journal_date=report_day).first()
+    opening = opening_record.amount if opening_record else Decimal('0.00')
     rows = apply_created_range(rows, request.query_params)
     if request.query_params.get('payment_method'):
-        rows = rows.filter(payment_method=request.query_params['payment_method'])
+        payment_method = request.query_params['payment_method']
+        if payment_method == 'online':
+            payment_method = JournalTransaction.PAYMENT_ELECTRONIC
+        rows = rows.filter(payment_method=payment_method)
     if request.query_params.get('transaction_type'):
         rows = rows.filter(cash_type=request.query_params['transaction_type'])
     income = rows.filter(cash_type=JournalTransaction.CASH_INCOME).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     expenses = rows.filter(cash_type=JournalTransaction.CASH_EXPENSE).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    opening = opening_income - opening_expenses
+    cash_total = rows.filter(payment_method=JournalTransaction.PAYMENT_CASH).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    electronic_total = rows.filter(payment_method=JournalTransaction.PAYMENT_ELECTRONIC).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    payment_method_rows = rows.values('payment_method').annotate(total=Sum('amount'), count=Count('id')).order_by('payment_method')
     return report_response('daily-journal', request, {
+        'report_date': report_day.isoformat(),
         'opening_balance': money(opening),
         'total_income': money(income),
         'total_expenses': money(expenses),
         'net_movement': money(income - expenses),
         'closing_balance': money(opening + income - expenses),
-        'cash_total': money(rows.filter(payment_method=JournalTransaction.PAYMENT_CASH).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')),
-        'online_total': money(rows.filter(payment_method=JournalTransaction.PAYMENT_ONLINE).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')),
+        'cash_total': money(cash_total),
+        'electronic_total': money(electronic_total),
+        'online_total': money(electronic_total),
+        'payment_methods': [
+            {
+                'payment_method': row['payment_method'] or '',
+                'total': money(row['total']),
+                'count': row['count'],
+            }
+            for row in payment_method_rows
+        ],
     }, [
-        {'id': row.id, 'date': local_dt(row.created_at), 'type': row.cash_type, 'payment_method': row.payment_method, 'party': row.party, 'amount': money(row.amount), 'description': row.description}
+        {
+            'id': row.id,
+            'date': local_date(row.created_at),
+            'time': local_time(row.created_at),
+            'created_at': local_dt(row.created_at),
+            'type': row.cash_type,
+            'payment_method': row.payment_method,
+            'party': row.party,
+            'amount': money(row.amount),
+            'description': row.description,
+        }
         for row in rows
     ])
 

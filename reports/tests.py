@@ -1,12 +1,15 @@
+from datetime import datetime
 from decimal import Decimal
+from pathlib import Path
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 from customers.models import Customer
-from daily_journal.models import JournalTransaction
+from daily_journal.models import DailyOpeningBalance, JournalTransaction
 from inventory.models import Inventory, Product, Warehouse
 from invoices.services import create_invoice_from_order, mark_invoice_paid
 from orders.models import Order
@@ -52,6 +55,84 @@ class ReportAPITests(APITestCase):
         self.assertEqual(response.data['summary']['total_income'], '1000.00')
         self.assertEqual(response.data['summary']['cash_total'], '1000.00')
 
+    def create_cash_transaction(self, *, amount, cash_type, day, payment_method='cash'):
+        transaction = JournalTransaction.objects.create(
+            journal_type=JournalTransaction.JOURNAL_CASH,
+            cash_type=cash_type,
+            payment_method=payment_method,
+            amount=Decimal(amount),
+            party='Daily Report Party',
+            description='Daily report regression transaction',
+            source_type=JournalTransaction.SOURCE_MANUAL,
+            created_by=self.admin,
+        )
+        current_timezone = timezone.get_current_timezone()
+        created_at = timezone.make_aware(datetime.combine(day, datetime.min.time()).replace(hour=9), current_timezone)
+        JournalTransaction.objects.filter(id=transaction.id).update(created_at=created_at)
+        transaction.refresh_from_db()
+        return transaction
+
+    def move_existing_cash_transactions(self, day):
+        current_timezone = timezone.get_current_timezone()
+        created_at = timezone.make_aware(datetime.combine(day, datetime.min.time()).replace(hour=8), current_timezone)
+        JournalTransaction.objects.filter(journal_type=JournalTransaction.JOURNAL_CASH).update(created_at=created_at)
+
+    def test_daily_report_is_selected_date_specific_and_never_falls_back(self):
+        self.move_existing_cash_transactions(datetime.strptime('2026-07-28', '%Y-%m-%d').date())
+        july_29 = datetime.strptime('2026-07-29', '%Y-%m-%d').date()
+        july_30 = datetime.strptime('2026-07-30', '%Y-%m-%d').date()
+        income = self.create_cash_transaction(amount='200000.00', cash_type=JournalTransaction.CASH_INCOME, day=july_29)
+        expense = self.create_cash_transaction(amount='10000.00', cash_type=JournalTransaction.CASH_EXPENSE, day=july_29)
+        DailyOpeningBalance.objects.create(journal_date=july_29, amount=Decimal('1000000.00'), created_by=self.admin)
+        DailyOpeningBalance.objects.create(journal_date=july_30, amount=Decimal('0.00'), created_by=self.admin)
+
+        july_29_response = self.client.get('/api/reports/daily-journal/', {'date': '2026-07-29'})
+        self.assertEqual(july_29_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(july_29_response.data['report_date'], '2026-07-29')
+        self.assertEqual(july_29_response.data['summary']['report_date'], '2026-07-29')
+        self.assertEqual(july_29_response.data['summary']['opening_balance'], '1000000.00')
+        self.assertEqual(july_29_response.data['summary']['total_income'], '200000.00')
+        self.assertEqual(july_29_response.data['summary']['total_expenses'], '10000.00')
+        self.assertEqual(july_29_response.data['summary']['closing_balance'], '1190000.00')
+
+        july_30_response = self.client.get('/api/reports/daily-journal/', {'date': '2026-07-30'})
+        self.assertEqual(july_30_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(july_30_response.data['report_date'], '2026-07-30')
+        self.assertEqual(july_30_response.data['summary']['opening_balance'], '0.00')
+        self.assertEqual(july_30_response.data['summary']['total_income'], '0.00')
+        self.assertEqual(july_30_response.data['summary']['total_expenses'], '0.00')
+        self.assertEqual(july_30_response.data['summary']['closing_balance'], '0.00')
+        self.assertEqual(july_30_response.data['results'], [])
+
+        income.refresh_from_db()
+        expense.refresh_from_db()
+        self.assertEqual(timezone.localtime(income.created_at).date(), july_29)
+        self.assertEqual(timezone.localtime(expense.created_at).date(), july_29)
+
+    def test_daily_report_payment_methods_and_reversed_transactions_are_date_specific(self):
+        self.move_existing_cash_transactions(datetime.strptime('2026-07-28', '%Y-%m-%d').date())
+        july_29 = datetime.strptime('2026-07-29', '%Y-%m-%d').date()
+        july_30 = datetime.strptime('2026-07-30', '%Y-%m-%d').date()
+        self.create_cash_transaction(amount='700.00', cash_type=JournalTransaction.CASH_INCOME, day=july_30, payment_method=JournalTransaction.PAYMENT_CASH)
+        self.create_cash_transaction(amount='300.00', cash_type=JournalTransaction.CASH_INCOME, day=july_30, payment_method=JournalTransaction.PAYMENT_ELECTRONIC)
+        self.create_cash_transaction(amount='999.00', cash_type=JournalTransaction.CASH_INCOME, day=july_29, payment_method=JournalTransaction.PAYMENT_ELECTRONIC)
+        reversed_transaction = self.create_cash_transaction(amount='500.00', cash_type=JournalTransaction.CASH_INCOME, day=july_30)
+        reversed_transaction.is_reversed = True
+        reversed_transaction.reversed_at = timezone.now()
+        reversed_transaction.reversed_by = self.admin
+        reversed_transaction.reversal_reason = 'Report test reversal'
+        reversed_transaction.save(update_fields=['is_reversed', 'reversed_at', 'reversed_by', 'reversal_reason'])
+
+        response = self.client.get('/api/reports/daily-journal/', {'date': '2026-07-30'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['summary']['total_income'], '1000.00')
+        self.assertEqual(response.data['summary']['cash_total'], '700.00')
+        self.assertEqual(response.data['summary']['electronic_total'], '300.00')
+        self.assertEqual(response.data['summary']['payment_methods'], [
+            {'payment_method': 'cash', 'total': '700.00', 'count': 1},
+            {'payment_method': 'electronic', 'total': '300.00', 'count': 1},
+        ])
+
     def test_inventory_report_uses_real_stock_and_units(self):
         response = self.client.get('/api/reports/inventory/', {'product': self.white.id})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -85,3 +166,23 @@ class ReportAPITests(APITestCase):
         response = self.client.get('/api/reports/financial-summary/')
         self.assertEqual(response.data['summary']['cash']['income'], '1000.00')
         self.assertEqual(response.data['summary']['invoices']['paid_value'], '1000.00')
+
+    def test_reports_frontend_defaults_daily_report_to_local_business_date(self):
+        page = Path(__file__).resolve().parents[1] / 'src' / 'pages' / 'Reports.jsx'
+        source = page.read_text(encoding='utf-8')
+        self.assertIn("const [selectedReportId, setSelectedReportId] = useState('daily-journal')", source)
+        self.assertIn('function toLocalDateString', source)
+        self.assertIn("date: toLocalDateString()", source)
+        self.assertIn("'daily-journal': ['date', 'payment_method', 'transaction_type']", source)
+        self.assertNotIn('toISOString().slice(0, 10)', source)
+
+    def test_reports_frontend_daily_charts_use_backend_summary_totals(self):
+        chart = Path(__file__).resolve().parents[1] / 'src' / 'components' / 'reports' / 'ReportCharts.jsx'
+        source = chart.read_text(encoding='utf-8')
+        self.assertIn('function DailyJournalCharts', source)
+        self.assertIn('summary?.total_income', source)
+        self.assertIn('summary?.total_expenses', source)
+        self.assertIn('summary?.opening_balance', source)
+        self.assertIn('summary?.closing_balance', source)
+        self.assertIn('summary?.payment_methods', source)
+        self.assertIn('innerRadius={58}', source)
