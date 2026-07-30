@@ -52,6 +52,7 @@ export const translations = {
       invoices: 'Invoices',
       customerMessages: 'Customer Messages',
       supplyOffers: 'Offers',
+      zakat: 'Zakat Management',
       reports: 'Reports',
     },
     supplyOffers: {
@@ -1349,6 +1350,7 @@ export const translations = {
       invoices: 'الفواتير',
       customerMessages: 'رسائل العملاء',
       supplyOffers: 'العروض',
+      zakat: 'إدارة الزكاة',
       reports: 'التقارير',
     },
     supplyOffers: {

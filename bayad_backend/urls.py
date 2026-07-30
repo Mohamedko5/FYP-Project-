@@ -21,6 +21,7 @@ urlpatterns = [
     path('api/reports/', include('reports.urls')),
     path('api/chat/', include('communications.urls')),
     path('api/supply-offers/', include('supply_offers.urls')),
+    path('api/zakat/', include('zakat.urls')),
 ]
 
 if settings.DEBUG:

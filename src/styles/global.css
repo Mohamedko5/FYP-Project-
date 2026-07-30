@@ -260,6 +260,52 @@ textarea:focus-visible {
   color: #ffffff;
 }
 
+.zakat-notice {
+  padding: 10px 12px;
+  border: 1px solid rgba(138, 108, 47, 0.35);
+  border-radius: 8px;
+  background: #fff8e8;
+  color: #5e4a21;
+  font-weight: 800;
+}
+
+.zakat-report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.zakat-chart {
+  min-height: 250px;
+}
+
+.zakat-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.zakat-form .button-row,
+.zakat-form .form-error {
+  grid-column: 1 / -1;
+}
+
+.zakat-subtitle {
+  margin: 18px 0 10px;
+  font-size: 16px;
+}
+
+.button-row--compact {
+  gap: 6px;
+}
+
+@media (max-width: 860px) {
+  .zakat-report-grid,
+  .zakat-form {
+    grid-template-columns: 1fr;
+  }
+}
+
 .module-state {
   display: flex;
   align-items: center;

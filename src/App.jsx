@@ -13,6 +13,7 @@ import Invoices from './pages/Invoices.jsx';
 import Reports from './pages/Reports.jsx';
 import CustomerMessages from './pages/CustomerMessages.jsx';
 import SupplyOffers from './pages/SupplyOffers.jsx';
+import ZakatManagement from './pages/ZakatManagement.jsx';
 import Login from './pages/Login.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="invoices" element={<Invoices />} />
           <Route path="customer-messages" element={<CustomerMessages />} />
           <Route path="supply-offers" element={<SupplyOffers />} />
+          <Route path="zakat" element={<ZakatManagement />} />
           <Route path="reports" element={<Reports />} />
         </Route>
         <Route path="*" element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />} />

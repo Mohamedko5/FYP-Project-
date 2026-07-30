@@ -14,6 +14,7 @@ const navigationItems = [
   { path: '/invoices', labelKey: 'routes.invoices' },
   { path: '/customer-messages', labelKey: 'routes.customerMessages', badge: 'chat' },
   { path: '/supply-offers', labelKey: 'routes.supplyOffers', badge: 'supplyOffers' },
+  { path: '/zakat', labelKey: 'routes.zakat' },
   { path: '/weighing-shipment', labelKey: 'routes.weighingShipment' },
   { path: '/reports', labelKey: 'routes.reports' },
 ];
