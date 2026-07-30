@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import AppWindow from '../components/ui/AppWindow.jsx';
@@ -9,7 +10,7 @@ import StockForm from '../components/warehouse/StockForm.jsx';
 import WarehouseDetails from '../components/warehouse/WarehouseDetails.jsx';
 import WarehouseForm from '../components/warehouse/WarehouseForm.jsx';
 import WithdrawStockForm from '../components/warehouse/WithdrawStockForm.jsx';
-import { getAvailableCapacity, getProductCategory, getUnitOptions } from '../components/warehouse/warehouseUtils.js';
+import { getProductCategory, getUnitOptions } from '../components/warehouse/warehouseUtils.js';
 import { commodityProductLabels } from '../data/dummyData.js';
 import { useLanguage } from '../i18n/LanguageContext.jsx';
 import {
@@ -29,6 +30,8 @@ const unitLabels = {
   Bale: { en: 'Bale', ar: 'بالة' },
   Unit: { en: 'Unit', ar: 'وحدة' },
 };
+
+const STOCK_DISTRIBUTION_COLORS = ['#4f774e', '#9c7a2d', '#6f7f4d', '#b28b39', '#3f613f', '#c2a24b'];
 
 function createWarehouseForm() {
   return {
@@ -158,6 +161,140 @@ function mapMovement(row) {
     driverName: row.driver_name || '',
     notes: row.notes || '',
   };
+}
+
+function WarehouseStockDistributionChart({ warehouses, isArabic }) {
+  const data = warehouses
+    .map((warehouse) => ({
+      id: warehouse.id,
+      name: warehouse.warehouseName,
+      value: Number(warehouse.usedCapacity || warehouse.currentStock || 0),
+      unit: warehouse.capacityUnit,
+    }))
+    .filter((warehouse) => warehouse.value > 0);
+  const title = isArabic ? 'توزيع المخزون حسب المخزن' : 'Stock Distribution by Warehouse';
+  const empty = isArabic ? 'لا يوجد مخزون مسجل في المخازن.' : 'No stock is stored in warehouses yet.';
+
+  return (
+    <section className="warehouse-stock-distribution" aria-labelledby="warehouse-stock-distribution-title">
+      <h3 id="warehouse-stock-distribution-title">{title}</h3>
+      {data.length === 0 ? (
+        <p className="warehouse-stock-distribution__empty">{empty}</p>
+      ) : (
+        <div className="warehouse-stock-distribution__chart">
+          <ResponsiveContainer width="100%" height={240}>
+            <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+              <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="48%" outerRadius={78} label={(entry) => entry.name}>
+                {data.map((entry, index) => (
+                  <Cell key={entry.id} fill={STOCK_DISTRIBUTION_COLORS[index % STOCK_DISTRIBUTION_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value, _name, item) => [`${Number(value).toLocaleString()} ${item.payload.unit}`, item.payload.name]} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function WarehouseStockDistributionCharts({ warehouses, isArabic }) {
+  const title = isArabic ? 'توزيع المخزون لكل مخزن' : 'Stock Distribution for Each Warehouse';
+  const empty = isArabic ? 'لا توجد مخازن لعرض الرسم.' : 'No warehouses to chart yet.';
+  const noStock = isArabic ? 'لا يوجد مخزون في هذا المخزن.' : 'No stock in this warehouse.';
+
+  function productLabel(productName) {
+    return commodityProductLabels[productName]?.[isArabic ? 'ar' : 'en'] || productName;
+  }
+
+  return (
+    <section className="warehouse-stock-distribution-section" aria-labelledby="warehouse-stock-distribution-title">
+      <h3 id="warehouse-stock-distribution-title">{title}</h3>
+      {warehouses.length === 0 ? (
+        <p className="warehouse-stock-distribution__empty">{empty}</p>
+      ) : (
+        <div className="warehouse-stock-distribution-grid">
+          {warehouses.map((warehouse) => {
+            const data = (warehouse.storedProducts || [])
+              .map((item) => ({
+                id: item.id,
+                name: productLabel(item.productName),
+                value: Number(item.quantity || 0),
+                unit: item.unit,
+              }))
+              .filter((item) => item.value > 0);
+            return (
+              <article className="warehouse-stock-distribution" key={warehouse.id}>
+                <h4>{warehouse.warehouseName}</h4>
+                {data.length === 0 ? (
+                  <p className="warehouse-stock-distribution__empty">{noStock}</p>
+                ) : (
+                  <div className="warehouse-stock-distribution__chart">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                        <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="48%" outerRadius={70} label={(entry) => entry.name}>
+                          {data.map((entry, index) => (
+                            <Cell key={entry.id} fill={STOCK_DISTRIBUTION_COLORS[index % STOCK_DISTRIBUTION_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value, _name, item) => [`${Number(value).toLocaleString()} ${item.payload.unit}`, item.payload.name]} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SelectedWarehouseStockChart({ warehouse, isArabic }) {
+  const title = isArabic ? 'توزيع المخزون في المخزن' : 'Stock Distribution in Warehouse';
+  const noStock = isArabic ? 'لا يوجد مخزون في هذا المخزن.' : 'No stock in this warehouse.';
+
+  function productLabel(productName) {
+    return commodityProductLabels[productName]?.[isArabic ? 'ar' : 'en'] || productName;
+  }
+
+  if (!warehouse) return null;
+
+  const data = (warehouse.storedProducts || [])
+    .map((item) => ({
+      id: item.id,
+      name: productLabel(item.productName),
+      value: Number(item.quantity || 0),
+      unit: item.unit,
+    }))
+    .filter((item) => item.value > 0);
+
+  return (
+    <section className="warehouse-stock-distribution" aria-labelledby="warehouse-stock-distribution-title">
+      <h3 id="warehouse-stock-distribution-title">{title}</h3>
+      <p>{warehouse.warehouseName}</p>
+      {data.length === 0 ? (
+        <p className="warehouse-stock-distribution__empty">{noStock}</p>
+      ) : (
+        <div className="warehouse-stock-distribution__chart">
+          <ResponsiveContainer width="100%" height={240}>
+            <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+              <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="48%" outerRadius={78} label={(entry) => entry.name}>
+                {data.map((entry, index) => (
+                  <Cell key={entry.id} fill={STOCK_DISTRIBUTION_COLORS[index % STOCK_DISTRIBUTION_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value, _name, item) => [`${Number(value).toLocaleString()} ${item.payload.unit}`, item.payload.name]} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </section>
+  );
 }
 
 function productUnitRules(products) {
@@ -571,6 +708,7 @@ export default function WarehouseInventory() {
                     <p>{selectedWarehouse.warehouseName} {t('warehouse.fullAlert')}</p>
                   </div>
                 )}
+                <SelectedWarehouseStockChart warehouse={selectedWarehouse} isArabic={isArabic} />
                 <WarehouseDetails
                   warehouse={selectedWarehouse}
                   actionSlot={(
