@@ -78,7 +78,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       'accept_terms': acceptTerms,
     });
     if (ok && mounted) {
-      context.pushNamed(RouteNames.verifyEmail);
+      final flowState = ref.read(accountFlowControllerProvider);
+      context.pushNamed(
+        RouteNames.verifyEmail,
+        extra: {
+          'email': flowState.email,
+          'emailMasked': flowState.emailMasked,
+          'resendCooldownSeconds': flowState.resendCooldownSeconds,
+        },
+      );
     }
   }
 
@@ -200,7 +208,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 }
 
 class VerifyEmailScreen extends ConsumerStatefulWidget {
-  const VerifyEmailScreen({super.key});
+  const VerifyEmailScreen({
+    super.key,
+    this.initialEmail = '',
+    this.initialEmailMasked = '',
+    this.initialResendCooldownSeconds = 0,
+  });
+  final String initialEmail;
+  final String initialEmailMasked;
+  final int initialResendCooldownSeconds;
+
   @override
   ConsumerState<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
 }
@@ -211,6 +228,23 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   int _cooldownRemaining = 0;
   bool _resending = false;
   String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialEmail.trim().isNotEmpty) {
+      Future.microtask(() {
+        if (!mounted) return;
+        ref
+            .read(accountFlowControllerProvider.notifier)
+            .setVerificationTarget(
+              email: widget.initialEmail,
+              emailMasked: widget.initialEmailMasked,
+              resendCooldownSeconds: widget.initialResendCooldownSeconds,
+            );
+      });
+    }
+  }
 
   @override
   void dispose() {

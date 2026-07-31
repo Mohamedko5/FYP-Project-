@@ -67,6 +67,14 @@ class MobileRegistrationAndResetTests(APITestCase):
         self.assertIsNone(registration.created_user)
         self.assertNotIn('verification_code', response.data)
         self.assertTrue(response.data['verification_required'])
+        self.assertTrue(response.data['email_sent'])
+
+    def test_auth_verify_alias_uses_mobile_verification_workflow(self):
+        response = self.register()
+        registration = CustomerRegistrationRequest.objects.get(id=response.data['registration_id'])
+        verify = self.client.post('/api/auth/verify-email/', {'email': registration.email, 'code': self.code_from_email()}, format='json')
+        self.assertEqual(verify.status_code, status.HTTP_200_OK)
+        self.assertEqual(verify.data['next'], 'pending_approval')
 
     def test_duplicate_active_email_and_pending_email_are_rejected(self):
         self.User.objects.create_user(username='active', email=self.payload['email'], password='StrongPass123!')
@@ -136,6 +144,37 @@ class MobileRegistrationAndResetTests(APITestCase):
         self.assertIn('verification email', response.data['detail'])
         self.assertNotIn('ConnectionRefusedError', str(response.data))
         self.assertTrue(CustomerRegistrationRequest.objects.filter(email=self.payload['email']).exists())
+        retry = self.register()
+        self.assertEqual(retry.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(CustomerRegistrationRequest.objects.filter(email=self.payload['email']).count(), 1)
+
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend',
+        EMAIL_HOST='',
+        EMAIL_HOST_USER='',
+        EMAIL_HOST_PASSWORD='',
+        DEFAULT_FROM_EMAIL='',
+        SMTP_EMAIL_CONFIG_COMPLETE=False,
+        SMTP_EMAIL_MISSING_SETTINGS=['EMAIL_HOST', 'EMAIL_HOST_USER', 'EMAIL_HOST_PASSWORD', 'DEFAULT_FROM_EMAIL'],
+    )
+    def test_missing_smtp_settings_return_safe_error(self):
+        response = self.register()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['code'], 'email_delivery_failed')
+        self.assertIn('configuration', response.data['detail'])
+        self.assertNotIn('PASSWORD', str(response.data).upper())
+
+    @override_settings(CUSTOMER_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS=0)
+    def test_auth_resend_alias_reports_real_email_sent(self):
+        self.register()
+        response = self.client.post('/api/auth/resend-verification/', {'email': self.payload['email']}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['email_sent'])
+
+    def test_unknown_resend_does_not_claim_email_sent(self):
+        response = self.client.post('/api/mobile/auth/resend-verification/', {'email': 'unknown@example.com'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data['email_sent'])
 
     def test_unverified_pending_approved_and_rejected_login_behaviors(self):
         response = self.register()
@@ -169,6 +208,7 @@ class MobileRegistrationAndResetTests(APITestCase):
         self.assertEqual(first.status_code, status.HTTP_200_OK)
         reused = self.client.post('/api/mobile/auth/verify-email/', {'email': registration.email, 'code': code}, format='json')
         self.assertEqual(reused.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(reused.data['code'], 'code_used')
         registration.refresh_from_db()
         self.assertEqual(registration.full_name, 'أحمد محمد')
         self.assertEqual(registration.status, CustomerRegistrationRequest.STATUS_PENDING_APPROVAL)

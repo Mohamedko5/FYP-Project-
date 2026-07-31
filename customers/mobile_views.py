@@ -124,6 +124,7 @@ class MobileRegisterView(APIView):
             'email_masked': mask_email(registration.email),
             'email': registration.email,
             'verification_required': True,
+            'email_sent': True,
             'next': 'verify_email',
             'resend_cooldown_seconds': getattr(settings, 'CUSTOMER_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS', 60),
         }, status=status.HTTP_201_CREATED)
@@ -151,9 +152,10 @@ class MobileResendVerificationView(APIView):
     def post(self, request):
         serializer = MobileResendVerificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        email_sent = serializer.save()
         return Response({
             'message': 'If a verification is pending, a new code has been sent.',
+            'email_sent': email_sent,
             'resend_cooldown_seconds': getattr(settings, 'CUSTOMER_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS', 60),
         })
 

@@ -27,7 +27,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final location = state.matchedLocation;
       final isSplash = location == '/splash';
-      final isResetFlow = location == '/forgot-password' || location == '/verify-reset-code' || location == '/reset-password';
+      final isResetFlow =
+          location == '/forgot-password' ||
+          location == '/verify-reset-code' ||
+          location == '/reset-password';
       final isPublicAuth = {
         '/login',
         '/register',
@@ -40,65 +43,175 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }.contains(location);
       final isProtected = !isSplash && !isPublicAuth;
 
-      if (authState.status == AuthStatus.initial || authState.status == AuthStatus.loading) {
+      if (authState.status == AuthStatus.initial ||
+          authState.status == AuthStatus.loading) {
         return isSplash ? null : '/splash';
       }
-      if (authState.status == AuthStatus.error) return isSplash ? null : '/login';
-      if (!authState.isAuthenticated && (isProtected || isSplash)) return '/login';
-      if (authState.isAuthenticated && (isSplash || (isPublicAuth && !isResetFlow))) return '/home';
+      if (authState.status == AuthStatus.error) {
+        return isSplash ? null : '/login';
+      }
+      if (!authState.isAuthenticated && (isProtected || isSplash)) {
+        return '/login';
+      }
+      if (authState.isAuthenticated &&
+          (isSplash || (isPublicAuth && !isResetFlow))) {
+        return '/home';
+      }
       return null;
     },
     errorBuilder: (context, state) => const RouteErrorScreen(),
     routes: [
-      GoRoute(path: '/splash', name: RouteNames.splash, builder: (context, state) => const SplashScreen()),
-      GoRoute(path: '/login', name: RouteNames.login, builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/register', name: RouteNames.register, builder: (context, state) => const RegisterScreen()),
-      GoRoute(path: '/verify-email', name: RouteNames.verifyEmail, builder: (context, state) => const VerifyEmailScreen()),
-      GoRoute(path: '/pending-approval', name: RouteNames.pendingApproval, builder: (context, state) => const PendingApprovalScreen()),
-      GoRoute(path: '/registration-status', name: RouteNames.registrationStatus, builder: (context, state) => const PendingApprovalScreen()),
-      GoRoute(path: '/forgot-password', name: RouteNames.forgotPassword, builder: (context, state) => const ForgotPasswordScreen()),
-      GoRoute(path: '/verify-reset-code', name: RouteNames.verifyResetCode, builder: (context, state) => const VerifyResetCodeScreen()),
-      GoRoute(path: '/reset-password', name: RouteNames.resetPassword, builder: (context, state) => const ResetPasswordScreen()),
-      GoRoute(path: '/home', name: RouteNames.home, builder: (context, state) => const HomeScreen()),
-      GoRoute(path: '/profile', name: RouteNames.profile, builder: (context, state) => const ProfileScreen()),
-      GoRoute(path: '/chat', name: RouteNames.chat, builder: (context, state) => const ChatScreen()),
-      GoRoute(path: '/products', name: RouteNames.products, builder: (context, state) => const ProductsScreen()),
+      GoRoute(
+        path: '/splash',
+        name: RouteNames.splash,
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/login',
+        name: RouteNames.login,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        name: RouteNames.register,
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        name: RouteNames.verifyEmail,
+        builder: (context, state) {
+          final extra = state.extra;
+          final data = extra is Map ? extra : const {};
+          return VerifyEmailScreen(
+            initialEmail: data['email']?.toString() ?? '',
+            initialEmailMasked: data['emailMasked']?.toString() ?? '',
+            initialResendCooldownSeconds: data['resendCooldownSeconds'] is int
+                ? data['resendCooldownSeconds'] as int
+                : 0,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/pending-approval',
+        name: RouteNames.pendingApproval,
+        builder: (context, state) => const PendingApprovalScreen(),
+      ),
+      GoRoute(
+        path: '/registration-status',
+        name: RouteNames.registrationStatus,
+        builder: (context, state) => const PendingApprovalScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        name: RouteNames.forgotPassword,
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/verify-reset-code',
+        name: RouteNames.verifyResetCode,
+        builder: (context, state) => const VerifyResetCodeScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        name: RouteNames.resetPassword,
+        builder: (context, state) => const ResetPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/home',
+        name: RouteNames.home,
+        builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        name: RouteNames.profile,
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/chat',
+        name: RouteNames.chat,
+        builder: (context, state) => const ChatScreen(),
+      ),
+      GoRoute(
+        path: '/products',
+        name: RouteNames.products,
+        builder: (context, state) => const ProductsScreen(),
+      ),
       GoRoute(
         path: '/products/:id',
         name: RouteNames.productDetail,
-        builder: (context, state) => ProductDetailScreen(productId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+        builder: (context, state) => ProductDetailScreen(
+          productId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+        ),
       ),
-      GoRoute(path: '/cart', name: RouteNames.cart, builder: (context, state) => const CartScreen()),
-      GoRoute(path: '/checkout', name: RouteNames.checkout, builder: (context, state) => const CheckoutScreen()),
+      GoRoute(
+        path: '/cart',
+        name: RouteNames.cart,
+        builder: (context, state) => const CartScreen(),
+      ),
+      GoRoute(
+        path: '/checkout',
+        name: RouteNames.checkout,
+        builder: (context, state) => const CheckoutScreen(),
+      ),
       GoRoute(
         path: '/orders/:id/success',
         name: RouteNames.orderSuccess,
-        builder: (context, state) => OrderSuccessScreen(orderId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+        builder: (context, state) => OrderSuccessScreen(
+          orderId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+        ),
       ),
-      GoRoute(path: '/orders', name: RouteNames.orders, builder: (context, state) => const OrdersScreen()),
+      GoRoute(
+        path: '/orders',
+        name: RouteNames.orders,
+        builder: (context, state) => const OrdersScreen(),
+      ),
       GoRoute(
         path: '/orders/:id',
         name: RouteNames.orderDetail,
-        builder: (context, state) => OrderDetailScreen(orderId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+        builder: (context, state) => OrderDetailScreen(
+          orderId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+        ),
       ),
-      GoRoute(path: '/invoices', name: RouteNames.invoices, builder: (context, state) => const InvoicesScreen()),
+      GoRoute(
+        path: '/invoices',
+        name: RouteNames.invoices,
+        builder: (context, state) => const InvoicesScreen(),
+      ),
       GoRoute(
         path: '/invoices/:id',
         name: RouteNames.invoiceDetail,
-        builder: (context, state) => InvoiceDetailScreen(invoiceId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+        builder: (context, state) => InvoiceDetailScreen(
+          invoiceId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+        ),
       ),
-      GoRoute(path: '/shipments', name: RouteNames.shipments, builder: (context, state) => const ShipmentsScreen()),
+      GoRoute(
+        path: '/shipments',
+        name: RouteNames.shipments,
+        builder: (context, state) => const ShipmentsScreen(),
+      ),
       GoRoute(
         path: '/shipments/:id',
         name: RouteNames.shipmentDetail,
-        builder: (context, state) => ShipmentDetailScreen(shipmentId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+        builder: (context, state) => ShipmentDetailScreen(
+          shipmentId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+        ),
       ),
-      GoRoute(path: '/supply-offers', name: RouteNames.supplyOffers, builder: (context, state) => const SupplyOffersScreen()),
-      GoRoute(path: '/supply-offers/create', name: RouteNames.createSupplyOffer, builder: (context, state) => const CreateSupplyOfferScreen()),
+      GoRoute(
+        path: '/supply-offers',
+        name: RouteNames.supplyOffers,
+        builder: (context, state) => const SupplyOffersScreen(),
+      ),
+      GoRoute(
+        path: '/supply-offers/create',
+        name: RouteNames.createSupplyOffer,
+        builder: (context, state) => const CreateSupplyOfferScreen(),
+      ),
       GoRoute(
         path: '/supply-offers/:id',
         name: RouteNames.supplyOfferDetail,
-        builder: (context, state) => SupplyOfferDetailScreen(offerId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+        builder: (context, state) => SupplyOfferDetailScreen(
+          offerId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+        ),
       ),
     ],
   );
@@ -114,7 +227,10 @@ class RouteErrorScreen extends StatelessWidget {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text(AppLocalizations.of(context).routeError, textAlign: TextAlign.center),
+            child: Text(
+              AppLocalizations.of(context).routeError,
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
       ),

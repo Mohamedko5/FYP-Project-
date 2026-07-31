@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:bayad_customer_app/app.dart';
@@ -11,8 +12,11 @@ import 'package:bayad_customer_app/core/storage/preferences_provider.dart';
 import 'package:bayad_customer_app/core/storage/preferences_service.dart';
 import 'package:bayad_customer_app/core/storage/secure_storage_service.dart';
 import 'package:bayad_customer_app/features/auth/data/auth_repository.dart';
+import 'package:bayad_customer_app/features/auth/data/account_recovery_repository.dart';
 import 'package:bayad_customer_app/features/auth/domain/auth_state.dart';
 import 'package:bayad_customer_app/features/auth/presentation/auth_controller.dart';
+import 'package:bayad_customer_app/features/auth/presentation/registration_screens.dart';
+import 'package:bayad_customer_app/core/network/api_exception.dart';
 import 'package:bayad_customer_app/features/chat/domain/chat_models.dart';
 import 'package:bayad_customer_app/features/profile/domain/customer.dart';
 import 'package:bayad_customer_app/features/supply_offers/data/models/supply_offer_models.dart';
@@ -286,6 +290,85 @@ class FakeAuthRepository extends AuthRepository {
   Future<void> clearTokens() async {}
 }
 
+class FakeAccountRecoveryRepository extends AccountRecoveryRepository {
+  FakeAccountRecoveryRepository({this.verifyOk = true, this.resendOk = true})
+    : super(Dio());
+
+  final bool verifyOk;
+  final bool resendOk;
+  String? verifiedCode;
+  int resendCalls = 0;
+
+  @override
+  Future<Map<String, dynamic>> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    verifiedCode = code;
+    if (!verifyOk) {
+      throw const ApiException(
+        'The verification code is incorrect.',
+        code: 'invalid_code',
+      );
+    }
+    return {'next': 'pending_approval'};
+  }
+
+  @override
+  Future<Map<String, dynamic>> resendVerification(String email) async {
+    resendCalls += 1;
+    if (!resendOk) {
+      throw const ApiException(
+        'Unable to send the email. Try again.',
+        code: 'email_delivery_failed',
+      );
+    }
+    return {'email_sent': true, 'resend_cooldown_seconds': 60};
+  }
+}
+
+Future<void> pumpVerifyEmailScreen(
+  WidgetTester tester, {
+  required FakeAccountRecoveryRepository repository,
+  String language = 'en',
+}) async {
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const VerifyEmailScreen(
+          initialEmail: 'customer@example.com',
+          initialEmailMasked: 'c***r@example.com',
+        ),
+      ),
+      GoRoute(
+        path: '/pending-approval',
+        name: 'pendingApproval',
+        builder: (context, state) => const PendingApprovalScreen(),
+      ),
+    ],
+  );
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        accountRecoveryRepositoryProvider.overrideWithValue(repository),
+      ],
+      child: MaterialApp.router(
+        routerConfig: router,
+        locale: Locale(language),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+      ),
+    ),
+  );
+  await tester.pump();
+}
+
 Future<void> pumpBayadApp(
   WidgetTester tester, {
   AuthState initialState = const AuthState.unauthenticated(),
@@ -515,6 +598,57 @@ Future<void> pumpProductCard(
 }
 
 void main() {
+  testWidgets('Verification screen receives and masks the registered email', (
+    tester,
+  ) async {
+    await pumpVerifyEmailScreen(
+      tester,
+      repository: FakeAccountRecoveryRepository(),
+    );
+    expect(find.textContaining('c***r@example.com'), findsOneWidget);
+  });
+
+  testWidgets('Resend success appears only after HTTP success', (tester) async {
+    final repository = FakeAccountRecoveryRepository(resendOk: true);
+    await pumpVerifyEmailScreen(tester, repository: repository);
+    await tester.tap(find.text('Resend Code'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(repository.resendCalls, 1);
+    expect(
+      find.text('The verification code was sent to your email.'),
+      findsOneWidget,
+    );
+    expect(find.text('Resend Code (60s)'), findsOneWidget);
+  });
+
+  testWidgets('Resend failure does not display success or start cooldown', (
+    tester,
+  ) async {
+    final repository = FakeAccountRecoveryRepository(resendOk: false);
+    await pumpVerifyEmailScreen(tester, repository: repository);
+    await tester.tap(find.text('Resend Code'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(repository.resendCalls, 1);
+    expect(
+      find.text('The verification code was sent to your email.'),
+      findsNothing,
+    );
+    expect(find.text('Resend Code (60s)'), findsNothing);
+    expect(find.text('Unable to send the email. Try again.'), findsOneWidget);
+  });
+
+  testWidgets('Code field accepts only six digits before confirm', (
+    tester,
+  ) async {
+    final repository = FakeAccountRecoveryRepository();
+    await pumpVerifyEmailScreen(tester, repository: repository);
+    await tester.enterText(find.byType(TextField).first, '1234567abc');
+    expect(find.text('123456'), findsWidgets);
+    expect(find.text('1234567abc'), findsNothing);
+  });
+
   testWidgets('Product grid card renders without overflow on narrow phone', (
     tester,
   ) async {

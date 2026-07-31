@@ -18,6 +18,15 @@ class EmailDeliveryError(Exception):
 
 
 def _send_template_email(subject, to_email, template_name, context, safe_detail=None):
+    if not getattr(settings, 'SMTP_EMAIL_CONFIG_COMPLETE', True):
+        logger.error(
+            'Customer email delivery blocked by incomplete email configuration template=%s recipient=%s missing=%s',
+            template_name,
+            to_email,
+            ','.join(getattr(settings, 'SMTP_EMAIL_MISSING_SETTINGS', [])),
+        )
+        raise EmailDeliveryError('Email configuration is incomplete.')
+
     text_body = render_to_string(f'customers/email/{template_name}.txt', context)
     html_body = render_to_string(f'customers/email/{template_name}.html', context)
     email = EmailMultiAlternatives(
@@ -28,7 +37,7 @@ def _send_template_email(subject, to_email, template_name, context, safe_detail=
     )
     email.attach_alternative(html_body, 'text/html')
     try:
-        email.send(fail_silently=False)
+        sent_count = email.send(fail_silently=False)
     except (SMTPException, OSError, TimeoutError) as exc:
         logger.warning(
             'Customer email delivery failed for template=%s recipient=%s error=%s',
@@ -37,6 +46,20 @@ def _send_template_email(subject, to_email, template_name, context, safe_detail=
             exc.__class__.__name__,
         )
         raise EmailDeliveryError(safe_detail) from exc
+    if sent_count != 1:
+        logger.warning(
+            'Customer email delivery returned unexpected sent_count=%s template=%s recipient=%s',
+            sent_count,
+            template_name,
+            to_email,
+        )
+        raise EmailDeliveryError(safe_detail)
+    logger.info(
+        'Customer email sent successfully template=%s recipient=%s backend=%s',
+        template_name,
+        to_email,
+        settings.EMAIL_BACKEND,
+    )
 
 
 def _customer_name(registration=None, user=None):
@@ -61,6 +84,10 @@ def send_customer_verification_email(registration, code):
         },
         safe_detail='We could not send the verification email. Please try again.',
     )
+
+
+def send_email_verification_code(*, user, code, language='en'):
+    return send_customer_verification_email(user, code)
 
 
 def send_password_reset_email(user, code):

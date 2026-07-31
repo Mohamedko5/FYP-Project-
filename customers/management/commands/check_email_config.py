@@ -33,7 +33,7 @@ class Command(BaseCommand):
         self.stdout.write(f'EMAIL_USE_TLS: {settings.EMAIL_USE_TLS}')
         self.stdout.write(f'EMAIL_USE_SSL: {settings.EMAIL_USE_SSL}')
 
-        if missing:
+        if missing or not getattr(settings, 'SMTP_EMAIL_CONFIG_COMPLETE', True):
             self.stdout.write(self.style.WARNING('Missing or invalid SMTP setting(s): ' + ', '.join(missing)))
             return
 

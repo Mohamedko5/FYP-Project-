@@ -109,12 +109,16 @@ class AccountFlowController extends StateNotifier<AccountFlowState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final data = await _repository.resendVerification(state.email);
+      final emailSent = data['email_sent'] == true;
       state = state.copyWith(
         isLoading: false,
-        message: 'verification_sent',
+        message: emailSent ? 'verification_sent' : null,
         resendCooldownSeconds: data['resend_cooldown_seconds'] as int? ?? 60,
       );
-      return true;
+      if (!emailSent) {
+        state = state.copyWith(error: 'Unable to send the email. Try again.');
+      }
+      return emailSent;
     } catch (error) {
       _setError(error);
       return false;
@@ -201,5 +205,19 @@ class AccountFlowController extends StateNotifier<AccountFlowState> {
     } else {
       state = state.copyWith(isLoading: false, error: error.toString());
     }
+  }
+
+  void setVerificationTarget({
+    required String email,
+    required String emailMasked,
+    required int resendCooldownSeconds,
+  }) {
+    state = state.copyWith(
+      email: email,
+      emailMasked: emailMasked,
+      resendCooldownSeconds: resendCooldownSeconds,
+      error: null,
+      errorCode: null,
+    );
   }
 }
