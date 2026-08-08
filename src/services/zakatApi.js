@@ -77,6 +77,10 @@ export function createZakatReceipt(data) {
   return apiRequest('/api/zakat/receipts/', { method: 'POST', body: JSON.stringify(data) });
 }
 
+export function updateZakatReceipt(id, data) {
+  return apiRequest(`/api/zakat/receipts/${id}/`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
 export function verifyZakatReceipt(id, notes = '') {
   return apiRequest(`/api/zakat/receipts/${id}/verify/`, { method: 'POST', body: JSON.stringify({ notes }) });
 }

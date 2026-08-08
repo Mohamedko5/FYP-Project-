@@ -292,6 +292,19 @@ textarea:focus-visible {
   min-height: 250px;
 }
 
+.zakat-date-stack {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: end;
+}
+
+.zakat-filter-toolbar {
+  margin-bottom: 16px;
+}
+
 .zakat-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -308,14 +321,46 @@ textarea:focus-visible {
   font-size: 16px;
 }
 
+.zakat-receipt-details {
+  display: grid;
+  gap: 10px;
+}
+
+.zakat-detail-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.45fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.zakat-detail-row span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.zakat-detail-row strong {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
 .button-row--compact {
   gap: 6px;
 }
 
 @media (max-width: 860px) {
   .zakat-report-grid,
-  .zakat-form {
+  .zakat-form,
+  .zakat-detail-row {
     grid-template-columns: 1fr;
+  }
+
+  .zakat-date-stack {
+    text-align: start;
   }
 }
 
